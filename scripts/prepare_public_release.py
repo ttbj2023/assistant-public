@@ -7,7 +7,7 @@
 规则:
   - 基于 git ls-files (自动遵循 .gitignore, 排除 data/.venv 等未跟踪内容)
   - 黑名单: AGENTS.md / CLAUDE.md / .claude/ / .opencode/ (私人配置)
-  - 改造: README 占位 / docs/README.md 去私人引用 / 精简 .gitignore
+  - 脱敏: README / docs/README.md 去私人引用 (CLAUDE.md/AGENTS.md) / 精简 .gitignore
   - 新增: LICENSE (MIT)
 
 用法:
@@ -70,22 +70,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-README_PLACEHOLDER = """# Personal Agent Assistant
-
-> README under construction.
-
-基于 LangChain Agent 框架与双路检索记忆系统的个人 AI 助手.
-
-完整文档见 [docs/](docs/) 目录.
-
----
-
-本项目为个人作品展示, Issues 欢迎反馈, 不接受 PR.
-
-License: [MIT](LICENSE)
-"""
-
-
 def should_exclude(rel_path: str) -> bool:
     """判断相对路径是否应排除."""
     if rel_path in EXCLUDE_PATHS:
@@ -132,15 +116,8 @@ def sanitize_gitignore(source: Path) -> str:
     return "\n".join(sanitized_lines) + "\n"
 
 
-def fix_docs_readme(source: Path) -> str | None:
-    """改造 docs/README.md: 去掉 CLAUDE.md/AGENTS.md 引用.
-
-    若文件不存在返回 None.
-    """
-    docs_readme = source / "docs" / "README.md"
-    if not docs_readme.exists():
-        return None
-    content = docs_readme.read_text(encoding="utf-8")
+def _strip_private_md_refs(content: str) -> str:
+    """去除含 CLAUDE.md/AGENTS.md 的行及其紧跟的空行 (脱敏)."""
     new_lines: list[str] = []
     skip_next_blank = False
     for line in content.splitlines():
@@ -153,6 +130,25 @@ def fix_docs_readme(source: Path) -> str | None:
         skip_next_blank = False
         new_lines.append(line)
     return "\n".join(new_lines) + "\n"
+
+
+def fix_readme(source: Path) -> str | None:
+    """导出源仓 README.md 并脱敏 (去除私人 md 引用)."""
+    readme = source / "README.md"
+    if not readme.exists():
+        return None
+    return _strip_private_md_refs(readme.read_text(encoding="utf-8"))
+
+
+def fix_docs_readme(source: Path) -> str | None:
+    """改造 docs/README.md: 去掉 CLAUDE.md/AGENTS.md 引用.
+
+    若文件不存在返回 None.
+    """
+    docs_readme = source / "docs" / "README.md"
+    if not docs_readme.exists():
+        return None
+    return _strip_private_md_refs(docs_readme.read_text(encoding="utf-8"))
 
 
 def export_snapshot(source: Path, target: Path) -> list[str]:
@@ -169,8 +165,10 @@ def export_snapshot(source: Path, target: Path) -> list[str]:
         copy_tracked_file(source, target, rel_path)
         copied.append(rel_path)
 
-    # 改造 README 为占位
-    write_text(target, "README.md", README_PLACEHOLDER)
+    # README 脱敏: 源仓 README 已随 git ls-files 拷贝, 覆盖为去除私人引用的版本
+    fixed_readme = fix_readme(source)
+    if fixed_readme is not None:
+        write_text(target, "README.md", fixed_readme)
 
     # 新增 LICENSE
     write_text(target, "LICENSE", LICENSE_CONTENT)
