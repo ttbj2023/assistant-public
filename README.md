@@ -127,6 +127,16 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 
 `core` 是零上层依赖的叶子层 (路径解析 / 流式 / 上下文 / 生命周期). 横切层 `config` / `utils` 可被任意层单向依赖.
 
+### 对话模型 — 单轮 React 与上下文隔离
+
+**单轮完整 React 循环**: 超长期单线程对话场景下, 每次用户输入触发一个完整的 ReAct 循环 (LangChain v1.0 `create_agent` 接管, 仅通过中间件 retry / tool_call_limit / discovery / skill_load 干预), 暂未做人在回环. 一个 prompt 内 agent 完全独立.
+
+**工具信息不跨循环**: 对话持久化只存 `user_message` + `assistant_response` (最终回复), ReAct 循环中的工具调用轨迹 (`tool_calls` / `ToolMessage`) 不落库. 因此下一轮的 Push 上下文看不到上一轮的工具调用细节.
+
+**对工具 / Skill 设计的约束**: 错误信息不跨循环传递 — 两次独立的 prompt 中, 模型可能调用同样工具、犯同样错误. 这要求工具设计自包含容错, Skill 的操作说明需预防常见误用.
+
+**专家工具 = Subagent 包装**: 为保证上下文干净与简化设计, subagent 被包装为 LangChain tool (`BaseExpertTool`). 主 agent 看到的是一个普通工具, 内部却是独立的 `create_agent` 编排 (如网络调研 / 地图导航). 子 agent 的多步推理不污染主 agent 上下文, 主 agent 只收到最终结果.
+
 ### 工具系统 — 渐进式能力披露
 
 **第一性原理的延伸**: 不把所有工具一次性塞进上下文 (浪费 token + 选择困难), 而是按需发现注入. Agent 启动只加载**核心工具** + `search_available_tools` + `load_skill`.
@@ -137,7 +147,7 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 |------|------|------|
 | 内部工具 | user/thread/agent 三级 | 需数据安全, 如记忆检索 / TODO / 用户要求记事本 |
 | 外部工具 | 无状态全局 | 封装外部 API, 如天气 / 图表 / Python 执行 |
-| 专家工具 | 全局共享 | 独立 Agent 编排多源工具, 如网络调研 / 地图导航 |
+| 专家工具 | 全局共享 | 独立 Agent 编排多源工具, 如网络调研 / 地图导航 (subagent 包装, 见对话模型) |
 | MCP 工具 | 全局共享 | McpBridge 集成, 支持 streamable_http / sse / stdio |
 
 **休眠工具发现 + 注入** (两套同构中间件, 基于 LangChain v1.0 `AgentMiddleware`):

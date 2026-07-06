@@ -125,11 +125,21 @@ api (routes) -> session (message queue / orchestration) -> agent (Agent framewor
             -> tools / files / inference / storage.service -> storage.dao -> core (leaf)
 ```
 
+### Conversation Model — Single-Turn React & Context Isolation
+
+**Single-turn full React loop**: in the ultra-long single-thread conversation scenario, each user input triggers a complete ReAct loop (handled by LangChain v1.0 `create_agent`, intervened only via middleware: retry / tool_call_limit / discovery / skill_load); no human-in-the-loop yet. Within one prompt, the agent is fully independent.
+
+**Tool info doesn't cross loops**: conversation persistence stores only `user_message` + `assistant_response` (final reply); the tool-call trajectory (`tool_calls` / `ToolMessage`) from the ReAct loop is not persisted. So the next turn's Push context cannot see the previous turn's tool-call details.
+
+**Constraint on tool / Skill design**: error info doesn't cross loops — across two independent prompts, the model may call the same tool and repeat the same mistake. This requires tools to be self-contained in error handling, and Skill instructions to preempt common misuse.
+
+**Expert tool = Subagent wrapper**: to keep context clean and simplify design, subagents are wrapped as LangChain tools (`BaseExpertTool`). The main agent sees an ordinary tool; internally it's an independent `create_agent` orchestration (e.g. web research / geo navigation). The subagent's multi-step reasoning doesn't pollute the main agent's context — the main agent only receives the final result.
+
 ### Tool System — Progressive Capability Disclosure
 
 **First principle extended**: don't stuff all tools into context at once (wastes tokens + choice overload); discover and inject on demand. At startup, only **core tools** + `search_available_tools` + `load_skill` are loaded.
 
-Four tool sources: internal (3-level isolation: user/thread/agent) / external (stateless global) / expert (independent agent orchestration) / MCP. Dormant tools are discovered via `search_available_tools` and injected at runtime by `ToolDiscoveryMiddleware` (two isomorphic middlewares based on LangChain v1.0 `AgentMiddleware`: `awrap_model_call` for injection + `awrap_tool_call` for routing). Tool groups are transparent to the main model — searching a group name expands to all members.
+Four tool sources: internal (3-level isolation: user/thread/agent) / external (stateless global) / expert (independent agent orchestration — subagent wrapper, see Conversation Model) / MCP. Dormant tools are discovered via `search_available_tools` and injected at runtime by `ToolDiscoveryMiddleware` (two isomorphic middlewares based on LangChain v1.0 `AgentMiddleware`: `awrap_model_call` for injection + `awrap_tool_call` for routing). Tool groups are transparent to the main model — searching a group name expands to all members.
 
 ### Skills — Cross-domain capability spanning Context and Tools
 
