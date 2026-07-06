@@ -1,0 +1,130 @@
+{
+  "sample_id": "syn_medical",
+  "sample_type": "negative",
+  "description": "医疗事实(动作形式但持久状态), 难点: 不误删",
+  "pinned_memory": {
+    "basic_info": "2024年确诊高血压，每日服用缬沙坦80mg\n对青霉素过敏\n上周去医院复查，血压130/85\n家族有糖尿病史",
+    "preferences": "饮食习惯偏清淡"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "用药",
+      "summary": "确认目前每日服用缬沙坦和二甲双胍, 血压血糖控制稳定"
+    },
+    {
+      "round": 42,
+      "topic": "过敏",
+      "summary": "提醒注意饮食中避免花生, 因有明确过敏史"
+    },
+    {
+      "round": 43,
+      "topic": "复查",
+      "summary": "上周去医院复查, 血压130/85, 医生建议继续当前方案"
+    },
+    {
+      "round": 44,
+      "topic": "家族史",
+      "summary": "聊到家族糖尿病史, 讨论了预防措施"
+    },
+    {
+      "round": 45,
+      "topic": "饮食",
+      "summary": "讨论了清淡饮食对血压的好处"
+    },
+    {
+      "round": 46,
+      "topic": "运动",
+      "summary": "建议了适合高血压患者的轻度运动"
+    },
+    {
+      "round": 47,
+      "topic": "用药调整",
+      "summary": "确认当前用药方案无需调整"
+    },
+    {
+      "round": 48,
+      "topic": "指标",
+      "summary": "记录了近期血压血糖指标"
+    },
+    {
+      "round": 49,
+      "topic": "复查预约",
+      "summary": "预约了三个月后的下次复查"
+    },
+    {
+      "round": 50,
+      "topic": "过敏应对",
+      "summary": "讨论了万一误食花生的应急处理"
+    },
+    {
+      "round": 51,
+      "topic": "日常",
+      "summary": "聊了聊睡眠质量对血压的影响"
+    },
+    {
+      "round": 52,
+      "topic": "饮食",
+      "summary": "分享了一个低钠食谱"
+    },
+    {
+      "round": 53,
+      "topic": "用药依从",
+      "summary": "确认近期按时服药没有漏服"
+    },
+    {
+      "round": 54,
+      "topic": "家族",
+      "summary": "聊到父亲也确认有糖尿病"
+    },
+    {
+      "round": 55,
+      "topic": "运动",
+      "summary": "开始每天散步30分钟"
+    },
+    {
+      "round": 56,
+      "topic": "指标",
+      "summary": "近期血压稳定在125/80左右"
+    },
+    {
+      "round": 57,
+      "topic": "饮食",
+      "summary": "坚持清淡饮食, 少油少盐"
+    },
+    {
+      "round": 58,
+      "topic": "复查",
+      "summary": "上次复查是两周前, 指标正常"
+    },
+    {
+      "round": 59,
+      "topic": "过敏",
+      "summary": "确认外出就餐会主动询问花生成分"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "整体健康状况稳定, 继续当前方案"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "上周去医院复查，血压130/85"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "最近血压怎么样",
+      "assistant": "近期血压稳定在125/80, 按时服用缬沙坦和二甲双胍。上次去社区医院复查后方案不变, 整体控制良好。"
+    },
+    {
+      "round": 60,
+      "user": "过敏和饮食",
+      "assistant": "花生过敏持续注意, 清淡饮食习惯保持, 家族糖尿病史提醒定期监测。"
+    }
+  ]
+}

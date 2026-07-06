@@ -1,0 +1,86 @@
+# 健康数据统一提取 Prompt
+# 单次调用完成: 检测 + 分类 + 转录
+# 使用 DeepSeek V4 Flash + JSON Mode
+
+unified_extraction: |
+  分析以下用户对话内容, 提取所有健康相关数据.
+
+  ## 核心规则
+  1. 只提取用户明确提供的数据, **禁止推断/预估/编造任何数值**
+  2. 一条对话可能包含多种类型的数据, 全部提取
+  3. 精确转录原始数值和名称, 不要泛化 (如"醇豆浆"不能简化为"豆浆")
+  4. 无法辨认或不确定的数据设为 null
+  5. 如果对话中不包含任何健康数据, extractions 返回空数组
+
+  ## 数据来源规则
+  1. **只从"用户消息"和"图片内容"中提取数据** - 这些是用户的原始输入
+  2. **严禁从"助手回复"中提取数据** - 助手的分析/总结/引用/建议不属于用户原始数据
+  3. 如果用户只是确认或回应助手的问题, 不产生新的健康数据
+
+  ## 语义判断规则
+  判断用户描述的是"新发生的实际数据"还是其他语义:
+
+  | 语义类型 | 判断关键词 | 是否提取 |
+  |---------|----------|---------|
+  | 实际发生 | "吃了/喝了/买了/测了/检查了/体重是" | **提取** |
+  | 未来计划 | "计划吃/打算买/可能会/准备做" | **不提取** |
+  | 回顾描述 | "之前吃了/前几天的菜单/以前买的/类似于今天的" | **不提取** |
+  | 消耗信息 | "吃完了/用完了/豆腐吃完了" | 归为 meal_record, 不归为 shopping_list |
+  | 概括描述 | "类似/差不多/都是这些/菜单类似" | **不提取** |
+  | 确认回复 | "好的/收到/没问题/是的" | **不提取** |
+
+  ## 可提取的数据类型
+
+  ### meal_record (饮食记录)
+  用户描述自己实际吃了什么/喝了什么. 只记录食物名称和数量, **不要推断营养数据**.
+  注意: "煮了/炖了"只有在明确说"吃了"时才算饮食记录, 仅"炖上了"不算.
+
+  ### food_product (食品包装目录)
+  用户提供了食品包装的营养标签/配料表信息 (可能来自图片描述或直接粘贴的表格).
+  **必须精确转录数值, 禁止预估.** 中国标签常见 kJ 单位, 保留原始 kJ 值到 energy_kj 字段.
+
+  ### shopping_list (购物清单)
+  用户提到**新购买了**什么食材/商品 (来自购物清单图片或明确的购买行为).
+  注意: "吃完了/用完了"不是新购物; 回顾之前买的不是新购物.
+
+  ### weight_record (体重记录)
+  用户提到**自己的**体重/体脂/肌肉量数据. "斤"需要转换为kg: 1斤=0.5kg.
+  注意: 只提取用户亲口说的数据, 不提取助手引用的历史数据.
+
+  ### workout_record (运动记录)
+  用户描述了自己实际完成的运动/锻炼.
+
+  ### medical_report (体检报告)
+  用户提供了体检报告/检验报告数据 (可能来自图片描述或直接粘贴的文本). **精确转录指标数值.**
+  即使图片描述中没有明确说"体检报告", 只要包含检验项目/结果/参考范围等结构化医学指标,
+  都应归类为 medical_report.
+
+  ## 各类型的 JSON 格式
+
+  meal_record:
+  {{"data_type": "meal_record", "data": {{"meal_type": "breakfast/lunch/dinner/snack/null", "meal_date": "YYYY-MM-DD", "meal_time": "HH:MM或null", "items": [{{"name": "食物名称", "quantity": "数量描述(如: 1碗, 2个, 200g)"}}], "notes": "备注或null"}}}}
+
+  food_product:
+  {{"data_type": "food_product", "data": {{"product_id": "商品名_规格(如: 醇豆浆_400g)", "name": "商品全名", "brand": "品牌或null", "weight_per_unit": 单位重量_克或null, "ingredients": "配料表或null", "nutrition_per_100g": {{"energy_kj": 原始kJ值或null, "calories": 千卡值或null, "protein": 蛋白质_g, "carbs": 碳水化合物_g, "fat": 脂肪_g, "fiber": 膳食纤维_g或null, "sugar": 糖_g或null, "sodium": 钠_mg或null}}, "allergens": ["过敏原"]或null}}}}
+
+  shopping_list:
+  {{"data_type": "shopping_list", "data": {{"items": [{{"name": "商品名称", "quantity": 数量描述或null}}]}}}}
+
+  weight_record:
+  {{"data_type": "weight_record", "data": {{"weight": 体重_kg, "body_fat_percentage": 体脂率_百分比或null, "muscle_mass": 肌肉量_kg或null, "timestamp": "ISO 8601或null"}}}}
+
+  workout_record:
+  {{"data_type": "workout_record", "data": {{"workout_type": "运动类型(英文, 首字母大写)", "duration_minutes": 持续时间_分钟, "distance_km": 距离_km或null, "start_time": "ISO 8601或null", "notes": "备注或null"}}}}
+
+  medical_report:
+  {{"data_type": "medical_report", "data": {{"report_date": "YYYY-MM-DD或null", "report_data": {{"指标名": 数值, ...}}, "report_type": "routine/specialized/null"}}}}
+
+  ## 用户消息
+  {user_message}
+
+  ## 当前日期
+  {current_date}
+
+  ## 输出要求
+  返回合法 JSON, 格式如下. 如果没有健康数据, extractions 为空数组.
+  {{"extractions": [{{"data_type": "...", "data": {{...}}}}, ...]}}

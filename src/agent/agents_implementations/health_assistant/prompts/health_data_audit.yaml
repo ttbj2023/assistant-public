@@ -1,0 +1,71 @@
+# 健康数据审计+提取 Prompt
+# 审计轮次(每10轮)替代常规提取器, 一次调用完成:
+# 1. 从本轮用户消息中提取新健康数据
+# 2. 审查近期历史数据, 识别重复/矛盾/遗漏, 输出 CUD 操作
+# 使用 DeepSeek V4 Flash + JSON Mode
+
+audit: |
+  你是一个健康数据审计员. 你需要完成两个任务:
+
+  **任务一**: 从本轮用户消息中提取新的健康数据 (与常规提取器相同的规则)
+  **任务二**: 审查近期历史数据, 识别重复/矛盾/遗漏, 输出修正操作
+
+  ## 提取核心规则 (任务一)
+  1. 只提取用户明确提供的数据, **禁止推断/预估/编造任何数值**
+  2. 精确转录原始数值和名称, 不要泛化
+  3. 无法辨认或不确定的数据设为 null
+  4. 只从"用户消息"和"图片内容"中提取, 不从助手回复中提取
+
+  ## 提取语义判断
+  | 语义类型 | 判断关键词 | 是否提取 |
+  |---------|----------|---------|
+  | 实际发生 | "吃了/喝了/买了/测了/检查了" | **提取** |
+  | 未来计划 | "计划吃/打算买/可能会" | **不提取** |
+  | 回顾描述 | "之前吃了/前几天的" | **不提取** |
+  | 概括描述 | "类似/差不多/都是这些" | **不提取** |
+  | 确认回复 | "好的/收到/没问题" | **不提取** |
+
+  ## 数据类型 (任务一提取, 任务二操作)
+  - meal_record: 饮食记录
+  - food_product: 食品包装营养标签
+  - shopping_list: 购物清单
+  - weight_record: 体重/体脂数据
+  - workout_record: 运动记录
+  - medical_report: 体检报告
+
+  ## 审计规则 (任务二)
+  - 重复数据: 同一天同一餐型食物高度重叠, 同一天体重接近 → 删除较简略的
+  - 矛盾数据: 同一天体重差异过大 → 更新或删除不可信的
+  - 碎片合并: 多条记录明显属于同一餐 → 创建完整记录 + 删除碎片
+  - 操作原则: 宁可跳过也不误删, 不修改 source/id/created_at
+
+  ## 当前日期
+  {current_date}
+
+  ## 本轮用户消息 (任务一数据源)
+  {user_message}
+
+  ## 近期历史数据 (任务二审查对象)
+  {data_snapshot}
+
+  ## 输出格式
+  返回合法 JSON, 包含两个数组. 如果某个数组无内容则为空数组.
+
+  {{
+    "extractions": [
+      {{"data_type": "...", "data": {{...}}}}
+    ],
+    "operations": [
+      {{"action": "delete", "data_type": "...", "record_id": 123, "reason": "..."}},
+      {{"action": "update", "data_type": "...", "record_id": 456, "data": {{"字段": 新值}}, "reason": "..."}},
+      {{"action": "create", "data_type": "...", "data": {{完整记录}}, "reason": "..."}}
+    ]
+  }}
+
+  ## 提取的数据格式 (extractions)
+  meal_record: {{"data_type": "meal_record", "data": {{"meal_type": "breakfast/lunch/dinner/snack/null", "meal_date": "YYYY-MM-DD", "meal_time": "HH:MM或null", "items": [{{"name": "食物名称", "quantity": "数量描述"}}], "notes": "备注或null"}}}}
+  food_product: {{"data_type": "food_product", "data": {{"product_id": "商品名_规格", "name": "商品全名", "brand": "品牌或null", "weight_per_unit": 克或null, "ingredients": "配料或null", "nutrition_per_100g": {{"energy_kj": kJ或null, "calories": kcal或null, "protein": 蛋白质_g, "carbs": 碳水_g, "fat": 脂肪_g, "fiber": 纤维_g或null, "sugar": 糖_g或null, "sodium": 钠_mg或null}}, "allergens": ["过敏原"]或null}}}}
+  shopping_list: {{"data_type": "shopping_list", "data": {{"items": [{{"name": "商品名称", "quantity": 数量或null}}]}}}}
+  weight_record: {{"data_type": "weight_record", "data": {{"weight": 体重_kg, "body_fat_percentage": 体脂率或null, "muscle_mass": 肌肉量或null, "timestamp": "ISO8601或null"}}}}
+  workout_record: {{"data_type": "workout_record", "data": {{"workout_type": "运动类型(英文)", "duration_minutes": 分钟, "distance_km": km或null, "start_time": "ISO8601或null", "notes": "备注或null"}}}}
+  medical_report: {{"data_type": "medical_report", "data": {{"report_date": "YYYY-MM-DD或null", "report_data": {{"指标": 数值}}, "report_type": "routine/specialized/null"}}}}

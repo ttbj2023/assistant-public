@@ -1,0 +1,17 @@
+{
+  "sample_id": "gifford_r84",
+  "sample_type": "positive",
+  "description": "真实: 地铁偏好(稳定偏好), 该记",
+  "user_message": "我还是倾向与坐地铁",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "",
+    "preferences": ""
+  },
+  "ground_truth": {
+    "should_add": [
+      "地铁"
+    ],
+    "should_not_add": []
+  }
+}

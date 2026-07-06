@@ -1,0 +1,292 @@
+{
+  "query": "Python 3.13 free-threading GIL 新特性",
+  "category": "官方规范",
+  "expect": "gemini",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Python experimental support for free threading",
+        "url": "https://docs.python.org/tr/3.14/howto/free-threading-python.html",
+        "domain": "python.org",
+        "site": "Python",
+        "snippet": "İçindekiler\nPython experimental support for free threading\nInstallation\nIdentifying free-threaded Python\nThe global interpreter lock in free-threaded Python\nThread safety\nKnown limitations\nImmortalization\nFrame objects\nIterators\nSingle-threaded performance\nBehavioral changes\nContext variables\nWarning filters\nPython experimental support for free threading\nStarting with the 3.13 release, CPython has experimental support for a build of Python called free threading where the global interpreter lock (GIL) is disabled. Free-threaded execution allows for full utilization of the available processing p...",
+        "publish_time": "2025-04-29T03:06:19+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.13正式版发布:去除全局解释器锁(GIL)和新的交互式解释器(REPL)",
+        "url": "https://cloud.tencent.com/developer/news/1762031",
+        "domain": "tencent.com",
+        "site": "腾讯云",
+        "snippet": "Python 3.13正式版发布:去除全局解释器锁(GIL)和新的交互式解释器(REPL)\nPython编程语言迎来了新的里程碑——Python 3.13正式发布。这个版本带来了一系列激动人心的新特性和性能改进,为开发者提供了更强大的工具和更高效的编程体验。\n去除全局解释器锁(GIL)\nPython 3.13最引人注目的变化之一是实验性地去除了全局解释器锁(Global Interpreter Lock, GIL)。GIL长期以来一直是Python在多线程性能方面的一个限制因素。通过引入\"自由线程\"(Free Threading)模式,Python现在可以在禁用GIL的情况下运行,充分发挥多核处理器的优势。\n去除GIL的好处主要体现在:\n提高多线程性能:不再受单一锁的限制,多个线程可以真正并行执行。\n优化CPU密集型任务:特别是在科学计算、数据处理等领域,性能提升显著。\n更好地利用多核处理器:可以充分发挥现代计算机硬件的潜力。\n值得注意的是,这一功能目前仍处于实验阶段。Python开发团队计划分三个阶段逐步推广:实验阶段、支持但不默认阶段,最后是默认启用阶段。这种谨慎的方法确保了新特性的稳定性和兼容性。\n新的交互式解释器(REPL)\n另一个重要更新是引入了全新的交互式解释器,即REPL(Read-Eval-Print Loop)。这个新的REPL基于PyPy,带来了多项改进:\n多行...",
+        "publish_time": "2024-10-10T09:36:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.879989743232727,
+        "is_bytedance": false
+      },
+      {
+        "title": "Python并发与性能革命：自由线程、JIT编译器的深度解析与未来展望",
+        "url": "https://blog.csdn.net/qq_44623314/article/details/149788940",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "Python并发与性能革命：自由线程、JIT编译器的深度解析与未来展望\n标签\n#python #开发语言\nPython性能优化的步伐从未停止，一场从解释器底层到语法层的全面变革正在重塑开发者的效率边界\n一、自由线程：突破GIL枷锁的里程碑\n技术原理与版本适配\n自由线程（Free-Threading）是Python 3.13引入的实验性功能，通过可选的无GIL模式打破全局解释器锁的限制。传统Python线程因GIL只能伪并行执行，而自由线程允许：\n多线程在多核CPU上真正并行\n\n子解释器拥有独立GIL（PEP 684）\n\n共享内存通信替代进程间复制\n版本路线图：\nPython 3.13（2024）：实验性构建，需编译时启用--disable-gil\n\nPython 3.14（2025）：正式支持（PEP 779）\n\nPython 4.0：默认无GIL模式\n应用场景与性能实测\n典型应用场景：\n# 矩阵并行计算示例（Python 3.13+）\nimport numpy as np\nfrom threading import Thread\n\ndef compute_chunk(matrix, start_row, end_row, result):\n\n    # 无GIL约束下并行计算矩阵块\n\n    chunk = matrix[start_row:end_row] ** 2\n\n    ...",
+        "publish_time": "2025-07-30T22:52:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.78470379114151,
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 2至3.13各版本核心差异与新特性全面解析",
+        "url": "https://wenku.csdn.net/doc/6fodc3hn4w",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "ell的代数数据类型匹配能力，可对元组、字典、类实例乃至自定义模式进行深度解构，替代大量嵌套if-elif逻辑，使状态机、AST遍历、协议解析等场景的代码兼具可读性与可维护性。 至于前沿方向，Python 3.13的实验性特性直指长期痛点：自由线程（freethreading）旨在解除全局解释器锁（GIL）对多核CPU并行能力的制约，通过为每个线程分配独立的内存管理器与对象引用计数，实现真正的并行执行——这对科学计算、机器学习推理等CPU密集型任务意义重大；而JIT（Just-In-Time）编译器（基于HPy与新字节码优化框架）则尝试在不改变Python动态语义的前提下，对热点代码路径进行运行时编译加速，有望将部分数值计算性能提升数倍。这些特性虽尚处实验阶段，却预示着Python正从“解释优先”向“混合执行模型”战略转型。 综上，Python版本差异不仅是功能增减的清单，更是语言哲学的具象化：从兼容妥协（2→3迁移阵痛）到精准抽象（pathlib/enum），从表达效率（f-string/海象运算符）到系统能力（模式匹配/自由线程），每一次重大更新都要求开发者同步更新心智模型。掌握这些差异，意味着能准确评估项目迁移成本、合理选用语言特性、规避历史陷阱，并前瞻性地构建面向未来的可扩展架构——这正是资深Python工程师的核心竞争力所在。\n资源目录\nPython 2至3.13各版本核...",
+        "publish_time": "2025-11-14T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.7678019404411316,
+        "is_bytedance": false
+      },
+      {
+        "title": "探索Python 3.13新特性：你不能错过的重要更新",
+        "url": "https://blog.csdn.net/exlink2012/article/details/154475484",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "to import 'sys'?\n可定制性\n你可以通过以下环境变量控制颜色显示：\nPYTHON_COLORS：控制Python的颜色输出\nNO_COLOR：禁用所有颜色\nFORCE_COLOR：强制启用颜色\n另外，新的REPL还支持使用 clear 命令清屏，这在之前的版本中是不可能的。\n🚀 二、实验性的免GIL模式（Free-threaded Mode）\n这可能是Python 3.13最具革命性的特性！Python 3.13引入了实验性的免GIL（全局解释器锁）模式，这是由PEP 703提出的。\n什么是GIL？\nGIL（Global Interpreter Lock）是一个互斥锁，它控制着Python解释器的执行。虽然它提供了线程安全性，但也意味着同一时刻只能有一个线程处于执行状态，这限制了Python在多核处理器上的并行性能。\n免GIL模式的优势\n真正的并行执行：线程可以在多个CPU核心上\n真正并行运行\n充分利用硬件：多核处理器的性能得到完全释放\n提升多线程程序性能：特别适合计算密集型任务\n如何使用\n免GIL模式需要使用特殊的可执行文件：\nWindows/macOS：可以通过官方安装程序安装标记为\"free-threaded\"的预构建二进制文件\nLinux：需要使用 --disable-gil  选项从源码编译\n可执行文件通常命名为 python3.13t  或 python3...",
+        "publish_time": "2025-11-06T09:17:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.7561984658241272,
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 2.33
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Python 3.13 移除 GIL：开启多线程新纪元（发布时间：2025-06-23 17:02:42）",
+        "url": "",
+        "domain": "",
+        "site": "ref_1",
+        "snippet": "引言 2024年10月7日，Python 3.13 正式发布，带来了一个划时代的特性——全局解释器锁（GIL）成为可选！这一变革让 Python 开发者梦寐以求的“真正多线程”成为现实。多年来，GIL 限制了 Python 在多核 CPU 上的并发性能，尤其是在 CPU 密集型任务中表现不佳。如今，Python 3.13 通过实验性的“无 GIL”模式（free-threading mode），让开发者能够充分利用多核处理器，显著提升程序性能。本文将结合官方文档和网络资源，深入探讨 GIL 的历史、移除 GIL 的意义、实现细节，以及如何在 Python 3.13 中体验这一突破性特性。 GIL 是什么？为何是瓶颈？ 全局解释器锁（Global Interpreter Lock，GIL） 是 CPython（Python 的主要实现）中的一种锁机制，旨在确保同一时刻只有一个线程执行 Python 字节码。这种设计简化了 CPython 的内存管理和 C 扩展的线程安全问题，但也带来了明显的限制： I/O 密集型任务的友好性：在网络请求、文件读写等 I/O 密集型场景中，线程在等待 I/O 操作时会释放 GIL，允许其他线程运行，因此 Python 的多线程表现尚可。 CPU 密集型任务的瓶颈：在计算密集型任务（如数值计算、图像处理）中，GIL 限制了多个线程的并行执行，导致 Pyt...",
+        "publish_time": "2025-06-23",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.13 重磅发布，GIL 终于可以说再见了！（发布时间：2025-02-28 00:23:34）",
+        "url": "",
+        "domain": "",
+        "site": "ref_2",
+        "snippet": "引言 作为 Python 开发者，想必大家都在等待一个重大的消息 —— Python 的全局解释器锁（GIL）何时能不再是性能瓶颈？好消息来了！Python 3.13 版本正式发布，带来了一系列激动人心的更新，其中最引人注目的就是可选的 GIL。 让我们一起来看看 Python 3.13 中的三大重要特性。 1. REPL 终于变得好用了！ Python 的 REPL（交互式解释器）一直是开发者进行快速代码测试的重要工具。在 3.13 版本中，REPL 得到了显著改进： 1.1 支持多行代码块的回溯 以前在 REPL 中编写多行代码时，如果想重新执行同样的代码块，需要反复按 ↑ 键。现在只需要按一次 ↑ 键，整个代码块就会被完整调出： # 示例代码 def greet(name): print(f\"你好，{name}！\") print(\"欢迎使用 Python 3.13\") greet(\"张三\") 1.2 退出命令简化 现在可以直接使用 exit 或 quit 退出 REPL，不再需要加括号了。 1.3 支持多行代码粘贴 可以直接将多行代码粘贴到 REPL 中执行，大大提升了调试效率。 1.4 更友好的错误提示 错误信息现在支持彩色显示，让问题定位更直观。如果不喜欢彩色显示，可以通过设置 PYTHON_COLORS=0 环境变量关闭。 2. GIL 终于可选了！ Python 3....",
+        "publish_time": "2025-02-28",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.13 登场：新交互式解释器、增强自由线程、实验性 JIT（发布时间：2024-10-08 09:11:06）",
+        "url": "https://new.qq.com/rain/a/20241008A01L4400",
+        "domain": "qq.com",
+        "site": "ref_3",
+        "snippet": "IT之家 10 月 8 日消息，Python 3.13 最新稳定版于昨日（10 月 7 日）正式发布，新版本继续改进错误消息，默认彩色高亮显示回溯信息，并引入了新的交互式解释器，是该编程语言的年度重磅更新。\nIT之家注：Python 3.13 更新原定于 10 月 1 日发布，不过由于性能回退方面的问题而延后 1 周时间发布。\n本次更新最值得关注的变化是引入了新的交互式解释器，基于 PyPy，支持多行编辑，保存历史记录以及丰富的颜色提示支持。\n此外新版本还在实验性自由线程（Free Threading）中去除了全局解释器锁（GIL），兼容在禁用全局解释器锁（GIL）的情况下运行，支持多核处理器。\n新版本还实验性地支持即时编译（JIT）编译器，进一步提升了执行效率，特别是在计算密集型任务中。\n团队原计划在 Python 3.13 中加入增量垃圾回收功能，但由于性能问题，该功能未能如期加入。开发团队决定维持现有的垃圾回收机制，以确保版本的稳定性，并计划在 Python 3.14 中重新考虑此功能。",
+        "publish_time": "2024-10-08",
+        "is_bytedance": false
+      },
+      {
+        "title": "python3.13无GIL自由线程新特性（发布时间：2025-03-27 18:26:12）",
+        "url": "https://blog.csdn.net/yqq1997/article/details/146567906",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "安装Python3.13.2\nhttps://www.python.org/downloads/\nWindows: 安装python3.13, 直接下载即可，在安装目录的\npython3.13t\n在\"Advanced Options\"下，确保选择“Download free-threaded binaries(experimental)”选项，然后点击“安装”\nUbuntu: 下载代码编译\n./configure --disable-gil --enable-optimizations\nmake\n# 会覆盖系统的python\nmake install\n# 或者， 不覆盖系统的python\nmake altinstall\n运行测试代码:\nimport threading\ndef f():\n while 1:\n pass\nfor i in range(16):\n threading.Thread(target=f).start()\n使用\npython3.13t\n或\npython3.13\n运行代码\npython3.13t test.py\n或\nPYTHON_GIL=0 python3.13 test.py\n或\npython3.13 -Xgil=0 test.py\n, 查看16核CPU的占用率100%\n如何没有设置\nPYTHON_GIL\n， 那么 python3.13默认是无GIL的\n对比p...",
+        "publish_time": "2025-03-27",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python正式发布年度大更新3.13.0：实验性支持no-GIL、性能起飞！（发布时间：2024-10-14 12:26:29）",
+        "url": "https://blog.csdn.net/weixin_53707653/article/details/142820318",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "Python 3.13.0 主要变化包括一个新的交互式解释器、对在自由线程模式（无全局解释锁，no-GIL）下运行的实验性支持 (PEP 703)，以及即时编译器 (PEP 744)。这些改进预计将带来性能的适度提升。\nPython 3.13.0 最新稳定版已于 10 月 7 日正式发布，对语言、实现和标准库进行了一系列更改。\n据称该版本原定于 10 月 1 日推出，但由于在特定工作负载中出现了“明显”的性能回归问题，最终导致推迟发布。\n性能回归问题由此前引入的增量循环垃圾收集器导致，正式版已将该功能回滚，Python 团队将在 Python 3.14 中重新考虑引入该功能。\nPython 3.13 带来了两项重大更新：全局解释器锁的可选禁用 (no-GIL) 和实验性的即时编译器 (JIT)。\nGIL 的移除可提高基于线程的并行处理能力，从而优化多线程程序的性能；JIT 编译器将 Python 代码编译为机器代码，以提高代码执行效率。\n这些改进预计会显著提升 Python 代码的性能，尤其是在 CPU 密集型任务上。\n下图是开发者针对 Python 3.12 和 3.13 的性能测试对比，可以看到 no-GIL 和 JIT 带来的性能提升。\n如上图所示，Python 3.13 在禁用 GIL 的自由线程模式下性能明显优于其他版本，这表明此版本的 Python 能够充分利用计算机上...",
+        "publish_time": "2024-10-14",
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 0.88
+  },
+  "baidu": {
+    "count": 8,
+    "results": [
+      {
+        "title": "Python 3.13 有什麼新功能",
+        "url": "https://docs.python.org/zh-tw/dev/whatsnew/3.13.html",
+        "domain": "python.org",
+        "snippet": "python 3.13 is a stable release of the python programming language, with a mix of changes to the language, the implementation and the standard library. the biggest changes include a new interactive interpreter , experimental support for running in a free-threaded mode ( pep 703 ), and a just-in-time compiler ( pep 744 ). error messages continue to improve, with tracebacks now highlighted in color by default. the locals() builtin now has defined semantics for changing the returned mapping, and type parameters now support default values. the library changes contain removal of deprecated apis and...",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.13正式版发布:去除全局解释器锁(GIL)和新的交互式解释器(REPL)",
+        "url": "https://cloud.tencent.com/developer/news/1762031",
+        "domain": "tencent.com",
+        "snippet": "Python 3.13最引人注目的变化之一是实验性地去除了全局解释器锁(Global Interpreter Lock, GIL)。GIL长期以来一直是Python在多线程性能方面的一个限制因素。通过引入\"自由线程\"(Free Threading)模式,Python现在可以在禁用GIL的情况下运行,充分发挥多核处理器的优势。 去除GIL的好处主要体现在: 提高多线程性能:不再受单一锁的限制,多个线程可以真正并行执行。 优化CPU密集型任务:特别是在科学计算、数据处理等领域,性能提升显著。 更好地利用多核处理器:可以充分发挥现代计算机硬件的潜力。",
+        "is_bytedance": false
+      },
+      {
+        "title": "【Python工程化实战】GIL-Free Python (3.13t) 前瞻与迁移准备",
+        "url": "https://blog.csdn.net/xiaoma0529/article/details/162211957",
+        "domain": "csdn.net",
+        "snippet": "随着Python3.13 的正式发布,CPython 引入了\"无锁 Python\"(Free-Threaded Python)模式的支持。这标志着 Python 在并发模型上的一次重大范式转变,从长期依赖全局解释器锁(GIL)转向真正利用多核 CPU 进行多线程并行计算。对于现有企业级项目和 C 扩展开发者而言,理解其兼容性、适配要点及迁移策略至关重要。 以下是对 Free-Threaded Python 的深度分析与迁移指南。 一、背景与核心价值 1.1 为什么需要 GIL-Free? 长期以来,GIL 导致 Python 多线程无法在CPU密集型任务中并行(受限于单核执行)。虽然 I/O 密集型任务受益于线程切换,但在处理大量 CPU 计算(如图像处理、科学计算、数据预处理)时,多核优势无法发挥。Free-Threaded 模式允许: CPU 并行:真正的 Python 代码多线程并行执行。 降低延迟:线程创建与调度成本大幅降低(无需等待 GIL 释放)。 架构简化:在某些场景下可替代多进程架构,减少 IPC 序列化开销。 1.2 运行模式:编译时选项,辅以运行时环境变量 在Python 3.13 中,GIL 默认保留以确保向后兼容。Free-Threaded 模式需要在编译时启用,但可通过运行时环境变量进行微调。 构建方式:必须在编译 CPython 时使用./configu...",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.13引入自由线程:提升性能的双刃剑",
+        "url": "http://mt.sohu.com/a/826615413_121798711",
+        "domain": "sohu.com",
+        "snippet": "其中,最引人注目的是自由线程(Free Threading)模式的引入,允许Python运行时在某些条件下禁用全局解释器锁(GIL),从而可能显著提升多线程程序的运行效率。然而,这一新特性在实际应用中是否会导致性能下降,仍然是开发者热议的话题。 自由线程的背景与意义 全局解释器锁(GIL)是影响Python多线程性能的瓶颈,尤其是在计算密集型任务中,多线程往往因GIL的存在而效能大打折扣。自由线程模式旨在解决这一问题,通过允许多个线程同时执行字节码,从而更有效地利用多核CPU的潜力。这一模式使得CPython 3.13在设计上能够支持并行计算,尤其适合大规模数据处理与计算密集型任务。 新特性的实际效果 根据测试,新版本的自由线程模式确实在特定场景下提升了性能。例如,在执行Google早期搜索引擎中使用的PageRank算法时,传统多处理(multiprocessing)方式面临内存开销大和进程间通信成本高的困境,而自由线程模式则允许更快的数据共享和计算。| 通过充分利用多核处理器,开发者能够实现显著的性能提升。 但自由线程模式也并非完美无缺。一些基准测试表明,在启用自由线程的情况下,与使用GIL的实现相比,其实际性能反而有所下降。这是因为,自由线程的实现需要关闭自适应解释器,使得在某些非并行场景中,性能可能受到影响。这一现象提醒开发者,在选择是否使用自由线程时,需根据具体应用场景进...",
+        "is_bytedance": false
+      },
+      {
+        "title": "python3.13无GIL自由线程新特性",
+        "url": "https://blog.csdn.net/yqq1997/article/details/146567906",
+        "domain": "csdn.net",
+        "snippet": "python3.13无GIL自由线程新特性 安装Python3.13.2 https://www.python.org/downloads/ Windows: 安装python3.13, 直接下载即可,在安装目录的python3.13t 在\"Advanced Options\"下,确保选择“Download free-threaded binaries(experimental)”选项,然后点击“安装” Ubuntu: 下载代码编译 ./configure --disable-gil --enable-optimizationsmake# 会覆盖系统的pythonmakeinstall# 或者, 不覆盖系统的pythonmakealtinstall AI写代码shell 1 2 3 4 5 6 7 8 运行测试代码: importthreadingdeff():while1:passforiinrange(16):threading.Thread(target=f).start() AI写代码python 1 2 3 4 5 6 7 8 9 使用python3.13t或python3.13运行代码python3.13t test.py或PYTHON_GIL=0 python3.13 test.py或python3.13 -Xgil=0 test.py, 查看16核CPU的占用率100...",
+        "is_bytedance": false
+      },
+      {
+        "title": "【Python 3.13实战进阶】:解锁全新模式匹配语法的7种高阶用法",
+        "url": "https://blog.csdn.net/ByteVein/article/details/156453425",
+        "domain": "csdn.net",
+        "snippet": "原生模式支持无 GIL 运行 实验性引入的“自由线程模式”(Free-threading mode)允许 Python 在多线程程序中绕过全局解释器锁(GIL),实现真正的并行执行。启用方式如下: # 编译时启用自由线程模式 ./configure --enable-free-threading make # 运行时指定模式 python -X freethreading script.py AI写代码 该模式适用于 I/O 密集型与计算密集型混合任务,但需注意第三方 C 扩展可能尚未兼容。",
+        "is_bytedance": false
+      },
+      {
+        "title": "终极指南:Python 3.13.0 Alpha 2新特性与快速上手教程",
+        "url": "https://blog.csdn.net/gitblog_00060/article/details/138651220",
+        "domain": "csdn.net",
+        "snippet": "预编译安装包 官方提供了Windows和macOS的预编译安装包,你可以在安装过程中选择\"free-threaded\"选项来体验无GIL模式。",
+        "is_bytedance": false
+      },
+      {
+        "title": "What's New In Python 3.13",
+        "url": "https://docs.python.org/fr/3.13/whatsnew/3.13.html",
+        "domain": "python.org",
+        "snippet": "Python 3.13 is the latest stable release of the Python programming language, with a mix of changes to the language, the implementation and the standard library. The biggest changes include a new interactive interpreter , experimental support for running in a free-threaded mode ( PEP 703 ), and a Just-In-Time compiler ( PEP 744 ). Error messages continue to improve, with tracebacks now highlighted in color by default. The locals() builtin now has defined semantics for changing the returned mapping, and type parameters now support default values. The library changes contain removal of deprecated...",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "",
+    "elapsed": 1.51
+  },
+  "gemini": {
+    "count": 15,
+    "results": [
+      {
+        "title": "medium.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF3NFuVOVmwiXIrQNSv2HrpAMXoVOVG8kYElST6OFP8kJgkaPDlteiukREfyqrRfi5iYcnAl7Y_IEFUMJQQriGdf9SKkDgf0FYZuIaaxH_eT48tFz7obmuDxVXOJbJPhxEfDh7YyCt0oSR0FHg9Ivm0eYO_1fDHL-MuDr4sRNuT8QhoIoiTjy192sQVo_9CETXCHv64FAi7FHFbiokR6cYaDIY9Fxi4gYEak4MkAZeWTe5f",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "codspeed.io",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH1TLlElUH6ZBhBDcQiQnHCYP4i3bcXRYI86nxUhZUN8TI-uw-w0ckqBY91tm1cV0xvQ5W3BaeJZiIaJHQkcBSbgFCgmA31au-HNlgIM0Cfu39CQDv0sdZXT4jqMB1ve4HeYLSm62MueujoLyplRbSsTdnkKZQzIj5YIRRuyQFDLgHsTA==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "python.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF6y-0dEbYSMc-AmY0hcp6Fohu_gLn0ESeLG1jtK4EAOk-Y1VuF4svQsC_4JTiyRqowZUoMtYwzgJRtFls0L6aKBBfGIcI0_kcZQJaAYCEStiMkP9J1oCvURwtAmT8NYH_KbvMdPegc",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "wearecommunity.io",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF9JZeEFet4yF_q_55BhxWmITgAZyMHMhrs3820Scydvtx0-ulNG_uZYxw_84Wumecb7nH2yIZatK_Ma6-THEZWFVDA_NO7uS1v-EfrxNg1RN0lp4VpaFbVSX3JktW7Us3Do2cGDWhWM4HAF5nOYjoJZl52VxDdb9LurA==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "dev.to",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH_FFVAVDfuLabPsoVoUp-ocP0jjIVttBeQZrTLH1ZRaLL-R7c3jnYc1yojXxpeBlREK8KF5oQ98rjrNjEXm_hVFJ9prmWQD0tiNBTYmU42XjOasymhRV208SH-XSe34SiAOyc7GEq805OZqfsyvROTNP7HR6F_gST246eU3w==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "jetbrains.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVQkZAw1DznIKEIz0W_SCdK9Hv8LUF4k3IXL2R1vA0SHYaGRKug8JZjZzkJir5pcWu-og85A4RNJilzSlW-3y1G6J10arYzURxNZYLUBruJZXXWYJoVUsjYahdMgh7FDEVGlDpILdZsH4_u-7Plxflij1PinCflGnsusK1kQFViAQmNdaI3cx7Q3eunAOfQhRijJKHrINAyBtqQNFCDCKiBg==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "realpython.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSGVcrDem_D6aoKZayh4K6hycV0cBGtNyx_oqR1CEjEHASpUZuFYeUV5g-1jXjRccCQW5PcZ-A5fhqdZCg69nM0-gMzM_mxTKcYxOxL9YE-kd7vKkefBZBaOFbK2cE599S-UUD5L0cGALuaT2I7BA=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "medium.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGLAmn9MLgwTrPSzzfNwOap5OaPKZMTVu1OolqQuYhtdXBd1gS_hQwVR3vkOmCP2EXyZk3bh9tlLpyzaAbFXKS4VoYlT9RxAW4yUtwv4CA9vEGVHi9FqY7pq21Dej8ECYLrjW6CIY594iASzCISVgipvPqFQjVL7qI2r7EPaXnRJA==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "qq.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGDCjqXFDKjvnnSOJz6Izr9DOGV-yTC_nsP6LHDTfoiGHjBs-RypSA9k119Qi9EGgr7X52jds6FEKHl9BuETC2b_ifMaNeJvwF0XBxIphp02S8NX85y3bQfpARTDwhDlViHwvvpMy4=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "python.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHvSKlBC8axT7TcuzFiTH2HY_dcXS-G3Z3zVhDCr4AthuquUb-hADSFcPuVIZ-2Hp_s9UI1f1nIPMKZJsEdVJ0UPYUE6kH8kwKBC9hKkn7R2UaVfPnblsRFT0Zo0NCqGa6KIu1KTmVE-xOM7vxY8KdcRaMyAnQ=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "python.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSt8_GwRYH1i9Y8EgepOBdiNHho-6_C1gCBZfBVq8dtlra94NjhJHqeozTKKz0EvwGqKwHcEFQqYeYYk61JIKs7SwK8rSugV0datHmmJk1YnFu1eriWiRUjOG8SG9fQhU9twv-Q04DSKfDyZTprJYYef0b4kEGGG0ITyp2qQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "python.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHt5hGHx60Tb17BmXgB_xVZxMm9dnygEznesPKjbRUbZ9wM1L19TncbKVawwdHIrcyRDTlfGy7QWk8S5Zxgq7Ag51CzZtNqJoMFbAHQLM-2Vu7q4YaJfIyIFqPYOHewuM2XcgmVmj5a2BC2itXAESjkfAZyPpatIu_mJONuuBU=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "pycascades.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9_hSHGn-7fN6iig2Yta5SYbBarco1JVXJX0HivIdCzUtt2HGWQd-yg_XQuFVozDuJbDn-N1Ywz2fNeiZX9T7aXyKaclkXKmnsXOsgACZtaSDnw1V1qdmsh5DrIUSs5vNpXaITwb4P2LSAtiI7pSLnGQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "myapollo.com.tw",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0HSFsz5WUTVF0mmLJvaXsz4nDC9gkameX4P5fIFdsc2yPHN8Ozfq38N8zmZVaJ7CZA-56I1HYrvjXExs76I0obJZMSz5T6NsiwRkkdkCpB17-t8_cgdQo_z_ymG4TwjF9iGynKD8k0JKCz7wVzXG0jkQ=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "dev.to",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEi4LkWqoWh73XPCMCTQc1emTMGHsNwe-rWG8AkYZyIBn09EwEAVICqQTCg2806Uhp6y4Xbc13ZYh_qV9pXMky3HEaLjgPmFGxOV8yWc4fz0ujLLeR8ljc93NEeXv3KoOezzc4QSut_ZobTFtwvUYyW7iMaC0GTLeyHTDBSe61JNKKP",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "Python 3.13 引入了一项名为“自由线程”（Free Threading）的实验性新特性，该特性允许 CPython 解释器在禁用全局解释器锁（Global Interpreter Lock, GIL）的情况下运行。这是 Python 在多线程性能方面的一个重大进步，因为 GIL 长期以来一直是限制 Python 利用多核处理器并行执行任务的瓶颈。\n\n**自由线程（Free Threading）的主要新特性包括：**\n\n*   **可选的 GIL：** Python 3.13 仍然默认启用 GIL，但提供了“自由线程”模式，可以选择禁用 GIL。这意味着开发者需要显式地构建或安装支持自由线程的版本才能使用此功能。\n*   **真正的并行执行：** 禁用 GIL 后，多个线程可以真正地在不同的 CPU 核心上并行执行，从而显著提高 CPU 密集型任务的性能。这对于科学计算、数据分析和机器学习等领域尤其有利。\n*   **性能提升：** 在禁用 GIL 的情况下，多线程任务的执行速度可以得到大幅提升，有时甚至可以达到数倍的增长。\n*   **安装和使用：** 从 Python 3.13 开始，官方的 macOS 和 Windows 安装程序会可选地支持安装自由线程的 Python 二进制文件。用户也可以通过从源代码编译 CPython 时使用 `--disable-gil` 选项来构建自由线程版本。\n*   **兼容性考虑：** 自由线程模式是实验性的，并且并非所有第三方库都已完全准备好支持。一些 C 扩展模块可能需要更新才能与自由线程模式兼容，否则在导入时可能会重新启用 GIL 并发出警告。\n*   **线程安全：** 在自由线程模式下，尽管内置类型（如 `dict`、`list` 和 `set`）会使用内部锁来防止并发修改，但开发者需要更加注意手动管理线程安全，以避免竞态条件。\n\n**重要提示：**\n\n*   自由线程模式目前仍处于实验阶段，可能会存在一些 bug，并且单线程性能可能会受到影响。\n*   Python 官方计划分阶段推广此功能，从实验阶段逐步过渡到最终默认启用。\n*   要检查当前解释器是否支持自由线程，可以查看 `sys.version` 是否包含“experimental free-threading build”，或使用 `sys._is_gil_enabled()` 函数来判断 GIL 是否已被禁用。\n\n**参考来源：**\n\n*   GIL Becomes Optional in Python 3.13: A Game-Changer for Multithreading! - Medium\n*   State of Python 3.13 Performance: Free-Threading - CodSpeed\n*   Python support for free threading — Python 3.14.6 documentation\n*   Goodbye GIL: Exploring the Free-threaded mode in Python 3.13 - PyCascades 2025\n*   Python 3.13正式版发布:去除全局解释器锁(GIL)和新的交互式解释器(REPL) - QQ News\n*   Python 3.13 距離解除GIL 封印又更近一步了！ - MyApollo\n*   Faster Python: Unlocking the Python Global I...",
+    "elapsed": 18.46
+  }
+}

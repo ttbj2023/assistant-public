@@ -1,0 +1,174 @@
+# Ruff完整模式配置 - 2025年AI/ML项目业界最佳实践
+# 基于Ruff 0.14.6最新特性，接近顶级项目代码质量标准
+
+line-length = 88
+target-version = "py312"
+fix = false  # 静态分析只读(探索模式), 修复由显式命令承担
+preview = true  # 启用所有preview特性
+
+[lint]
+# 2025年业界顶级项目精选规则集 - 追求卓越代码质量
+select = [
+    # 基础错误检查 - 捕获所有潜在问题
+    "E", "W", "F",      # 语法错误和逻辑问题
+    "I",               # 导入排序和优化
+
+    # 代码现代化 - 保持技术先进性
+    "UP",              # pyupgrade - 现代化Python语法
+    "C4",              # 推导式优化
+    "SIM",             # 代码简化和可读性提升
+
+    # 高质量代码检查 - 业界标准
+    "B",               # flake8-bugbear - 捕获常见错误和陷阱
+    "RET",             # 返回值检查和优化
+    "Q",               # 引号一致性
+    "PTH",             # pathlib现代化
+    "A",               # flake8-builtins - 避免内置函数覆盖
+
+    # 代码质量增强 - 2025年重点
+    "PIE",             # flake8-pie - Python代码改进建议
+    "T20",             # flake8-print - print语句检查（调试残留检测）
+    "ERA",             # eradicate - 移除注释掉的代码
+    "PL",              # Pylint精选规则 - 代码质量全面检查
+
+    # Ruff特定规则 - 2025年完整版
+    "RUF",             # Ruff所有高质量规则
+
+    # 类型检查集成
+    "TCH",             # flake8-type-checking - 类型检查导入优化
+
+    # 项目特定规则 - 完整版
+    "PD",              # pandas使用规范
+    "NPY",             # numpy使用规范
+    "DJ",              # Django规则（如需要）
+
+    # 与核心模式保持一致, 避免完整模式下 RUF100 误判 ARG 的 noqa 为 unused
+    "ARG",             # 未使用参数检查
+
+    # 并发安全 - async函数中的阻塞调用检测 (FastAPI项目高价值)
+    "ASYNC",           # async函数中同步阻塞操作
+]
+
+# 2025年扩展规则 - 完整版（基础验证规则）
+extend-select = [
+    # Ruff核心规则（基础验证）
+    "RUF039",  # useless-else-if-return - 逻辑优化
+    "RUF048",  # map-int-version-parsing - 版本解析优化
+    "RUF022",  # unsorted-dupe-keys - 数据一致性
+    "RUF023",  # unsorted-dict-items - 代码可读性
+    "RUF100",  # unused-noqa - 未使用的noqa注释
+]
+
+# 完整模式精简忽略规则 - 仅保留必要的AI项目适配
+# 移除的 ignore 规则作为改进信号继续报告: PLR2004/PLR0912/PLR0911/T203/S101/ERA001
+ignore = [
+    # 项目特色支持
+    "RUF002", "RUF003",  # 中文标点符号支持（注释和文档）
+
+    # AI/ML项目合理容忍
+    "E501",             # 长行容忍（AI表达式和链式调用常很长）
+    "PLR0913",          # 参数数量（AI函数常需要多参数）
+    "PLR0915",          # 语句数量（复杂AI逻辑合理，已有同类 PLR0914 在报）
+
+    # 数据处理模式
+    "PLW2901",          # 复杂返回值的循环变量（AI数据处理常见）
+
+    # 并发检查适配 - timeout参数是httpx生态惯用法, 非阻塞隐患
+    "ASYNC109",         # async函数带timeout参数 (设计建议, 非bug, 与230/240真隐患区分)
+]
+
+[lint.mccabe]
+max-complexity = 10  # 完整模式稍严格，但为AI项目适度放宽
+
+[lint.per-file-ignores]
+# 测试文件：适度宽松，确保功能完整性
+"tests/**/*.py" = [
+    "E501",      # 长行容忍
+    "PLR0913",   # 测试函数参数可以多
+    "PLR2004",   # 测试中可以使用魔数
+    "ARG",       # 测试函数可能有未使用参数
+    "PLR0915",   # 测试逻辑可能复杂
+    "T203",      # 测试中可以使用pprint
+    "S101",      # 测试中使用assert合理
+]
+
+# 脚本文件：实用优先，适当宽松
+"scripts/**/*.py" = [
+    "E501",      # 脚本中长行常见
+    "E402",      # sys.path操作导致import不在顶部(脚本惯例)
+    "PLR0915",   # 脚本逻辑可能复杂
+    "PLR2004",   # 脚本中魔数常见
+    "T203",      # 脚本中使用print输出合理
+    "S101",      # 脚本中的assert用于验证
+    "ARG",       # CLI入口函数常有未使用参数(与核心模式保持一致)
+]
+
+# 配置文件：最宽松
+"config/**/*.py" = [
+    "E501",      # 配置文件长行常见
+    "PLR2004",   # 配置中魔数合理
+]
+
+# 文档生成文件：特殊处理
+"docs/**/*.py" = [
+    "E501",      # 文档长行常见
+    "PLR2004",   # 文档示例魔数
+]
+
+# 性能和安全增强配置 - 特殊模块的安全检查排除
+"src/**/*test*.py" = ["S101", "S102"]  # 测试文件允许assert和exec
+
+# 特定文件的有意Unicode/FastAPI模式豁免
+"src/tools/internal/wechat_publish/converter.py" = ["RUF001"]  # LaTeX→Unicode映射表
+"src/auth/middleware.py" = ["B008"]  # FastAPI Depends标准模式
+"src/api/fastapi_app.py" = ["RUF029"]  # FastAPI异常处理器需要async签名
+"src/core/cache/simple_cache.py" = ["A002"]  # LangChain接口签名(input)
+"src/storage/langchain_vector_store.py" = ["A002"]  # LangChain接口签名(filter)
+"src/tools/mcp/mcp_tool_manager.py" = ["PLC2801"]  # MCP Client手动生命周期管理
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# 2025年增强的导入排序配置
+[lint.isort]
+split-on-trailing-comma = true
+force-single-line = false
+single-line-exclusions = ["typing", "collections.abc"]
+required-imports = ["from __future__ import annotations"]
+
+
+# 完整模式特有配置
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-type-checking]
+strict = true  # 完整模式启用严格类型检查
+runtime-evaluated-base-classes = [
+    "typing.Type",
+    "typing.Protocol",
+    # 字段注解在运行时被解析为数据库列 / 校验规则
+    "pydantic.BaseModel",
+    "sqlmodel.SQLModel",
+]
+runtime-evaluated-decorators = [
+    # FastAPI 路由装饰器：签名在运行时被解析为依赖注入和请求处理
+    "fastapi.APIRouter.get",
+    "fastapi.APIRouter.post",
+    "fastapi.FastAPI.post",
+]
+
+[lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+
+# 新增的2025年规则配置
+[lint.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+# 文档字符串检查（完整模式启用）
+[lint.pydocstyle]
+convention = "google"  # Google风格文档字符串
+ignore-decorators = ["overload", "property"]

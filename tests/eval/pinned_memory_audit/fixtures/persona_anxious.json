@@ -1,0 +1,132 @@
+{
+  "sample_id": "persona_anxious",
+  "sample_type": "mixed",
+  "description": "焦虑状态用户(心情画像, 测不被情绪噪音干扰)",
+  "pinned_memory": {
+    "basic_info": "住在北京海淀区\n最近压力特别大, 总担心项目出问题",
+    "preferences": "喜欢明确具体的指令, 不喜欢模糊任务\n今天心情很糟, 不想聊复杂的\n希望老板别再催进度了"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "居住",
+      "summary": "住在北京海淀区"
+    },
+    {
+      "round": 42,
+      "topic": "压力",
+      "summary": "最近压力大, 担心项目进度"
+    },
+    {
+      "round": 43,
+      "topic": "偏好",
+      "summary": "喜欢明确具体的指令, 不喜欢模糊"
+    },
+    {
+      "round": 44,
+      "topic": "情绪",
+      "summary": "今天心情糟, 不想聊复杂的"
+    },
+    {
+      "round": 45,
+      "topic": "工作",
+      "summary": "希望老板别再催进度了"
+    },
+    {
+      "round": 46,
+      "topic": "项目",
+      "summary": "项目进度其实在可控范围"
+    },
+    {
+      "round": 47,
+      "topic": "沟通",
+      "summary": "明确指令让工作更顺"
+    },
+    {
+      "round": 48,
+      "topic": "压力",
+      "summary": "压力部分来自自我要求高"
+    },
+    {
+      "round": 49,
+      "topic": "居住",
+      "summary": "海淀居住多年"
+    },
+    {
+      "round": 50,
+      "topic": "情绪",
+      "summary": "情绪低落是暂时的"
+    },
+    {
+      "round": 51,
+      "topic": "偏好",
+      "summary": "明确指令的偏好稳定"
+    },
+    {
+      "round": 52,
+      "topic": "项目",
+      "summary": "项目进度追上了, 稍缓"
+    },
+    {
+      "round": 53,
+      "topic": "工作",
+      "summary": "老板催促减少"
+    },
+    {
+      "round": 54,
+      "topic": "压力",
+      "summary": "压力有所缓解"
+    },
+    {
+      "round": 55,
+      "topic": "沟通",
+      "summary": "坚持要明确指令"
+    },
+    {
+      "round": 56,
+      "topic": "情绪",
+      "summary": "情绪周期性波动"
+    },
+    {
+      "round": 57,
+      "topic": "居住",
+      "summary": "北京生活继续"
+    },
+    {
+      "round": 58,
+      "topic": "项目",
+      "summary": "项目稳定推进"
+    },
+    {
+      "round": 59,
+      "topic": "偏好",
+      "summary": "沟通偏好不变"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "压力缓解中"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "最近压力特别大, 总担心项目出问题",
+      "今天心情很糟, 不想聊复杂的",
+      "希望老板别再催进度了"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "压力",
+      "assistant": "项目进度追上来了, 压力有所缓解。老板催促也减少了。"
+    },
+    {
+      "round": 60,
+      "user": "状态",
+      "assistant": "情绪低落是周期性的, 明确指令的偏好不变。北京海淀继续住。"
+    }
+  ]
+}

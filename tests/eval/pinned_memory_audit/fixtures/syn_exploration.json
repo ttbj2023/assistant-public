@@ -1,0 +1,132 @@
+{
+  "sample_id": "syn_exploration",
+  "sample_type": "positive",
+  "description": "探索意图(未确定), 测召回; 穿插已采纳偏好作对照",
+  "pinned_memory": {
+    "basic_info": "姓名：王五",
+    "preferences": "已采用Python作为主力语言\n考虑学习Rust语言\n打算明年搬家到杭州\n在评估是否换工作\n偏好远程工作"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "技术栈",
+      "summary": "确认Python作为主力语言多年, 熟悉生态"
+    },
+    {
+      "round": 42,
+      "topic": "学习考虑",
+      "summary": "提到考虑学习Rust, 但还没下定决心"
+    },
+    {
+      "round": 43,
+      "topic": "搬家",
+      "summary": "说明年可能搬家到杭州, 还在看机会"
+    },
+    {
+      "round": 44,
+      "topic": "职业",
+      "summary": "在评估是否换工作, 目前还在观望"
+    },
+    {
+      "round": 45,
+      "topic": "工作方式",
+      "summary": "明确偏好远程工作, 不喜欢通勤"
+    },
+    {
+      "round": 46,
+      "topic": "Python",
+      "summary": "用Python完成了一个数据分析项目"
+    },
+    {
+      "round": 47,
+      "topic": "Rust",
+      "summary": "又聊到Rust, 觉得学习曲线陡, 暂缓"
+    },
+    {
+      "round": 48,
+      "topic": "杭州",
+      "summary": "查了杭州的房价和就业情况, 还在权衡"
+    },
+    {
+      "round": 49,
+      "topic": "换工作",
+      "summary": "看了几个职位, 觉得时机不对, 决定再等等"
+    },
+    {
+      "round": 50,
+      "topic": "远程",
+      "summary": "确认当前工作支持部分远程, 比较满意"
+    },
+    {
+      "round": 51,
+      "topic": "技术",
+      "summary": "讨论了Python的几个新特性"
+    },
+    {
+      "round": 52,
+      "topic": "学习",
+      "summary": "Rust学习计划搁置, 优先当前项目"
+    },
+    {
+      "round": 53,
+      "topic": "生活",
+      "summary": "聊了聊居住城市的优劣"
+    },
+    {
+      "round": 54,
+      "topic": "职业",
+      "summary": "暂时不考虑换工作了, 先稳定"
+    },
+    {
+      "round": 55,
+      "topic": "习惯",
+      "summary": "坚持远程工作的方式"
+    },
+    {
+      "round": 56,
+      "topic": "Python",
+      "summary": "继续用Python做主力开发"
+    },
+    {
+      "round": 57,
+      "topic": "Rust",
+      "summary": "今年不学Rust了, 精力不够"
+    },
+    {
+      "round": 58,
+      "topic": "搬家",
+      "summary": "搬家计划推迟到后年"
+    },
+    {
+      "round": 59,
+      "topic": "工作",
+      "summary": "对现状比较满意, 不主动找机会"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "近期以稳定为主, 探索的事都暂缓"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "考虑学习Rust语言",
+      "打算明年搬家到杭州",
+      "在评估是否换工作"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "Rust还学吗",
+      "assistant": "今年不学Rust了, 精力不够。搬家计划推迟到后年, 换工作暂时不考虑, 对现状满意。"
+    },
+    {
+      "round": 60,
+      "user": "近期规划",
+      "assistant": "继续以Python为主力, 坚持远程工作方式, 之前考虑的探索都暂缓。"
+    }
+  ]
+}

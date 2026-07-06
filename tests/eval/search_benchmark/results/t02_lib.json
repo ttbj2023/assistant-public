@@ -1,0 +1,123 @@
+{
+  "query": "Pydantic v2 BaseModel model_config 配置",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Configuration - Pydantic",
+        "url": "https://docs.pydantic.dev/2.8/concepts/config/",
+        "domain": "pydantic.dev",
+        "site": "Pydantic",
+        "snippet": "Configuration\nBehaviour of Pydantic can be controlled via the BaseModel.model_config, and as an argument to TypeAdapter .\nNote\nBefore v2.0 , the Config class was used. This is still supported, but deprecated.\nfrom pydantic import BaseModel, ConfigDict, ValidationError\nclass Model(BaseModel):\n\n    model_config = ConfigDict(str_max_length=10)\n\n    v: str\ntry:\n\n    m = Model(v='x' * 20)\nexcept ValidationError as e:\n\n    print(e)\n\"\"\"\n1 validation error for Model\nv\nString should have at most 10 characters [type=string_too_long, input_value='xxxxxxxxxxxxxxxxxxxx', input_type=str]\n\"\"\"\nAlso, you can s...",
+        "publish_time": "2026-04-04T14:40:22+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Configuration",
+        "url": "https://docs.pydantic.dev/2.10/concepts/config/",
+        "domain": "pydantic.dev",
+        "site": "Pydantic",
+        "snippet": "Configuration with dataclass from the standard library or TypedDict\nConfiguration\nBehaviour of Pydantic can be controlled via the BaseModel.model_config, and as an argument to TypeAdapter .\nNote\nBefore v2.0 , the Config class was used. This is still supported, but deprecated.\nfrom pydantic import BaseModel, ConfigDict, ValidationError\nclass Model(BaseModel):\n\n    model_config = ConfigDict(str_max_length=10)\n\n    v: str\ntry:\n\n    m = Model(v='x' * 20)\nexcept ValidationError as e:\n\n    print(e)\n\"\"\"\n1 validation error for Model\nv\nString should have at most 10 characters [type=string_too_long, inp...",
+        "publish_time": "2025-01-03T16:08:12+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Python_Pydantic_v2数据验证实战",
+        "url": "https://blog.csdn.net/Crown_22/article/details/161145274",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "1.2 v2的新特性一览from pydantic import BaseModel, Field, ConfigDictfrom typing import Annotated# v2的新语法class Product(BaseModel):# 使用model_config代替Config内部类model_config = ConfigDict(str_strip_whitespace=True,  # 自动去除字符串首尾空格validate_default=True,      # 验证默认值frozen=False,               # 是否不可变（v1叫allow_mutation）)name: Annotated[str, Field(min_length=1, max_length=100)]price: Annotated[float, Field(gt=0)]  # gt=大于0description: str = \"\"",
+        "publish_time": "2026-05-16T17:30:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9545749425888062,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Pydantic v2 入门教程：模型、字段、验证器",
+        "url": "https://cloud.tencent.cn/developer/article/2687599",
+        "domain": "tencent.cn",
+        "site": "腾讯云",
+        "snippet": "Pydantic v2 入门教程：模型、字段、验证器deephub发布于 2026-06-12 17:23:41本问将覆盖 API 的每个核心部分：定义模型、约束字段、写验证器、组合嵌套结构、控制序列化。所有示例基于 Pydantic v2  和 Python  3.10+，每个清单完整可运行。用 BaseModel 定义模型Pydantic 的核心就是 BaseModel 。继承 BaseModel，用注解声明字段。Pydantic 在类创建时检查注解、构建校验 schema，每次实例化时用它。无默认值的就是必填。有默认值或声明为 T | None  且默认 None  的就是可选。代码语言：javascriptfrom pydantic import BaseModelclass Address(BaseModel):street: strcity: strstate: strzip_code: strcountry: str = \"US\"           # 可选，默认 \"US\"",
+        "publish_time": "2026-06-12T17:23:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.935135006904602,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "Pydantic的BaseModel里Config类到底能干啥？怎么用它定制模型行为？",
+        "url": "https://wenku.csdn.net/answer/3bjtf4anok3c",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "Pydantic的BaseModel里Config类到底能干啥？怎么用它定制模型行为？\n时间: 2026-04-02 07:35:39 AIGC 浏览: 27\nPydantic BaseModel通过内部嵌套的Config类统一控制模型全局行为，包括字段别名映射、大小写敏感性、额外字段处理（ignore/allow/forbid）、ORM集成（from_attributes）、JSON序列化规则（_encoders）、赋值时验证（validate_assignment）等。Config类支持细粒度配置，如allow_population_by_field_name启用别名填充，alias_generator自动转换字段命名风格，case_sensitive控制键名匹配宽松度。实际应用中常用于前后端字段格式适配、数据库对象转换及API响应定制。需注意Pydantic v1与v2在配置项命名（如orm_mode→from_attributes）和继承机制上的差异。\n核心问题解构\n您的问题可以拆解为两层：\n确定语境：关键词 BaseModel  和 config  可能指向多种技术框架。\n解析具体需求：config 在此处通常指数据模型的配置选项或框架层面的配置方法。鉴于提供的参考资料，我们将聚焦于 Pydantic BaseModel 的配置，因其在数据处理领域最常用也最相关。\n方案推...",
+        "publish_time": "2026-04-02T07:35:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9344472885131836,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "from pydantic import basemodel, configdict（发布时间：2024-08-29 17:10:02）",
+        "url": "https://blog.csdn.net/jimn2000/article/details/141683543",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "在这\nPydantic 是一个流行的 Python 库，用于数据验证和设置管理。\nBaseConfig\n是 Pydantic 模型配置的基类，允许用户定制模型的行为和验证规则。以下是一些关于\nBaseConfig\n的具体使用示例：\n基本配置：可以通过\nBaseModel.model_config\n控制 Pydantic 的行为，也可以作为参数传递给\nTypeAdapter\n。例如，设置字符串的最大长度：\nfrom pydantic import BaseModel, ConfigDict, ValidationError\nclass Model(BaseModel):\n model_config = ConfigDict(str_max_length=10)\n v: str\ntry:\n m = Model(v='x' * 20)\nexcept ValidationError as e:\n print(e) # 将显示字符串长度错误信息\n引用：\n指定配置选项：配置选项可以作为模型类 kwargs 指定，例如禁止额外字段：\nfrom pydantic import BaseModel, ValidationError, Extra\nclass Model(BaseModel, extra=Extra.forbid):\n a: str\ntry:\n Model(a='spam', b='o...",
+        "publish_time": "2024-08-29",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Pydantic v2 入门教程：模型、字段、验证器（发布时间：2026-06-10 21:59:34）",
+        "url": "",
+        "domain": "",
+        "site": "ref_2",
+        "snippet": "点击上方“Deephub Imba”,关注公众号,好文章不错过 ! 本问将覆盖 API 的每个核心部分：定义模型、约束字段、写验证器、组合嵌套结构、控制序列化。所有示例基于 Pydantic v2 和 Python 3.10+，每个清单完整可运行。 用 BaseModel 定义模型 Pydantic 的核心就是 BaseModel。继承 BaseModel，用注解声明字段。Pydantic 在类创建时检查注解、构建校验 schema，每次实例化时用它。 无默认值的就是必填。有默认值或声明为 T | None 且默认 None 的就是可选。 from pydantic import BaseModel class Address(BaseModel): street: str city: str state: str zip_code: str country: str = \"US\" # 可选，默认 \"US\" apartment: str | None = None # 可选，默认 None addr = Address( street=\"123 Main St\", city=\"Springfield\", state=\"IL\", zip_code=\"62704\", ) print(addr) # street='123 Main St' city='Springfield' stat...",
+        "publish_time": "2026-06-10",
+        "is_bytedance": false,
+        "source_type": "无URL"
+      },
+      {
+        "title": "Pydantic系列之ModelConfig（发布时间：2023-08-18 15:54:18）",
+        "url": "https://zhuanlan.zhihu.com/p/650618511",
+        "domain": "zhihu.com",
+        "site": "ref_3",
+        "snippet": "在2.0之前，配置项在model类的class Config中编写，2.0之后，使用model_config=ConfigDict(**kwagrs)。创建自己的Model父类，所有model继承该类。 关于ConfigDict的参数见文档或者源码子类和父类的model_config会合并。Python变量规范蛇形命名法为主，而Java，前端是驼峰命名法，数据库也推荐蛇形命名法。在Java后端中，一般将数据库查出的蛇形字段转换为驼峰命名法，Python使用蛇形命名法，但数据返回前端需要转换成驼峰命名。在model_config中设置alias_generator为驼峰，populate_by_name为True，Field不设置alias，同时重写model_dump设置by_alias为True，可以满足后台蛇形命名，返回数据驼峰命名的需求。对传入的多余的属性，有三种处理方法。 - ignore，忽略。 - forbid，抛出异常。 - allow，保留。默认情况下Model只有在创建时会进行数据校验，后续的赋值不会再校验，如需要，设置validate_assignment=True每次修改后校验。对象只有初始化时会执行校验，当作为另一个对象的属性时，不会对其属性再次进行校验，参考以下代码。user实例化之后修改属性，由于没有设置validate_assignment，不会进行校...",
+        "publish_time": "2023-08-18",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Pydantic：默认配置模式的作用（发布时间：2025-04-30 00:22:17）",
+        "url": "https://blog.csdn.net/xuukai/article/details/147622105",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "1. 默认配置模式的定义与作用\n默认配置模式是 Pydantic 模型中用于控制数据解析、验证和序列化行为的核心设置。其核心作用包括：\nORM 兼容性：允许从 ORM 对象（如 SQLAlchemy 模型实例）直接创建 Pydantic 模型实例，通过读取对象的属性而非字典键。\n灵活初始化：支持通过非字典类型（如 ORM 对象）初始化模型，简化数据库查询结果到 API 响应模型的转换流程。\n性能优化：在 V2 中，因底层用 Rust 重写，\nfrom_attributes\n的性能显著提升，同时减少潜在错误。\n2. V1 与 V2 的默认配置模式区别\nPydantic V1 和 V2 在配置模式上的主要差异体现在 参数名称 和 配置语法 上：\n特性\nPydantic V1\nPydantic V2\n配置参数名\norm_mode = True\nfrom_attributes = True\n配置语法\n通过\nConfig\n子类定义\n通过\nmodel_config\n字典定义\n底层实现\n基于 Python 逻辑实现\n核心逻辑用 Rust 重写，性能提升 5-50 倍\n兼容性\n支持\nfrom_orm\n方法\nfrom_orm\n已弃用，改用\nmodel_validate\n3. 具体代码示例对比\nV1 语法：\nfrom pydantic import BaseModel\nclass UserV1(Bas...",
+        "publish_time": "2025-04-30",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "[python开发]pydantic中BaseModel的model（发布时间：2024-03-06 13:47:53）",
+        "url": "https://zhuanlan.zhihu.com/p/685542151",
+        "domain": "zhihu.com",
+        "site": "ref_5",
+        "snippet": "在 Pydantic 的 BaseModel 中，model_config 是一个类属性，它允许您为模型配置一些特定的行为。这个属性是一个 ConfigDict 类型的实例，您可以在其中设置各种配置选项，以改变模型的默认行为。这些配置选项可以在模型定义时设置，并且会影响所有该模型的实例。以下是一些常用的 model_config 配置选项及其用途：这些配置选项提供了对 Pydantic 模型行为的细粒度控制，使您能够根据应用程序的特定需求定制模型的行为。在模型定义中，您可以这样设置 model_config：",
+        "publish_time": "2024-03-06",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

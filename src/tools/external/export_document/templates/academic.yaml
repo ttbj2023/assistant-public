@@ -1,0 +1,85 @@
+# 学术论文模板
+# 适用于: 毕业论文、学术报告、研究论文
+
+fonts:
+  default: "SimSun, Noto Serif CJK SC, Times New Roman, serif"
+  heading: "SimHei, Noto Sans CJK SC, Arial, sans-serif"
+  code: "Noto Sans Mono CJK SC, Consolas, Courier New, monospace"
+  western: "Times New Roman, serif"
+
+font_sizes:
+  body: 12
+  h1: 22
+  h2: 16
+  h3: 14
+  h4: 13
+  h5: 12
+  h6: 12
+  caption: 10.5
+
+colors:
+  text: "#000000"
+  heading: "#000000"
+  link: "#0000FF"
+  table_border: "#000000"
+  table_header_bg: "#f0f0f0"
+  table_zebra: "#fafafa"
+  code_bg: "#f5f5f5"
+  blockquote_bg: "#fafafa"
+  blockquote_border: "#999999"
+  blockquote_text: "#333333"
+
+spacing:
+  line_height: 1.5
+  paragraph_before: 0
+  paragraph_after: 0
+  first_line_indent: "2em"
+
+margins:
+  top: "2.54cm"
+  bottom: "2.54cm"
+  left: "3.17cm"
+  right: "3.17cm"
+
+headings:
+  h1:
+    align: center
+    margin_top: "24pt"
+    margin_bottom: "18pt"
+  h2:
+    margin_top: "18pt"
+    margin_bottom: "12pt"
+  h3:
+    margin_top: "14pt"
+    margin_bottom: "6pt"
+  h4:
+    margin_top: "12pt"
+    margin_bottom: "6pt"
+
+tables:
+  border_collapse: true
+  border_color: "#000000"
+  border_width: "1px"
+  cell_padding: "4pt"
+  header_bg: "#f0f0f0"
+  zebra: false
+  font_size: 10.5
+
+code_blocks:
+  background: "#f5f5f5"
+  border: "1px solid #ddd"
+  border_left: "3px solid #999"
+  padding: "10px"
+  font_size: 10
+  line_height: 1.4
+
+blockquotes:
+  border_left: "3px solid #999"
+  background: "#fafafa"
+  padding: "8px 12px"
+  color: "#333"
+
+page_break:
+  h1_break_after: avoid
+  h2_break_after: avoid
+  table_break_inside: avoid

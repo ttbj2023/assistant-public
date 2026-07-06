@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_retiree",
+  "sample_type": "mixed",
+  "description": "退休老人(老年画像, 含用药史难点)",
+  "pinned_memory": {
+    "basic_info": "68岁, 退休工人\n有高血压和轻度糖尿病, 每日服用缬沙坦和二甲双胍\n老伴三年前过世, 目前独居\n昨天去社区医院量了血压, 偏高",
+    "preferences": "每天早晨在公园打太极拳\n希望社区多组织老年人活动"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "健康",
+      "summary": "68岁, 高血压和轻度糖尿病, 每日服药"
+    },
+    {
+      "round": 42,
+      "topic": "家庭",
+      "summary": "老伴三年前过世, 目前独居"
+    },
+    {
+      "round": 43,
+      "topic": "运动",
+      "summary": "每天早晨在公园打太极拳"
+    },
+    {
+      "round": 44,
+      "topic": "血压",
+      "summary": "昨天去社区医院量血压, 偏高"
+    },
+    {
+      "round": 45,
+      "topic": "社区",
+      "summary": "希望社区多组织老年人活动"
+    },
+    {
+      "round": 46,
+      "topic": "用药",
+      "summary": "缬沙坦和二甲双胍按时服用"
+    },
+    {
+      "round": 47,
+      "topic": "太极",
+      "summary": "太极拳坚持多年, 身体受益"
+    },
+    {
+      "round": 48,
+      "topic": "生活",
+      "summary": "独居生活已适应"
+    },
+    {
+      "round": 49,
+      "topic": "血压",
+      "summary": "血压偏高, 医生建议继续观察"
+    },
+    {
+      "round": 50,
+      "topic": "社区",
+      "summary": "社区活动较少, 有些孤单"
+    },
+    {
+      "round": 51,
+      "topic": "健康",
+      "summary": "糖尿病饮食控制"
+    },
+    {
+      "round": 52,
+      "topic": "运动",
+      "summary": "太极成了每天最重要的事"
+    },
+    {
+      "round": 53,
+      "topic": "用药",
+      "summary": "用药方案稳定"
+    },
+    {
+      "round": 54,
+      "topic": "家庭",
+      "summary": "孩子定期探望"
+    },
+    {
+      "round": 55,
+      "topic": "血压",
+      "summary": "血压波动, 注意监测"
+    },
+    {
+      "round": 56,
+      "topic": "太极",
+      "summary": "太极水平有进步"
+    },
+    {
+      "round": 57,
+      "topic": "生活",
+      "summary": "独居但能自理"
+    },
+    {
+      "round": 58,
+      "topic": "健康",
+      "summary": "整体状况可控"
+    },
+    {
+      "round": 59,
+      "topic": "社区",
+      "summary": "期待更多老年活动"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "生活规律, 健康可控"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天去社区医院量了血压, 偏高",
+      "希望社区多组织老年人活动"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "血压",
+      "assistant": "上次社区医院量的血压偏高, 医生建议继续观察。缬沙坦和二甲双胍按时服用。"
+    },
+    {
+      "round": 60,
+      "user": "生活",
+      "assistant": "太极拳坚持每天打, 独居生活已适应, 期待社区多组织老年活动。"
+    }
+  ]
+}

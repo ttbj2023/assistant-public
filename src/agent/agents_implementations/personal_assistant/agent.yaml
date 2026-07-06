@@ -1,0 +1,61 @@
+# Personal Assistant Agent配置 - 规范化结构
+# Agent基础信息
+agent_id: "personal-assistant"
+name: "Personal Agent Assistant"
+description: "个人助手Agent，支持记忆管理、TODO任务等"
+
+# 模型配置
+model_id: "ark-agent-plan:kimi-k2.6"
+
+# 备选方案（需要对应的API密钥或服务）:
+# - Kimi K2.6: model_id: "ark-agent-plan:kimi-k2.6" (火山引擎 Ark Agent Plan 订阅) [默认主模型]
+# - Qwen3.7-Plus: model_id: "aliyun-token-plan:qwen3.7-plus" (阿里云 Token Plan 订阅, 1M上下文)
+# - scnet:Kimi-K2.6 (超算互联网聚合)
+# - DeepSeek V4 Pro: model_id: "deepseek:deepseek-v4-pro" (旗舰推理, 1M上下文)
+# - OpenAI: model_id: "openai:gpt-5.5" (旗舰模型, 1.05M上下文, 128K输出, 多模态)
+
+# 系统提示词
+system_prompt: |
+  你是一个个人助手Agent，可以帮助用户维护TODO、管理日常事务。
+  你的回答应该友好、准确。
+
+# 首轮对话开场专属提示词 (为空则不启用; 非空时首轮跳过记忆拼接并注入该提示词)
+first_turn_prompt: |
+  这是你与用户的第一次对话. 请在本次回应中, 以自然、友好、不突兀的方式完成以下引导:
+  1. 询问用户是否愿意为你(助手)起一个名字, 或主动提议一个称呼
+  2. 询问用户希望被怎样称呼(用户的称呼偏好会被长期记住)
+  如果用户的首条消息已包含明确的任务需求, 应优先响应需求, 在合适时机穿插上述引导, 不要让引导打断用户当前意图.
+
+# 工具配置
+tools:
+  - "requirement_memory"
+  - "search_memories"
+  - "search_available_tools"
+  - "todo_manager_group"
+
+# 可选工具: 休眠状态, Agent通过search_available_tools按需发现后由中间件动态注入
+optional_tools:
+  - "web_research"
+  - "professional_database"
+  - "read_file"
+  - "analyze_image"
+  - "scheduled_messenger_group"
+  - "stock_watch_group"
+  - "regenerate_download_link"
+  - "geo_navigator"
+  - "weather_query"
+  - "export_document"
+  - "generate_image"
+  - "python_executor"
+
+# Skills: 领域知识+定向能力, 通过load_skill按需加载(渐进式披露)
+skills:
+  - "xlsx"
+  - "chart_maker"
+
+# 记忆配置（简化结构）
+memory:
+  type: "local"  # 空字符串表示不开启记忆
+  total_char_budget: 20000  # 主历史区字符预算
+  index_char_budget: 10000  # 索引区独立预算(可调, 建议 10k-20k)
+  include_todo_in_context: true  # Personal Assistant需要TODO记忆

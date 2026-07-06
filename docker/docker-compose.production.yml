@@ -1,0 +1,158 @@
+# Personal Assistant - 生产环境编排
+#
+# 使用方法:
+#   确保项目根目录 .env 已配置 API Keys, 然后:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# 包含主服务、工具运行时和行情查询, 一次性启动全部.
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        VERSION: ${VERSION:-latest}
+    image: assistant:${VERSION:-latest}
+    depends_on:
+      tool-runtime:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ../config.yaml:/app/config.yaml:ro
+      - ../data:/app/data
+      - ../src/auth/static_users.yaml:/app/src/auth/static_users.yaml
+    env_file:
+      - ../.env
+    environment:
+      - ENVIRONMENT=production
+      - LOCAL_EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
+      - LOCAL_BASE_URL=http://host.docker.internal:11434/v1
+      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - TOOL_RUNTIME_BASE_URL=http://tool-runtime:8766
+      - QUOTE_SERVICE_BASE_URL=http://quote-service:8767
+    networks:
+      - default
+      - executor-internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: "4"
+        reservations:
+          memory: 3G
+          cpus: "2"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tool-runtime:
+    build:
+      context: ..
+      dockerfile: docker/tool-runtime/Dockerfile
+      args:
+        PIP_INDEX_URL: ${TOOL_RUNTIME_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+    image: assistant-tool-runtime:${VERSION:-latest}
+    container_name: assistant-tool-runtime
+    user: "10002:10002"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 384
+    mem_limit: 4g
+    cpus: 2.0
+    networks:
+      - executor-internal
+    volumes:
+      - tool-runtime-workspace:/workspace
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=512m
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:${TOOL_RUNTIME_PORT:-8766}/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  quote-service:
+    # A股实时行情查询服务. 封装 pytdx 行情连接, 对外提供 /quote /quotes 端点.
+    # 纯查询无状态: 价格监控的规则存储/轮询/派发均在 app 侧 (经 NotificationService).
+    # 注意: 必须挂 default 网络 (需外网访问通达信服务器), 不能用 executor-internal.
+    build:
+      context: ..
+      dockerfile: docker/quote-service/Dockerfile
+      args:
+        PIP_INDEX_URL: ${QUOTE_SERVICE_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+    image: assistant-quote-service:${VERSION:-latest}
+    container_name: assistant-quote-service
+    user: "10003:10003"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    networks:
+      - default                  # 需外网访问通达信服务器 (非 executor-internal)
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:${QUOTE_SERVICE_PORT:-8767}/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  executor-internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  tool-runtime-workspace:

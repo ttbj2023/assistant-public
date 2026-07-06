@@ -1,0 +1,134 @@
+# Personal Agent Assistant - 主配置 (生产与开发共用)
+#
+# 优先级: 环境变量 > 本文件 > Pydantic 默认值 / 内置 catalog
+# 设计原则: 仅保留与代码默认值不同的覆盖项, 工具/skill 默认清单见
+#   src/config/tool_catalog.py, 本文件按 per-tool/per-group deep merge.
+# 完整字段说明见 docs/config-yaml-template.yaml 结构模板与
+#   docs/config-yaml-reference.md 字段参考.
+# Agent 配置独立维护 (src/agent/agents_implementations/*/agent.yaml).
+#
+# 环境差异通过 .env 注入 (各环境独立维护, 不进版本控制), 涉及变量:
+#   - 模型 Provider API Key (DEEPSEEK_API_KEY / GEMINI_API_KEY 等)
+#   - 部署拓扑 (OPENCLAW_GATEWAY_URL / TOOL_RUNTIME_BASE_URL 等)
+#   - SMTP 凭据 (SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_ADDRESS)
+#   - 其他见 .env.example
+
+# ===========================================
+# 推理模块配置 (仅覆盖与默认不同的项)
+# ===========================================
+inference:
+  # 全局 fallback: 关闭 deepseek-flash 默认 high 思考(对简单任务纯浪费;
+  # 判断类任务由 content_analyzer.fallback_model_params 覆盖保留思考)
+  fallback:
+    text_model_params:
+      extra_body:
+        thinking:
+          type: disabled
+
+  # 内容分析器 (主模型走默认 doubao-mini; 仅覆盖参数与索引弧参数)
+  content_analyzer:
+    model_params:
+      max_tokens: 2048
+      reasoning_effort: "minimal"
+    # 索引弧短语蒸馏(收紧 max_tokens; arc_model 走默认 doubao-mini)
+    arc_model_params:
+      max_tokens: 1024
+      reasoning_effort: "minimal"
+    # 判断类任务(置顶/SimpleMemory) fallback 保思考(全局默认关思考, 判断任务需保留)
+    fallback_model_params:
+      extra_body:
+        thinking:
+          type: enabled
+
+  # 图片描述 (仅模型参数覆盖, 模型本身=默认)
+  image_description:
+    model_params:
+      max_tokens: 8192
+      reasoning_effort: "minimal"
+      temperature: 0.1
+    read_image_model_params:
+      max_tokens: 16384
+      reasoning_effort: "low"
+      temperature: 0.1
+
+  # 健康数据提取 (模型参数 + 审计模型覆盖; 审计用 deepseek, 非默认 doubao-pro)
+  health_data_extraction:
+    model_params:
+      max_tokens: 32768
+      reasoning_effort: "max"
+    audit_model: "deepseek:deepseek-v4-pro"
+    audit_model_params:
+      max_tokens: 16384
+      reasoning_effort: "high"
+
+  # 专家工具 (仅模型参数覆盖; maps_grounding_model 等走默认)
+  experts:
+    default_model_params:
+      max_tokens: 16384
+      reasoning_effort: "max"
+    web_research_model_params:
+      max_tokens: 16384
+      reasoning_effort: "high"
+    web_research_synthesis_model_params:
+      max_tokens: 8192
+      reasoning_effort: "high"
+    geo_research_model_params:
+      max_tokens: 8192
+      reasoning_effort: "high"
+    grounding_model_params:
+      temperature: 0.1
+      top_p: 1.0
+      max_output_tokens: 4096
+
+# ===========================================
+# 工具系统配置 (仅保留默认清单没有的项; catalog 默认自动合并)
+# ===========================================
+tools:
+  mcp_servers:
+    # 百度AI搜索 (默认清单无此服务器, 显式新增)
+    baidu_search:
+      name: "baidu_search"
+      transport: "sse"
+      url: "http://appbuilder.baidu.com/v2/ai_search/mcp/sse?api_key=${BAIDU_API_KEY}"
+      headers:
+        Authorization: "Bearer ${BAIDU_API_KEY}"
+      timeout: 60.0
+      tool_names:
+        AIsearch: "baidu_search"
+
+  # Skill配置 (默认空, 此处显式启用; 详见 docs/development/skills-integration.md)
+  skills:
+    xlsx:
+      name: "xlsx"
+      source: "./skills/xlsx/"
+      backend: "executable"
+      associated_tools: ["skill_executor"]
+    chart_maker:
+      name: "chart_maker"
+      source: "./skills/chart_maker/"
+      associated_tools: ["mermaid_chart", "vega_chart", "markmap_chart"]
+
+# ===========================================
+# OpenClaw Gateway (主动发消息: 超长回复补发/定时消息/价格监控派发)
+# ===========================================
+# gateway.url 默认 http://127.0.0.1:18789, Docker 由 env OPENCLAW_GATEWAY_URL 覆盖
+# notification_defaults 为微信渠道系统级默认, 缺失会导致补发/定时消息静默失败
+openclaw:
+  gateway:
+    url: "http://127.0.0.1:18789"
+  notification_defaults:
+    weixin:
+      channel: "openclaw-weixin"
+
+# ===========================================
+# SMTP 邮件发送配置 (系统级共享, app 进程内发邮件工具共用)
+# ===========================================
+# 全部留空, 走 .env: SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_ADDRESS
+# 设计目的: SMTP 服务器地址/账号等半敏感信息不进版本控制, 与密钥治理一致
+smtp:
+  host: ""
+  port: 465
+  use_tls: true
+  username: ""
+  password: ""
+  from_address: ""

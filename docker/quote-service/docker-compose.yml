@@ -1,0 +1,54 @@
+# Quote Service - 开发环境 (本地容器)
+#
+# 用法 (在项目根目录执行):
+#   docker compose -f docker/quote-service/docker-compose.yml up -d --build
+#
+# 容器监听 8767, 仅绑定 127.0.0.1. 开发机 venv 跑的 app 经
+# http://127.0.0.1:8767 访问 (config.yaml base_url 或 QUOTE_SERVICE_BASE_URL).
+#
+# 与生产完全隔离: 本地独立构建运行, 纯查询无状态 (无 volume).
+
+services:
+  quote-service:
+    build:
+      context: ../..
+      dockerfile: docker/quote-service/Dockerfile
+      args:
+        PIP_INDEX_URL: ${QUOTE_SERVICE_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        HTTP_PROXY: ${QUOTE_SERVICE_HTTP_PROXY:-}
+        HTTPS_PROXY: ${QUOTE_SERVICE_HTTPS_PROXY:-}
+        http_proxy: ${QUOTE_SERVICE_HTTP_PROXY:-}
+        https_proxy: ${QUOTE_SERVICE_HTTPS_PROXY:-}
+    image: assistant-quote-service:dev
+    container_name: assistant-quote-service
+    user: "10003:10003"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    ports:
+      - "127.0.0.1:${QUOTE_SERVICE_PORT:-8767}:${QUOTE_SERVICE_PORT:-8767}"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:${QUOTE_SERVICE_PORT:-8767}/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

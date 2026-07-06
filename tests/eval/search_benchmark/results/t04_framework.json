@@ -1,0 +1,123 @@
+{
+  "query": "LangGraph StateGraph 状态图 工作流 编排",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "LangGraph实战：用状态图构建多步Agent工作流",
+        "url": "https://cloud.tencent.cn/developer/article/2684294",
+        "domain": "tencent.cn",
+        "site": "腾讯云",
+        "snippet": "LangGraph实战：用状态图构建多步Agent工作流\n陆业聪\n发布于 2026-06-08 13:37:10\n📚 Agent全栈工程师：企业级知识库项目系列 · 第2/20篇\n从LangChain到 Kubernetes ，20篇系统掌握AI Agent全栈开发\n超越线性Chain，用StateGraph实现分支、循环与人工审批\n上周我们说 Agent全栈工程师要懂编排，这周来兑现承诺：用一个真实跑挂7次的故事，告诉你为什么线性Chain已经不够用，以及LangGraph的StateGraph是如何用一张有向图把\"分支判断、循环重试、人工审批、断点续传\"这四件Chain做不了的事，一次解决的。\n这是系列从\"为什么\"走向\"怎么做\"的关键转折。\n我盯着监控告警发呆——一个跑了112秒的Chain，在第7步API调用上挂了。前6步白跑，5块钱tokens费用打水漂，用户在那头等着。我只能让它从头跑一遍。\n这就是Chain的宿命：线性、无记忆、不可中断。直到我把它换成LangGraph的StateGraph。\nLangChain官方2026 State of Agent Engineering报告里有个数据让我印象深刻：超过60%的Agent生产事故，都和状态管理有关。这不是模型问题，是工程问题。今天这篇文章就来啃下这块硬骨头。\n📰 每日要闻速递\n在进入正题前，先看看本周值得关注的几条...",
+        "publish_time": "2026-06-08T13:37:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9999755620956421,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "#LangGraph 状态图编排：从链式调用到智能工作流的进化之路",
+        "url": "https://blog.csdn.net/CFzjy/article/details/158926617",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "#LangGraph 状态图编排：从链式调用到智能工作流的进化之路\n原创 已于 2026-03-12 16:38:26 修改 · 586 阅读\n文章标签：\n#transformer #langchain #人工智能 #python #开发语言\n写在前面：在 AI Agent 开发领域，LangGraph 正在重新定义工作流编排的方式。相比传统的链式调用，状态图编排提供了更灵活的流程控制、更强大的状态管理和更清晰的代码结构。本文将带你深入理解 LangGraph 的核心原理、技术选型和最佳实践，助你在面试中脱颖而出。\n引言：一个真实的痛点\n问题场景\n假设你正在构建一个智能客服系统，业务流程如下：\n用\n户提问：“我的订单什么时候发货？”\n期望的处理流程：\n是\n否\n是\n否\n是\n否\n用户提问\n意图识别\n是否订单相关?\n查询订单系统\n通用问答\n订单存在?\n生成回复\n转人工客服\n用户满意?\n结束\n追问澄清\n传统 LangChain 的困境：\n# LangChain 链式调用的局限性\n\nchain = (\n\n    intent_chain \n    | order_lookup_chain \n    | response_chain\n)\n# 问题1：如何处理条件分支？\n# 问题2：如何实现循环迭代？\n# 问题3：如何管理复杂的中间状态？\n# 问题4：如何优雅地处理错误和重试？\npython\nL...",
+        "publish_time": "2026-03-11T15:07:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9997695088386536,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "第三版：3、LangGraph之WorkFlow",
+        "url": "https://blog.csdn.net/asdurt/article/details/156054081",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "第三版：3、LangGraph之WorkFlow\n原创 已于 2025-12-18 17:33:59 修改 · 757 阅读\n文章标签：\n#langchain\nWorkFlow介绍\n工作流是 LLM 和工具通过预定义的代码路径进行编排的系统。另一方面，智能体是 LLM 动态指导其自身流程和工具使用的系统，它们都是构建复杂的大模型应用系统的核心组件。\nLangGraph的工作流通过有向图(Directed Graph)定义，由节点（Node）、边（Edge）、状态（State）构成，支持条件分支、循环、并行执行。通过 状态图（StartGraph）  将多个智能体（Agent）和任务节点（Node）组织成可动态调整的流程结构，实现 有状态、可扩展的任务编排。\nLangGraph通过 状态图 将Agent和工作流解耦，让开发者能以“搭积木”的方式构建复杂AI系统:\nAgent 是“乐高积木”，负责实现具体功能;\n工作流 是“搭建规则”，定义积木如何组合、何时执行。\n这种设计既保留了灵活性，又能通过状态管理实现大规模系统的可靠运行。\n一句话总结：Agent 是一种特殊的节点(Node)，而工作流是整个图的运行流程(Graph)。Agent 负责\"思考+行动”，工作流负责”编排+调度”。\n相关概念\nStateGraph\nLangGraph 的核心是将 Agent 和 WorkFlow 建模...",
+        "publish_time": "2025-12-18T13:58:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.999610960483551,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "LangChain.js 完全开发手册（九）LangGraph 状态图与工作流编排",
+        "url": "https://juejin.cn/post/7550916263867940904",
+        "domain": "juejin.cn",
+        "site": "稀土掘金",
+        "snippet": "LangChain.js 完全开发手册（九）LangGraph 状态图与工作流编排\n鲫小鱼\n2025-09-18\n第9章：LangGraph 状态图与工作流编排\n前言\n大家好，我是鲫小鱼。是一名不写前端代码的前端工程师，热衷于分享非前端的知识，带领切图仔逃离切图圈子，欢迎关注我，微信公众号：《鲫小鱼不正经》。欢迎点赞、收藏、关注，一键三连！！\n🎯 本章学习目标\n全面掌握 LangGraph 0.3 的核心概念：状态（State）、通道（Channels）、节点（Nodes）、边（Edges）、编译（Compile）\n掌握分支（Branch）、循环（Loop）、并行（Parallel）、中断（Int\nerrupt）等工作流编排能力\n将 Runnable、Memory、Callback 与 LangGraph 深度结合，构建可观测与可恢复的长流程\n掌握人机协同：人工审批 / 审核节点、断点恢复、可回放执行\n在 Next.js 中构建“流程引擎 API”，并提供前端可视化“状态图查看器”\n实战：构建“知识入库（Ingest）+ RAG 问答 + 反馈闭环”的端到端流程\n🧠 LangGraph 基本概念与模型\n9.1 为什么需要 LangGraph\nRunnable 更像“函数管道”；当流程复杂（多分支/循环/跨请求）时，维护成本高\nLangGraph 提供“显式状态与状态转移”的工作流抽...",
+        "publish_time": "2025-09-18T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.999549925327301,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "LangGraph 的 StateGraph 是怎么把状态、节点和条件逻辑组织成可运行工作流的？",
+        "url": "https://wenku.csdn.net/answer/ade0mp0rdsh1",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "LangGraph 的 StateGraph 是怎么把状态、节点和条件逻辑组织成可运行工作流的？\n时间: 2026-05-01 09:06:43 AIGC 浏览: 18\nLangGraph 的核心围绕 StateGraph 构建，它通过定义强类型状态（如 TypedDict 或 Pydantic 模型）作为工作流上下文，在其上添加节点（纯函数，接收并更新状态）、无条件边（固定执行顺序）和关键的条件边（基于运行时状态动态路由）。图需经 compile() 编译为可调用的 app 实例，才能通过 invoke() 执行。状态在节点间自动传递与增量更新；条件边支持分支与循环（如 ReAct），是实现智能决策的基础；检查点（CheckpointSaver）模块提供内存持久化能力，支持多轮对话恢复与调试；运行时还集成可视化（Mermaid）和递归控制等机制，共同构成构建复杂 Agent 系统的模块化框架。\nLangGraph 的核心模块围绕其核心抽象——状态图（StateGraph） 构建，用于定义和控制多步骤、有状态的工作流。其核心模块主要包括：图定义与编译模块、状态管理模块、节点与边模块、内存与持久化模块以及运行时与可视化模块。这些模块协同工作，使得开发者能够构建复杂的、具备条件逻辑和循环的智能体（Agent）系统 [ref_3]。\n核心模块详解与使用方法\n1. 图定义与编译模块 (la...",
+        "publish_time": "2026-05-01T09:06:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9995465874671936,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "LangGraph教程4：LangGraph核心组件（发布时间：2025-07-19 12:03:23）",
+        "url": "https://blog.csdn.net/weixin_46530492/article/details/149455611",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "文章目录\n主要特性\nLangGraph 平台\nGraph(图)\nStateGraph\nLangGraph\n是一个用于构建有状态的多参与者应用程序的库，利用\nLLM\n创建代理和多代理工作流。与其他\nLLM\n框架相比，它提供了以下核心优势：循环性、可控性和持久性。\nLangGraph\n允许您定义涉及循环的流程，这对于大多数代理架构至关重要，使其与基于\nDAG\n的解决方案区别开来。作为一个非常底层的框架，它提供了对应用程序流和状态的细粒度控制，这对于创建可靠的代理至关重要。此外，\nLangGraph\n包含内置的持久性，支持先进的人机协作和记忆特性。\nLangGraph\n的灵感来源于\nPregel\n和\nApache Beam\n。公共接口受\nNetworkX\n的启发。\nLangGraph\n是由\nLangChain Inc\n开发的，它是\nLangChain\n的创建者，但可以在不使用\nLangChain\n的情况下使用。\nLangGraph\n平台 是用于部署\nLangGraph\n代理的基础设施。它是一个商业解决方案，用于将代理应用程序部署到生产环境，构建于开源的\nLangGraph\n框架之上。\nLangGraph\n平台由多个组件组成，这些组件协同工作以支持\nLangGraph\n应用程序的开发、部署、调试和监控：\nLangGraph\n服务器（\nAPI\n）、\nLangGraph SDK\n（\nAPI\n客...",
+        "publish_time": "2025-07-19",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "通俗易懂的LangGraph图定义解析（发布时间：2025-07-02 23:59:05）",
+        "url": "https://blog.csdn.net/weixin_44872675/article/details/149081702",
+        "domain": "csdn.net",
+        "site": "ref_2",
+        "snippet": "LangGraph 是一个基于状态的工作流框架，它通过 节点（Nodes） 和 边（Edges） 的组合，构建出复杂的工作流逻辑。这种设计特别适合处理需要动态决策、循环、多步骤交互的场景（比如对话系统、智能代理等）。下面我们通过一个简单的例子，逐步讲解 LangGraph 中的图（Graph）是如何定义的。\n1. 什么是 StateGraph？\nStateGraph\n是 LangGraph 的核心类，用于定义和管理基于状态的图结构。它的核心思想是：\n节点：表示执行的操作（如调用模型、处理数据）。\n边：定义节点之间的执行顺序（支持无条件跳转、条件跳转、循环）。\n状态（State）：贯穿整个图的数据结构，存储和传递上下文信息。\n举个例子：\n想象你正在开发一个聊天机器人，用户输入一条消息后，机器人需要依次完成以下步骤：\n解析用户意图（节点A）。\n查询数据库（节点B）。\n生成回复（节点C）。\n通过\nStateGraph\n，你可以将这三个步骤定义为节点，并通过边连接它们，同时用状态对象传递上下文（比如用户的消息、查询结果等）。\n2. 如何定义一个图？\n定义一个图的核心步骤包括：创建状态、添加节点、设置边，并最终编译图。以下是具体操作：\n(1) 定义状态\n状态是图中传递的数据结构，通常是一个字典（\nTypedDict\n或自定义类）。例如：\nfrom typing_extensions impo...",
+        "publish_time": "2025-07-02",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "解锁 LangGraph：通过 3 个迷你程序学习图编程的基本思想（发布时间：2024-12-04 21:34:51）",
+        "url": "https://blog.csdn.net/surfirst/article/details/144249504",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "LangGraph 是一种将任务流程模块化的编程框架，通过状态图（StateGraph）构建灵活且高效的智能对话系统。本篇文章将通过 3 个迷你程序逐步深入 LangGraph 的图编程核心思想，帮助您快速上手并了解其实际应用潜力，初步了解 Agent 工作流控制的方法。\n1. LangGraph 简介\nLangGraph 是一种基于图的编程框架，用于组织和管理复杂任务的工作流。它的核心思想是将任务分解为“节点”（Node），并通过“边”（Edge）定义这些节点之间的逻辑关系。 相比于传统的线性流程控制，LangGraph 的图结构更适合处理动态任务分支、多任务协作等复杂场景。\n主要优势包括：\n模块化设计：任务逻辑清晰且易于扩展。\n灵活的状态管理：通过图的结构实现动态任务切换和条件处理。\n多工具集成：支持接入外部工具和大模型（如 OpenAI 和 Google Gemini）。\n2. 为什么选择 LangGraph？\n在传统的对话系统中，开发者常常面临以下挑战：\n任务分支逻辑复杂，难以维护；\n多工具协作的集成成本高；\n大规模上下文处理缺乏高效解决方案。\nLangGraph 则通过状态图和内存管理等特性，解决了这些痛点。例如，LangGraph 支持通过条件逻辑选择合适的工具或模型，同时保留会话上下文，显著提升开发效率。\n3. LangGraph 编程的 6 个基本步骤\n定义任务的状...",
+        "publish_time": "2024-12-04",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "AI 智能体开发框架 LangGraph（发布时间：2024-12-26 17:00:00）",
+        "url": "https://blog.csdn.net/YZL40514131/article/details/144725616",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "AI 智能体开发框架 LangGraph\n一、简介\n二、LangGraph 架构设计\n三、LangGraph 特点\n1、安装\n2、官方示例\n3、LangGraph 的核心步骤\n4、状态消息\n5、Reducers 映射归约器\n四、图节点 Nodes\n1、图的关系边 Edges\n2、图的关系边实现\n3、可视化\n4、利用反向代理进行分析\n五、LangSmith 介绍\n1、LangSmith 配置\n2、Web 自动化 Agent\n3、多 Agent 示例\n一、简介\nLangGraph 是一个使用 LLM 构建有状态、多参与者应用程序的库，用于创建代理和多代理工作流。LangGraph 允许定义涉及循环的流程。它提供了对应用程序的流程和状态的细粒度控制。\n二、LangGraph 架构设计\nGoogle Pregel: 大规模图处理系统，支持并行\nApache Beam：进行批量和流式数据处理的最简单方法。一次编写，随处运行，适用于关键任务生产工作负载的数据处理。\nNetworkX 是一个 Python 包，用于创建、操作和研究复杂网络的结构、动态和功能\n三、LangGraph 特点\n循",
+        "publish_time": "2024-12-26",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "【收藏必备】LangGraph从零开始：构建你的第一个AI聊天机器人（附完整代码）（发布时间：2025-09-12 11:16:14）",
+        "url": "https://blog.csdn.net/2401_85325726/article/details/151613428",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "LangGraph 是由 LangChain 团队开发的开源框架，专为构建有状态、多步骤的复杂工作流而设计。它弥补了传统 LangChain 在动态流程控制（如循环、分支）上的不足，支持更灵活的 Agent 协作与状态管理：通过有向图（Graph） 组织工作流，将任务拆分为 节点（Nodes） 和 边（Edges），实现非线性的执行逻辑（如循环、条件分支），更贴近真实业务场景。\nLangGraph 的特性\n通过 LangGraph 获得控制能力，设计能够可靠处理复杂任务的智能体。\n🛑 指导、管理和控制您的智能体，实现人工干预（human-in-the-loop）。添加易于加入的审核和质量控制，防止智能体偏离方向。加入人工干预检查以引导和批准智能体的操作。\n🎨 构建富有表现力、可定制的智能体工作流程。LangGraph 的低层基础（low-level primitives）提供了创建完全可定制智能体所需的灵活性。设计多样化的控制流程——单智能体、多智能体、分层结构——全部使用一个框架。\n📡 持久化上下文，实现长期互动。LangGraph 的内置存储（built-in memory）存储对话历史记录并随时间推移保持上下文，从而支持跨会话的丰富、个性化互动。\n🌊 一流的流式技术（First-class streaming）带来更好的用户体验设计。通过原生的逐令牌流式传输（native t...",
+        "publish_time": "2025-09-12",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

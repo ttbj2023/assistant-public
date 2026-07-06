@@ -1,0 +1,28 @@
+{
+  "gemini-2.5-flash-lite": {
+    "search": [
+      {
+        "id": "s1",
+        "note": "时效性搜索",
+        "success": false,
+        "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+        "error_type": "ServerError",
+        "metadata_real": false,
+        "elapsed": 16.64
+      },
+      {
+        "id": "s2",
+        "note": "技术事实搜索",
+        "answer": "Python 3.13 引入了多项重要新特性，旨在提升开发体验、性能和语言功能。主要亮点包括：\n\n*   **改进的交互式解释器**：Python 3.13 引入了一个全新的交互式解释器，其灵感来源于 PyPy 项目。新解释器支持多行编辑、历史记录保存，并默认启用了彩色提示符和彩色错误回溯信息，使得代码编写和调试更加便捷。它还提供了更易用的 `help`、`exit` 和 `quit` 命令，以及通过 F1 键激活的交互式帮助浏览器和 F2 键浏览历史记录的功能。\n\n*   **实验性的无全局解释器锁 (No-GIL) 模式 (PEP 703)**：Python 3.13 提供了实验性的支持，可以在运行时禁用全局解释器锁 (GIL)。这有望在多线程场景下实现更优的并发性能。\n\n*   **实验性的即时编译 (JIT) 编译器 (PEP 744)**：新版本中增加了一个基础的 JIT 编译器。目前该功能处于实验阶段，默认禁用，但它为未来的性能优化奠定了基础，预计将带来显著的性能提升。\n\n*   **`locals()` 内置函数的语义标准化 (PEP 667)**：`locals()` 函数在修改返回的映射时，现在有了明确定义的语义。这使得 Python 调试器等工具在并发代码执行期间，能够更可靠地更新优化作用域中的局部变量。\n\n*   **类型参数支持默认值**：类型参数现在可以设置默认值，为类型提示提供了更大的灵活性。\n\n*   **移除“死电池”模块 (PEP 594)**：一些长期被弃用的标准库模块已在 Python 3.13 中被移除，以精简标准库。\n\n*   **改进的错误消息**：错误消息的清晰度和有用性得到了进一步提升，回溯信息默认使用彩色高亮显示。\n\nPython 3.13 于 2024 年 10 月 7 日发布，是一次重要的版本更新，带来了多方面的改进和新功能。",
+        "grounding_chunks": 7,
+        "search_queries": [
+          "Python 3.13 new features chinese",
+          "Python 3.13 release notes chinese"
+        ],
+        "metadata_real": true,
+        "success": true,
+        "elapsed": 17.06
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "sample_id": "gifford_r59",
+  "sample_type": "positive",
+  "description": "真实: 减药时间(用药), 该记",
+  "user_message": "关于用药的记录的话, 还可以再加一条, 我是2月10号开始减药的",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "",
+    "preferences": ""
+  },
+  "ground_truth": {
+    "should_add": [
+      "减药",
+      "2月"
+    ],
+    "should_not_add": []
+  }
+}

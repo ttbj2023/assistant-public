@@ -1,0 +1,123 @@
+{
+  "query": "uv pip compile requirements lock 锁文件",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "python包管理器uv工具的使用",
+        "url": "https://cloud.tencent.com.cn/developer/article/2593276",
+        "domain": "com.cn",
+        "site": "腾讯云",
+        "snippet": "python包管理器uv工具的使用\n保持热爱奔赴山海\n发布于 2025-11-24 22:21:11\n项目地址 https://github.com/astral-sh/uv\n优势：\nuv 是用 Rust 编写的，其依赖解析和安装速度比 pip 快 10 到 100 倍。它支持并发下载、智能缓存和预编译二进制文件的优先选择。这意味着你的 CI/CD 流水线构建时间可以从几分钟缩短到几秒钟，极大地提升了开发和运维 效率。\nuv 通过 uv.lock 或 requirements.lock 文件精确锁定每一个直接和传递依赖的版本号以及其内容的哈希值。只要使用这个锁定文件进行安装（uv pip install -r requirements.lock），就能保证在任何机器、任何时间点安装的依赖树都是完全一致的。这对于生产环境的稳定性和可预测性至关重要。\nuv 会对下载的每个包进行严格的哈希校验（SHA-256）。如果网络传输过程中数据损坏，或者仓库中的包被恶意篡改，uv 会立即检测到并报错，防止有问题的代码进入生产环境。\nuv 拥有更先进的依赖解析算法，能够更快、更准确地找到满足所有约束的依赖组合，并提供清晰的错误报告，帮助你快速定位和解决问题。\n安装\n代码语言：\ntxt\nAI代码解释\n执行：curl -LsSf https://astral.sh/uv/install.sh| sh\n\n...",
+        "publish_time": "2025-11-24T22:21:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9984486699104309,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "uv安装依赖 - CSDN文库",
+        "url": "https://wenku.csdn.net/answer/5adpuy2cju",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "方脚本）。在含pyproject.toml的项目中，可用'uv pip install -e .'安装主依赖；添加'[dev]'等可选依赖组（如'.[dev,docs,web]'）可一并安装对应可选依赖。为保障环境一致性，推荐生成锁定文件（'uv pip freeze > requirements.lock'）或使用'uv pip sync requirements.txt'同步现有依赖列表，该命令会精确匹配并清理多余包。所有操作均基于uv内置的pip兼容子命令，兼顾速度与确定性。\n要使用 uv  工具安装依赖，首先确保你已经正确安装了 uv。如果尚未安装，可以通过多种方式完成，例如使用脚本安装或通过 pipx 安装[^3]。\n一旦 uv  成功安装，你可以根据项目的需要以不同的方式来安装依赖：\n安装项目依赖\n如果你的项目根目录下存在 pyproject.toml  文件，并且其中定义了项目的依赖项，则可以使用以下命令来安装这些依赖：\nuv pip install -e .\n此命令会安装 pyproject.toml  中 [project.dependencies]  部分列出的所有依赖项[^1]。\n安装开发依赖\n如果还想安装开发过程中所需的额外依赖（如测试工具、代码质量检查工具等），可以在命令中指定开发依赖组：\nuv pip install -e \".[dev]\"\n这将安装主依...",
+        "publish_time": "2026-06-09T20:31:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9979773163795471,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "使用 uv 管理 Python 版本",
+        "url": "https://blog.csdn.net/gusushantang/article/details/161788398",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "0\",\n    \"numpy>=1.24.0\",\n]\n\n[project.optional-dependencies]\ndev = [\n    \"pytest>=7.0\",\n    \"black>=23.0\",\n]\ntoml\n然后使用：\n# 从 pyproject.toml 安装\n\nuv pip install -e .\n# 安装开发依赖\n\nuv pip install -e \".[dev]\"\n# 锁定依赖版本（生成 uv.lock）\n\nuv pip compile pyproject.toml -o requirements.txt\nbash\n六、完整工作流示例\n场景：启动一个新项目\n# 1. 创建项目目录\nmkdir my-project && cd my-project\n\n# 2. 创建 pyproject.toml\ncat > pyproject.toml << 'EOF'\n[proj\nect]\nname = \"my-project\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"fastapi>=0.100\",\n    \"uvicorn>=0.23\",\n]\n\n[project.optional-dependencies]\ndev = [\n    \"pytest>=7.0\",\n    \"...",
+        "publish_time": "2026-06-08T09:08:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9977497458457947,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "uv 通过lock文件管理和安装包",
+        "url": "https://wenku.csdn.net/answer/4uwmm13rw5",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "uv 通过lock文件管理和安装包\n时间: 2025-11-18 18:11:23 AIGC 浏览: 40\n使用 lock 文件与不使用 lock 文件管理 uv 包的对比\n通过 lock 文件管理 uv 包\n当使用 lock 文件时，uv 工具会生成一个 Pipfile.lock 文件来记录项目中所有依赖项的确切版本号。这有助于确保在不同环境中安装的依赖项始终一致，从而避免因版本差异导致的问题。\n创建 lock 文件\n在首次安装依赖项时，可以使用以下命令生成 lock 文件：\nuv pip compile\n此命令会解析 Pipfile  中的依赖项，并生成一个包含所有依赖项及其确切版本的 Pipfile.lock 文件[^2]。\n同步依赖项\n使用以下命令根据 lock 文件安装依赖项：\nuv pip sync\n这将确保安装的依赖项版本与 lock 文件中的记录完全一致[^2]。\n更新依赖项\n如果需要更新某些依赖项，可以先修改 Pipfile  文件，然后重新运行 uv pip compile 命令以更新 lock 文件，最后再执行 uv pip sync 完成同步[^2]。\n优点\n确保不同环境下的依赖项版本一致性。\n避免因依赖项版本冲突导致的问题。\n提高项目的可重复性和可靠性。\n不使用 lock 文件管理 uv 包\n如果不使用 lock 文件，uv 工具将直接安装依赖项，而不记录...",
+        "publish_time": "2025-11-18T18:11:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9973660111427307,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "怎样在Python中使用uv快速安装依赖并替换缓慢的pip？",
+        "url": "https://m.php.cn/faq/2692513.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "避免每次重复输入。\n用 uv sync 替代 pip install -r + pip freeze 组合\n如果你习惯用 pip install -r requirements.txt + pip freeze > requirements.txt 来同步环境，uv sync 是更可靠的选择：它基于锁文件（uv.lock）精确还原依赖树，避免因网络抖动、索引顺序变化导致的版本漂移。\nuv sync 默认读取 pyproject.toml  中的 [project.dependencies]，生成并维护 uv.lock\n首次运行会创建 uv.lock ；后续 uv sync 严格按 lock 文件安装，不重新解析\n想更新依赖？用 uv pip compile pyproject.toml -o requirements.txt 生成新约束，再 uv sync\n不支持直接从 requirements.txt 生成 lock —— 它的设计前提是声明式（pyproject.toml）优先\n常见坑与注意事项\nuv 并非万能替代，几个关键限制必须提前知道：\nuv pip install 不支持 --editable 安装某些复杂包（如含 pyproject.toml  + build-backend 且未声明 build-system.requires 的项目），此时退回 pip insta...",
+        "publish_time": "2026-06-22T02:58:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9971203804016113,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "uv命令介绍（高性能Python包管理工具，旨在替代pip、pip-tools和virtualenv等传统工具）（发布时间：2025-03-14 16:20:34）",
+        "url": "https://blog.csdn.net/Dontla/article/details/146260077",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "文章目录\n**主要功能**\n1. **快速安装和管理 Python 包**\n2. **生成和管理锁文件 (`requirements.lock`)**\n3. **创建虚拟环境**\n4. **与 `poetry` 兼容**\n**核心优势**\n1. **极快的速度**：基于 Rust 实现，利用多线程和缓存大幅加速依赖解析。\n2. **轻量且独立**：无需预装 Python 环境，直接作为静态二进制文件运行。\n3. **全局缓存**：减少重复下载，所有项目共享全局包缓存。\n4. **无缝兼容**：\n**常见命令示例**\n**安装方法**\n**适用场景**\n- 需要快速初始化 Python 环境（如 CI/CD 流程）。\n- 项目管理需要兼容传统 `pip` 和现代工具链。\n- 依赖解析速度成为瓶颈时（特别是大型项目）。\n**注意事项**\nuv\n是一个由 Astral 团队（Ruff 和 Black 的开发者）推出的高性能 Python 包管理工具，旨在替代\npip\n、\npip-tools\n和\nvirtualenv\n等传统工具。它强调极速（比\npip\n快 10-100 倍）、支持全局依赖缓存，并兼容\npip\n和\npip-tools\n的工作流。\n主要功能\n1. 快速安装和管理 Python 包\nuv pip install requests # 单包安装\nuv pip install -r...",
+        "publish_time": "2025-03-14",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Python包管理工具之uv使用指南（发布时间：2025-06-16 20:50:09）",
+        "url": "https://blog.csdn.net/asialee_bird/article/details/148604776",
+        "domain": "csdn.net",
+        "site": "ref_2",
+        "snippet": "目录\n🌟 一、uv 的特点\n🛠️ 二、安装 uv\n✅ 使用官方推荐方式（适用于大多数用户）\n✅ 使用 pip 安装（Python >= 3.8）\n✅ 使用 conda/mamba 安装（Conda 用户）\n📝 三、基本使用方法\n1. 初始化项目并创建虚拟环境\n2. 安装依赖\n✅ 使用 requirements.txt\n✅ 安装单个包\n✅ 安装开发依赖\n3. 生成依赖文件\n4. 使用 pyproject.toml 管理依赖\n5. 升级依赖\n6. 删除依赖\n🧪 四、高级功能\n1. 可重复构建（Reproducibility）\n2. 支持编辑模式（Editable Installs）\n3. 镜像源设置（Mirror Support）\n📊 五、uv vs pip vs poetry 对比\n💡 六、适用场景推荐\n🧰 七、示例流程（从零开始）\n📚 八、参考文档\nuv\n是一个新兴的 Python 包管理工具，它旨在提供比\npip\n和\npoetry\n更快、更现代的依赖管理体验。\nuv\n由 Charles Murphy 开发，基于 Rust 构建，具有极高的性能和兼容性，支持标准的\nrequirements.txt\n文件以及\npyproject.toml\n中的依赖声明。\n🌟 一、uv 的特点\n特点\n描述\n⚡ 极速安装\n使用 Rust 编写，依赖解析速度远超 pip 和 Poetry\n🔐 安全性\n支持...",
+        "publish_time": "2025-06-16",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "conda pip uv与pixi（发布时间：2025-08-08 09:58:51）",
+        "url": "https://blog.csdn.net/weixin_42198836/article/details/150057791",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "简单来说，\nuv\n和\npixi\n都是为了解决传统 Python 包管理和项目环境管理中的痛点而生的新一代工具，它们的核心优势在于 极高的速度 和 更现代化的工作流。\nuv\n: 一个极速的 Python 包安装器和解析器\nuv\n是由\nRuff\n（一个用 Rust 编写的极速 Python Linter）的作者 Charlie Marsh 开发的。你可以把它看作是\npip\n和\npip-tools\n的一个速度极快的替代品。\n核心定位与功能：\n极速的包管理工具：\nuv\n的主要目标是取代\npip\n、\npip-tools\n、\nvirtualenv\n等工具的部分功能，但速度要快得多。它使用 Rust 编写，并利用了先进的缓存和并行处理技术，使其在安装、解析和锁定依赖项时比\npip\n快几个数量级。\n不是完整的环境管理器：与\nconda\n或\nmamba\n不同，\nuv\n本身不管理 Python 解释器。它专注于 Python 包 的管理，并假设你已经有了一个 Python 环境（比如系统 Python、pyenv 创建的 Python 或者 Conda 环境）。\n主要功能：\nuv pip install/uninstall\n: 替代\npip install/uninstall\n，速度极快。\nuv venv\n: 替代\npython -m venv\n或\nvirtualenv\n，用于快速创建虚拟环境。\nuv...",
+        "publish_time": "2025-08-08",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "pip安装uv（发布时间：2025-03-24 11:08:35）",
+        "url": "https://blog.csdn.net/lovechris00/article/details/146470893",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "文章目录\npip 接口\nPython 环境\n创建虚拟环境\n使用虚拟环境\n关闭环境\n使用任意的 Python 环境\n管理软件包\n安装一个包\n可编辑包\n从文件安装包\n卸载一个包\n检查环境\n列出已安装的包\n检查一个包\n验证环境\n声明依赖\n使用 `pyproject.toml`\n使用 `requirements.in`\n锁定环境\n锁定要求\n升级要求\n同步环境\n添加约束\n添加构建约束\n覆盖依赖版本\n与 `pip` 和 `pip-tools` 的兼容性\n配置文件和环境变量\n预发布兼容性\n存在于多个索引的包\nPEP 517 构建隔离\n传递性 URL 依赖\n默认使用虚拟环境\n解析策略\n`pip check`\n`--user` 和 `user` 安装方案\n`--only-binary` 强制执行\n`--no-binary` 强制执行\n`manylinux_compatible` 强制执行\n字节码编译\n严格性和规范执行\n`pip` 命令行选项和子命令\n注册表身份验证\n`egg` 支持\n构建约束\n`pip compile` 默认行为\n`requires-python` 强制实施\npip 接口\nhttps://docs.astral.sh/uv/pip/\nuv 提供了常见\npip\n、\npip-tools\n和\nvirtualenv\n命令的即插即用替代方案。这些命令直接与虚拟环境协同工作，与 uv 的主要接口...",
+        "publish_time": "2025-03-24",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Python3笔记之号称替代pip的uv包管理器（发布时间：2025-04-09 23:30:34）",
+        "url": "https://blog.csdn.net/u011159821/article/details/147104821",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "uv是什么？\nuv\n，这是一个由\nAstral\n团队开发的极快速的\nPython\n包和项目管理工具，用\nRust\n语言编写。它集成了多种功能，旨在替代\npip\n、\npip-tools\n、\npipx\n、\npoetry\n、\npyenv\n、\ntwine\n、\nvirtualenv\n等多个工具，提供更高效、更全面的\nPython\n项目管理解决方案。\nuv 开源库\n:\nhttps://docs.astral.sh/uv/\nuv docs\n:\nhttps://docs.astral.sh/uv/\n亮点\n🚀一个工具即可替换pip、、、、、、、等等pip-tools。pipxpoetrypyenvtwinevirtualenv\n⚡️比 pip 快 10-100 倍。\n🗂️ 提供全面的项目管理，并带有 通用的锁文件。\n❇️运行脚本，支持 内联依赖元数据。\n🐍安装和管理Python 版本。\n🛠️运行并安装以 Python 包形式发布的工具。\n🔩 包含与pip 兼容的接口，可通过熟悉的 CLI 提高性能。\n🏢 支持可扩展项目的Cargo 风格工作区。\n💾 节省磁盘空间，具有用于依赖性重复数据删除的全局缓存。\n⏬ 无需 Rust 或 Python 即可通过curl或安装pip。\n🖥️ 支持 macOS、Linux 和 Windows。\nuv 与 pip 的对比分析\n功能\nuv\npip\n包管理\n支持包的安装、...",
+        "publish_time": "2025-04-09",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

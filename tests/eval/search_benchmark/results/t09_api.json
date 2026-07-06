@@ -1,0 +1,123 @@
+{
+  "query": "gRPC REST 性能对比 protobuf 序列化",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "gRPC | Grafana k6 documentation",
+        "url": "https://grafana.com/docs/k6/v0.48.x/using-k6/protocols/grpc/?pg=blog-2025-01-30-how-to-integrate-performance-testing-and-continuous-profiling-for-deeper-application-insights&plcmt=sidebar-banner&src=partner-nspectrum&tech=target",
+        "domain": "grafana.com",
+        "site": "Grafana",
+        "snippet": "gRPC\nOverview\ngRPC is a lightweight, open-source RPC framework. It was originally developed by Google, with version 1.0 released in August 2016. Since then, it’s gained much attention and wide adoption.\nWhereas JSON transmits as human-readable text, gRPC is binary. The binary format makes data transfer faster and more compact. In the benchmarks we’ve seen, gRPC has proved much faster than REST, gRPC’s more traditional, JSON-based counterpart. The messages and services used for gRPC are described in .proto files, containing definitions for Protocol Buffers (protobuf).\nk6 also supports unary gRP...",
+        "publish_time": "2025-07-31T21:17:02+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "gRPC与REST性能对比分析",
+        "url": "https://m.17golang.com/article/530367.html",
+        "domain": "17golang.com",
+        "site": "Golang学习网",
+        "snippet": "gRPC与REST性能对比分析\n时间：2026-03-14 15:54:43\n在Python生产环境中，gRPC并不天然优于REST：实际性能差距仅10%–20%，且常被业务逻辑、数据库I/O或不当的Channel管理所掩盖；protobuf序列化优势受GIL和C扩展开销制约，而协议强契约性、客户端兼容性、调试便利性、错误可观测性及跨协议统一治理（如Tracing与鉴权）等工程现实问题，远比“谁更快”更关键——真正决定技术选型的，是团队对变更的容忍度、运维成熟度和系统长期可维护性。\ngRPC 在 Python 里真比 REST 快？先看实际瓶颈在哪\n多数人默认 gRPC 更快，但 Python 生产环境里，grpcio 的性能优势常被抵消——尤其当业务逻辑本身是 CPU-bound 或 I/O-bound 时。protobuf 序列化确实比 json.dumps 快，但 Python 的 GI\nL 和 grpcio 的 C 扩展调用开销会让差异缩小到 10%–20%，远不如换掉慢查询或加缓存来得实在。\n实操建议：\n用 timeit 对比真实 payload（比如一个含 50 个字段的嵌套消息）在 SerializeToString()  和 json.dumps() 的耗时，别信 benchmark 文章里的 toy example\n如果服务主要和数据库/Redis 打交道，网络序...",
+        "publish_time": "2026-03-14T15:54:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.999487042427063,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "Python gRPC vs REST 在生产中的权衡",
+        "url": "https://m.php.cn/faq/2136794.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "Python gRPC vs REST 在生产中的权衡\n冷炫風刃\n2026-02-24\n708人浏览\npython中grpc未必比rest快，实际瓶颈常在业务逻辑、数据库i/o或连接管理；protobuf序列化优势被gil和c扩展开销削弱，性能差异仅10%–20%。\ngRPC 在 Python 里真比 REST 快？先看实际瓶颈在哪\n多数人默认 gRPC 更快，但 Python 生产环境里，grpcio 的性能优势常被抵消——尤其当业务逻辑本身是 CPU-bound 或 I/O-bound 时。protobuf 序列化确实比 json.dumps 快，但 Python 的 GIL 和 grpcio 的 C 扩展调用开销会让差异缩小到 10%–20%，远不如换掉慢查询或加缓存来得实在。\n实操建议：\n用 timeit 对比真实 payload（比如一个含 50 个字段的嵌套消息）在 Seriali\nzeToString()  和 json.dumps() 的耗时，别信 benchmark 文章里的 toy example\n如果服务主要和数据库/Redis 打交道，网络序列化差异几乎可忽略；真正卡点往往在 await db.execute() 或 requests.post()\ngrpcio 默认启用 HTTP/2 多路复用，但 Python 客户端若没显式复用 Channel （比如每...",
+        "publish_time": "2026-02-24T08:08:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9993011951446533,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "gRPC vs REST 性能对比实测，Python环境下谁才是真正王者?",
+        "url": "https://blog.csdn.net/Instrustar/article/details/152511896",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "接口返回相同结构的 JSON 数据。\n性能指标对比\n在 100 并发、持续 60 秒的压力下，收集平均延迟、每秒请求数（RPS）和 CPU 占用率：\n协议 平均延迟 (ms) RPS CPU 使用率 (%)\nREST (JSON) 48.2 2076 67\ngRPC (Protobuf) 19.5 5120 54\n可见 gRPC 在相同硬件条件下，RPS 提升超过 140%，延迟显著降低。这得益于 Protobuf 的二进制序列化效率和 HTTP/2 多路复用特性。\n适用场景建议\n内部服务间通信优先选择 gRPC，尤其对性能敏感的场景\n对外暴露 API 或需浏览器直接访问时，REST 更具兼容性\n开发调试阶段，REST 易于查看和测试\ngraph LR A[客户端] -- HTTP/1.1 + JSON --> B[REST 服务] C[客户端] -- HTTP/2 + Protobuf --\n> D[gRPC 服务] style A fill:#f9f,stroke:#333 style C fill:#f9f,stroke:#333 style B fill:#bbf,stroke:#333 style D fill:#bbf,stroke:#333\n第二章：gRPC Python服务开发基础\n2.1 gRPC核心概念与Protocol Buffers详解\ngRPC 是一个高性...",
+        "publish_time": "2025-10-04T13:52:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9989920258522034,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "gRPC 相比 REST 的优势在哪里？",
+        "url": "https://blog.csdn.net/m0_61505785/article/details/147888603",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "优势主要体现在以下多个维度，涵盖了传输效率、协议特性、开发体验及功能扩展性等方面：\n一、传输协议与性能优势\n基于 HTTP/2 的底层协议\ngRPC 采用 HTTP/2 协议，而 REST 通常基于 HTTP/1.1。HTTP/2 引入了多项关键优化：\n多路复用（Multiplexing） ：允许在单个 TCP 连接上同时发送多个请求和响应，避免了 HTTP/1.1 的“队头阻塞”问题，显著提升并发性能。\n头部压缩（Header Compression） ：减少重复的元数据传输，降低网络开销。\n二进制帧传输：数据以二进制形式传输，比 HTTP/1.1 的文本格式更高效。\n服务器推送（Server Push） ：支持服务器主动向客户端推送数据，减少往返延迟。\n实测数据显示，gRPC 的请求响应速度可达 REST 的 10 倍以上，且在高并发场景下 CPU 利用率更低。\n高效的序列化机制\ngRPC\n 默认使用 Protocol Buffers（Protobuf） ，一种二进制序列化格式，相比 REST 常用的 JSON 或 XML 具有显著优势：\n体积更小：Protobuf 的二进制编码比文本格式（如 JSON）减少约 30%-50% 的数据量。\n解析速度更快：二进制数据的序列化/反序列化速度比文本解析快 5-100 倍。\n强类型约束：通过 .proto  文件明确定义数据结构，避免运...",
+        "publish_time": "2025-05-12T09:15:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9974198341369629,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Envoy代理GRPC服务支持通过restful进行访问（发布时间：2022-09-29 16:53:22）",
+        "url": "https://blog.csdn.net/gpdsjqws/article/details/126954458",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "一、什么是GRPC\n1.概述\nGRPC是由Google开发的一款语言中立、平台中立、开源的远程过程调用( RPC)技术，主要用来解决性能损失的问题。gRPC使客户端和服务端应用程序可以透明地进行通信，并简化了连接系统的构建。它使用HTTP/2作为通信协议，使用ProtocolBuffers作为序列化协议。\n1.1.Rest和GRPC的对比\n1.1.1优势\n(1)拥有现代高性能轻量级RPC框架。 (2)约定优先的API开发，默认使用Protocol Buffers 作为描述语言，允许与语言无关的实现。 (3)可用于多种语言的工具，以生成强类型的服务器和客户端。 (4)支持客户端和服务器双向流调用。 (5)通过Protocol Buffers 二进制序列化减少网络使用。\n(6)Rest只支持一元(客户端发出单个请求并接收单个响应)传输，GRPC支持一元,服务端流,客户端流,双向流。\n(7)REST遵循基于HTTP 1.1的请求-响应通信模型，而gRPC遵循基于HTTP 2.0的客户端-响应通信模型。HTTP 2.0在速度上有着绝对的优势\nHttp发展路程\n从 Http/0.9 到 Http/2 要发送多个请求，从多个 Tcp 连接=>keep-alive=>管道化=>多路复用不断的减少多次创建 Tcp 等等带来的性能损耗。\n多个 Tcp 连接\n在最早的时候没有\nkeep-alive\n只...",
+        "publish_time": "2022-09-29",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "使用Protobuf创建简单的gRpc服务（发布时间：2023-02-17 14:46:00）",
+        "url": "https://www.cnblogs.com/zilean/articles/17130096.html",
+        "domain": "cnblogs.com",
+        "site": "ref_2",
+        "snippet": "程序开发过程中，最重要的一步是数据交互，也就是服务之间的数据通信，涉及到通讯需要有通讯协议，数据的序列化与反序列化，从早期使用的xml，到现今流行的json，再到protobuf，这些都是为了解决通讯的效率问题。\nProtobuf 简介\nProtobuf 全称是Protocol buffers，是Google开发的一种协议，允许对结构化数据进行序列化和反序列化。Google开发它的目的也是为了解决通讯效率问题。\n为什么已经有了xml 和 json 还要使用Protobuf？\n对于小量数据序列化与反序列化来说，三者的性能并没有太大区别，但是数据量变大的时候，Protobuf序列化后的大小是json的十分之一，是xml格式的二十分之一，而且性能是他们的5～100倍。总的来说，Protobuf的特征就是小且快。 性能对比：\n如何使用Protobuf？\n概念\n首先得理解序列化，序列化的通俗解释是：把内存的一段数据转化成二进制并存储或者通过网络传输，而读取磁盘或另一端收到后可以在内存中重建这段数据。 而protobuf协议是跨语言跨平台的序列化协议，对于json与xml是一种序列化的方式，是不需要提前定义接口描述语言（IDL），并且具备可读性，但是传输体积比较大。\n所以使用Protobuf前是需要写好IDL的，关于IDL语法怎么写？官方提供比较全的文档。\nIDL编写\n官网上查询到IDL文档支...",
+        "publish_time": "2023-02-17",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "gRPC 的接口描述语言 ProtoBuffer（二）（发布时间：2019-08-22 13:04:10）",
+        "url": "https://learnku.com/articles/32974",
+        "domain": "learnku.com",
+        "site": "ref_3",
+        "snippet": "什么是ProtoBuffer\nProtoBuffer是一种与语言无关，平台无关，可扩展的序列化结构化数据的方法，用于通信协议，数据存储等，ProtoBuffer由Google开发，目前各大互联网公司普遍使用，在使用时需要编写.proto文件，目前ProtoBuffer有两个版本，Pro2、Pro3，这次主要分享的是Pro3。\nProtoBuffer的特点\n相比xml，json等数据序列化方式，ProtoBuffer具有如下特点\n体积小3到10倍，（其数据格式紧密，没有多余的空格，括号，尖括号，key等）\n性能快20到100倍（体积小了，所以传输也快，另外protobuffer也做了一个额外处理，比如传入每个字段值的长度，方便读取）\n跨语言（为每种语言提供了编译器），跨平台（序列化结果为二进制与平台无关）\n.proto文件可读性不高，序列化后的字节序列为二进制序列，不能简单的分析有效性\nProtoBuffer安装\n安装地址：https://github.com/protocolbuffers/protobu... 选择自己合适的版本进行下载 下载之后把bin文件的protoc添加到环境变量中\nProtoBuffer的数据类型和各语言的数据类型对应关系\n这里只介绍几种常用的语言的，具体各语言的对应关系请看如下链接：\nhttps://developers.google.cn/protoc...",
+        "publish_time": "2019-08-22",
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "gRPC vs HTTP（发布时间：2024-01-14 10:43:53）",
+        "url": "https://blog.csdn.net/qq_42009262/article/details/135580465",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "性能\ngRPC 消息使用 Protobuf（一种高效的二进制消息格式）进行序列化。 Protobuf 在服务器和客户端上可以非常快速地序列化。 Protobuf 序列化产生的有效负载较小，这在移动应用等带宽有限的方案中很重要。\ngRPC 专为 HTTP/2（HTTP 的主要版本）而设计，与 HTTP 1.x 相比，HTTP/2 具有巨大性能优势：\n二进制组帧和压缩。 HTTP/2 协议在发送和接收方面均紧凑且高效。\n在单个 TCP 连接上多路复用多个 HTTP/2 调用。 多路复用可消除\n队头阻塞\n。\nHTTP/2 不是 gRPC 独占的。 许多请求类型（包括具有 JSON 的 HTTP API）都可以使用 HTTP/2，并受益于其性能改进。\n应用：\n例如ETCT版本v2升级至v3中watch机制实现，通过etcd v2 Watch机制实现中，使用的是HTTP/1.x协议，实现简单、兼容性好，每个watcher对应一个TCP连接。client通过HTTP/1.1协议长连接定时轮询server，获取最新的数据变化事件。\n然而当你的watcher成千上万的时，即使集群空负载，大量轮询也会产生一定的QPS，server端会消耗大量的socket、内存等资源，导致etcd的扩展性、稳定性无法满足Kubernetes等业务场景诉求。\netcd v3的Watch机制的设计实现并非凭空出现，它正...",
+        "publish_time": "2024-01-14",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "golang grpc初体验（发布时间：2024-10-02 10:38:17）",
+        "url": "https://blog.csdn.net/weixin_44575660/article/details/142669354",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "grpc 是一个高性能、开源和通用的 RPC 框架，面向服务端和移动端，基于 HTTP/2 设计。目前支持c、java和go，分别是grpc、grpc-java、grpc-go，目前c版本支持c、c++、node.js、ruby、python、objective-c、php和c#。grpc官网 grpc-go\nProtoBuf（全称Protocol Buffer）是数据结构序列化和反序列化框架，ProtoBuf是Google推出的一款轻量高效的数据化数据存储格式，性能比json、xml强，ProtoBuf经历了ProtoBuf2和ProtoBuf3，ProtoBuf3比ProtoBuf简化了很多，目前主流的是ProtoBuf3. 优点： 1.性能：压缩性好、序列化和反序列化快（比xml和json快2-100倍）、传输速度快 2.便捷性：使用简单（自动生成序列化和反序列化代码）、维护成本低（只支持proto文件）、向后兼容（不必破坏旧格式）、加密型号 3.跨语言：跨平台、支持各种主流语言 缺点： 1.通用性差：json可以任何语言都支持，但是protobuf需要专门的解析库 2.自解释性差：只有通过proto文件才能了解数据结构 protoBuf安装并配置环境变量官网 1.编辑环境变量文件‌：vim ~/.zshrc ‌2.添加环境变量‌：\nexport PATH=\"$PATH:/u...",
+        "publish_time": "2024-10-02",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

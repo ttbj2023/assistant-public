@@ -1,0 +1,243 @@
+{
+  "query": "LangChain v1.0 Agent 如何用 ContextVar 透传上下文",
+  "category": "英文技术",
+  "expect": "zhipu/gemini",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "【LangChain】Context与Runtime：运行时数据注入完全指南",
+        "url": "https://juejin.cn/post/7622973041178771496",
+        "domain": "juejin.cn",
+        "site": "稀土掘金",
+        "snippet": "【LangChain】Context与Runtime：运行时数据注入完全指南\ndev派\n2026-03-31\n\"为什么我的工具总是拿不到用户ID？\"\n如果你也曾被这个问题折磨到凌晨三点，这篇文章就是为你准备的。\n在构建生产级Agent时，数据传递往往是最让人头疼的环节。LangChain v1.0 引入的 Runtime 机制，本质上解决了一个核心问题：如何让工具\"感知\"到运行时的上下文，同时又不把这些内部细节暴露给大模型？\n想象一下快递配送：用户（LLM）只需要填写收货地址，但快递员（Tool）还需要知道配送站点、客户等级、甚至实时交通状况。Runtime就是那个\"快递员专用信息包\"——对用户透明，对工具必需。\n一、Runtime核心能力\nLangChain 的 ToolRuntime 为工具提供了六大核心能力 ：\n组件 作用域 典型用途 类比\nState 当前对话 访问消息历史、计数器、临时标记 工作台（当前任务相关）\nContext 单次运行 用户ID、权限、数据库连接、API密钥 工牌（身份认证信息）\nStore 跨会话持久化 用户偏好、长期记忆、知识库 档案柜（历史记录）\nStream Writer 实时流 进度反馈、中间状态推送 对讲机（实时通讯）\nConfig 运行配置 回调函数、标签、元数据 配置手册\nTool Call ID 单次调用 日志追踪、调用链关联 工单号...",
+        "publish_time": "2026-03-31T05:31:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.5778124332427979,
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain Agent 实战指南：调用、结构化输出、记忆与流式输出",
+        "url": "https://blog.51cto.com/JavaEdge/14599079",
+        "domain": "51cto.com",
+        "site": "51CTO博客",
+        "snippet": "LangChain Agent 实战指南：调用、结构化输出、记忆与流式输出\n公众号JavaEdge\n2026-05-14 14:56:42\n文章标签： 中间件 自定义 ide\n文章分类： Agent 开发 AI 开发平台\n一句话总结\n本文详解 LangChain Agent 的四大核心能力：基础调用与流式输出、结构化响应（ToolStrategy/ProviderStrategy）、自定义状态记忆（中间件与 state_schema）、以及中间件扩展机制。\n主要内容\n调用与流式输出\n通过 agent.invoke() 传入消息序列触发 Agent；使用 agent.stream() 可实时获取中间步骤（如工具调用、AI 回复），支持 stream_mode=\"values\"  流式消费完整状态。\n结构化输出\n支持两种策略：ToolStrategy（通用，基于工具模拟结构化）和 ProviderStrategy（原生支持模型，更可靠）；LangChain 1.0 起支持直接传入 Pydantic 模型自动降级选择策略。\n记忆管理\nAgent 默认维护消息历史（短期记忆）；可通过 中间件定义（推荐，语义清晰、支持 hook 工具）或 state_schema 参数定义自定义状态（须为 TypedDict），实现用户偏好等额外上下文持久化。\n中间件扩展\n提供 @before_model ...",
+        "publish_time": "2026-05-14T14:56:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.5610672831535339,
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain v1.0实战:解决AI Agent上下文混乱问题，程序员必收藏指南!",
+        "url": "https://blog.csdn.net/Trb701012/article/details/154340585",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "LangChain v1.0实战：解决AI Agent上下文混乱问题，程序员必收藏指南！\n最新推荐文章于 2026-02-10 22:05:23 发布\n最新推荐文章于 2026-02-10 22:05:23 发布\n文章标签：\n#langchain #人工智能 #产品经理 #大模型教程 #大模型学习 #AI #大模型\n用 LangChain 构建 AI Agent 的人应该都遇到过这种情况：测试阶段一切正常，部署到生产环境就开始出各种问题。上下文管理混乱，Agent 的行为变得难以预测，最后不得不写一堆自定义代码来控制信息流向。\n这是因为在v1.0 之前的 LangChain 对上下文工程的支持不够系统化。上下文工程的本质其实就是信息管理——给 AI 多少信息、什么时候给、以什么方式给。信息过载会导致模型困惑，信息不足则无法完成任务。这个平衡点一直很难把握。\nLangChain v1.0 引入的中间件机制就是为了解决这个问题。中间件的作用类似于一个信息协调层，在用户输入到达模型之前进行必要的处理：\n规范化输入格式\n注入相关背景知识\n过滤敏感信息\n限制工具调用权限\n这种架构保证了模型接收到的始终是经过精心组织的上下文。\n后端视角下的中间件模式\n对于熟悉 FastAPI 的开发者来说，LangChain 中间件的概念几乎可以无缝迁移。FastAPI 的中间件拦截 HTTP 请求，Lang...",
+        "publish_time": "2025-11-03T10:56:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.5561327934265137,
+        "is_bytedance": false
+      },
+      {
+        "title": "我的AI学习路线",
+        "url": "https://blog.51cto.com/u_16099330/14459517",
+        "domain": "51cto.com",
+        "site": "51CTO博客",
+        "snippet": "我的AI学习路线\n网络小墨\n2026-01-26 21:03:53 文章来源：转载\n文章标签： #人工智能 零基础 字段 数据\n文章分类： Agent 开发 AI 开发平台\n一句话总结\n本文系统介绍了LangChain中RunnablePassthrough的核心作用与实战应用，重点讲解其作为‘数据搬运工’在保留原始输入、扩展上下文及协同Milvus检索与本地模型生成答案中的关键价值。\n主要内容\n核心定位\nRunnablePassthrough是LangChain链式调用中的轻量级数据管理工具，核心功能为：①纯透传原始输入（如用户问题），确保不被中间组件消耗；②通过.assign()动态扩展字段（如添加processed_num、num_desc），丰富上下文。\n典型场景\n适用于需跨步骤共享原始输入的场景，例如：结合Retriever时同步传递用户问题与检索结果至Prompt；为日志追踪注入请求ID、时间戳等固定参数；在RAG流程中保障question与context双路输入。\n实战集成\n文中以‘本地模型（deepseek-r1:7b）+ Milvus向量库 + 博客文档’为例，构建完整RAG链：利用RunnablePassthrough透传question，与Retriever输出的context共同注入Prompt，驱动本地模型生成精准回答，显著简化上下文拼接逻辑，提升链路健壮...",
+        "publish_time": "2026-01-26T21:03:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.5455986857414246,
+        "is_bytedance": false
+      },
+      {
+        "title": "Langchain_v1.0|高级使用-Runtime 运行时",
+        "url": "https://blog.csdn.net/k316378085/article/details/157712165",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "Langchain_v1.0|高级使用-Runtime 运行时\n原创 已于 2026-02-04 00:27:19 修改 · 332 阅读\n文章标签：\n#langchain V1.x\nLangchain_v1.0|高级使用-Runtime 运行时\n@Runtime 运行时\n@Access 访问\n@Inside tools 工具内部\n@Inside middleware 内部中间件\nRuntime 运行时\nLangChain 的 create_agent 在 LangGraph 的运行时内运行。\nLangGraph 接受一个带有以下信息的 Runtime 对象：\nContext： 上下文 ：代理调用的静态信息，如用户 ID、数据库连接或其他依赖项\nStore: 状态存储：用于 长期存储 的 BaseStore 实例\nStream writer： 流写入器 ：用于通过“自定义”流模式流式传输信息的对象\n您可以在工具和中间件中访问运行时信息。\nAccess 访问\n当使用 create_agent 创建代理时，可以指定 context_schema 以定义存储在代理 Runtime 中的 context 的结构。\n调用代理时，将 context 参数传递给相关配置的运行：\nfrom dataclasses import dataclass\n\nfrom langchain.agents im...",
+        "publish_time": "2026-02-04T00:23:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.5420149564743042,
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 2.31
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "从 0.x 到 1.0：LangChain 生产级 Agent 实战指南（含示例代码）（发布时间：2025-11-04 23:31:47）",
+        "url": "",
+        "domain": "",
+        "site": "ref_1",
+        "snippet": "本文基于 LangChain 官网文档与官方博客，系统梳理 0.1、0.2、0.3 到生产级 1.0 的演进脉络、核心架构理念与每个版本重点优化方向。 掌握 LangChain 的“工程化能力曲线”，把控方案选型、风险与里程碑。 理解标准接口、LCEL 组合式编程、Agent 运行时、中间件与结构化输出，能独立完成从 0.x 迁移到 1.0 的基础工作。 欢迎关注，一起进步 演进总览 横向为版本递进，方块概述各版本核心演进重点与设计取舍。 版本与架构设计理念 0.1：首次稳定版与 LCEL（LangChain Expression Language） 时间与背景：0.1 作为首个稳定版，确立明确版本策略与核心一致性。 架构要点： 分层架构： langchain-core （核心抽象与 LCEL）、 langchain （高阶用例入口）、 langchain-community （第三方集成）。 LCEL 与 Runnable：统一的可组合运行时，暴露单次、批量、流式与异步方法，降低自定义链路成本，支持中间步骤流式可视化与更强可观测性。 兼容性与可维护性：以“稳定核心 + 社区集成拆分”的方式控制变更风险。 主要解决的问题： 早期“不可组合”的痛点：让链路真正通过 LCEL 可组合、可替换、可扩展。 集成膨胀与依赖复杂：将集成迁往 community 或独立包，改善安装与版本管理。 ...",
+        "publish_time": "2025-11-04",
+        "is_bytedance": false
+      },
+      {
+        "title": "Langchain Agent（发布时间：2024-04-29 00:10:10）",
+        "url": "https://zhuanlan.zhihu.com/p/694452841",
+        "domain": "zhihu.com",
+        "site": "ref_2",
+        "snippet": "Agent的核心思想是使用语言模型选择要采取的行动（action）序列。在chain中，行动序列是硬编码在代码中。在agent中，语言模型被当做推理引擎，确定要采取哪些行动以及按什么顺序执行。下面将逐一介绍Agent中的关键组件。Langchain有几个抽象概念让使用agent变得容易。表示agent应该采取的行动的数据类，它包含tool属性（应该调用的工具的名称）和tool_input属性（该工具的输入）。表示agent准备返回给用户时的最终结果，它包含return_values键值映射，其中包含最终的agent输出。它通常包含output键，其中包含作为agent响应的字符串。表示以前的agent行动和CURRENT agent运行的相应输出。这些内容传给接下来的迭代非常重要，这样agent就知道它已经完成了什么工作，它的类型格式为List[Tuple[AgentAction，Any]]。需要注意的是observation当前保留为Any类型，以保证最大限度地灵活性。在实践中，observation通常是字符串。这是决定下一步行动的chain，通常包含LLM、prompt和输出解析器。不同的agent有不同的推理提示风格、不同的编码输入方式和不同的输出解析方式。内置agent的完整列表请参阅agent types。如果你需要进一步的掌控，还可以构建自定义agent。Agent的...",
+        "publish_time": "2024-04-29",
+        "is_bytedance": false
+      },
+      {
+        "title": "【AI大模型】LangChain的Agent使用介绍，一文搞懂！！（发布时间：2024-11-16 08:00:00）",
+        "url": "https://blog.csdn.net/Android23333/article/details/143788375",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "LangChain 介绍\n随着各种开源大模型的发布，越来越多的人开始尝试接触和使用大模型。在感叹大模型带来的惊人表现的同时，也发现一些问题，比如没法查询到最新的信息，有时候问一些数学问题时候，会出现错误答案，还有一些专业领域类问题甚至编造回答等等。有没有什么办法能解决这些问题呢？答案就是LangChain。\nLangChain 是一个开源的语言模型集成框架，旨在简化使用大型语言模型（LLM）创建应用程序的过程。利用它可以让开发者使用语言模型来实现各种复杂的任务，例如文本到图像的生成、文档问答、聊天机器人、调用特定的SaaS服务等等。随着ChatGPT、midjourney等AI技术的爆火，LangChain也是在短时间内得到6w+的star数，版本迭代也是异常的快，社区十分活跃。\nLangChain 在没有任何收入也没有任何明显的创收计划的情况下，获得了 1000 万美元的种子轮融资和 2000-2500 万美元的 A 轮融资，估值达到 2 亿美元左右。\n上面是LangChain的核心架构图，可以看到LangChain主要包含如下模块：\nModel I/O：大模型的输入输出，包含提示词、任何大模型、结果解析器。\nRetrieval：涉及到数据集相关，主要包含文档提取器、文档转换器、向量数据库等。\nChains：允许将多个不同组件组合在一起使用，形成链条式调用。\nMemory：在大模...",
+        "publish_time": "2024-11-16",
+        "is_bytedance": false
+      },
+      {
+        "title": "如何用LangChain开发一个Agent，20分钟包教包会！（发布时间：2026-04-19 09:41:53）",
+        "url": "",
+        "domain": "",
+        "site": "ref_4",
+        "snippet": "你好，我是程序员小孟。最近接了很多AI的项目的开发，同时我也在更新一些AI 的项目。 26年一定是一个 Agent 大年，我这边持续出系列文章，帮助大家更好的落地 Agent，今天的重点是程序员最常用的 Agent 框架 LangChain。 只不过这东西可能由于 AI Coding 的成熟，由给人看变成给 AI 看的。 LangChain 既是一个开源的AI应用开发框架，也是其背后同名公司LangChain的统称。 该公司围绕AI应用开发构建了一套完整的产品矩阵，包括广受欢迎的开源框架LangChain、用于构建复杂状态机的LangGraph，以及企业级调试与监控平台LangSmith等。 其中，LangChain和LangGraph是社区中最活跃的两个开源项目。 需要特别说明的是，在LangChain 1.0版本之后，这两个框架的定位发生了重要变化：LangGraph 成为底层的智能体编排引擎，专注于有状态、多轮、高度定制化的智能体流程控制； 而LangChain 则在此基础上演变为上层应用开发框架，提供了更高阶的抽象、丰富的工具集成和便捷的智能体构建能力。 简单来说，LangChain 封装了 LangGraph 的复杂性，让开发者能够快速搭建标准智能体；而LangGraph 则为需要深度控制流程、自定义逻辑的场景提供了灵活的图式编程能力。 对于大多数智能体应用，比如本文将要...",
+        "publish_time": "2026-04-19",
+        "is_bytedance": false
+      },
+      {
+        "title": "LLM(大语言模型)「Agent」开发教程-LangChain（三）（发布时间：2024-08-06 20:31:04）",
+        "url": "https://blog.csdn.net/sgyuanshi/article/details/140965389",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "v1.0官方文档｜最新文档\n一、LangChain入门开发教程：Model I/O\n二、基于LangChain的RAG开发教程\nLangChain是一个能够利用大语言模型（LLM，Large Language Model）能力进行快速应用开发的框架：\n高度抽象的组件，可以像搭积木一样，使用LangChain的组件来实现我们的应用\n集成外部数据到LLM中，比如API接口数据、文件、外部应用等；\n提供了许多可自定义的LLM高级能力，比如Agent、RAG等等；\nLangChain框架主要由以下六个部分组成：\nModel IO：格式化和管理LLM的输入和输出\nRetrieval：检索，与特定应用数据交互，比如RAG，与向量数据库密切相关，能够实现从向量数据库中搜索与问题相关的文档来作为增强LLM的上下文\nAgents：决定使用哪个工具（高层指令）的结构体，而tools则是允许LLM与外部系统交互的接口\nChains：构建运行程序的block-style组合，即能将多个模块连接起来，实现复杂的功能应用\nMemory：在运行一个链路（chain）时能够存储程序状态的信息，比如存储历史对话记录，随时能够对这些历史对话记录重新加载，保证长对话的准确性\nCallbacks：回调机制，可以追踪任何链路的步骤，记录日志\n该系列的第一篇文章介绍了LangChain Model I/O涉及的Prompts...",
+        "publish_time": "2024-08-06",
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 0.78
+  },
+  "baidu": {
+    "count": 10,
+    "results": [
+      {
+        "title": "LangChain Agent Context Schema 笔记",
+        "url": "https://blog.csdn.net/cooper_wx/article/details/158127600",
+        "domain": "csdn.net",
+        "snippet": "context_schema是用于在agent调用链中传递自定义上下文数据的机制,让工具能够访问调用时传入的运行时信息。 🏗 基本结构 1. 定义上下文模式 fromdataclassesimportdataclass@dataclassclassContext:\"\"\"自定义运行时上下文\"\"\"user_id:str# 可以添加更多字段# auth_token: str# preferences: dict# session_id: str 一键获取完整项目代码python 1 2 3 4 5 6 7 8 9 10 2. 创建agent时注册 agent=create_agent(model=model,system_prompt=SYSTEM_PROMPT,tools=[get_user_location,get_weather_for_location],context_schema=Context,# 传入数据类,而不是实例response_format=ToolStrategy(ResponseFormat),checkpointer=checkpointer) 一键获取完整项目代码python 1 2 3 4 5 6 7 8 3. 定义可使用上下文的工具 fromlangchain.toolsimporttool,ToolRuntime@tooldefget_user_lo...",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain v1.0 中间件详解:彻底搞定 AI Agent 上下文控制",
+        "url": "https://www.163.com/dy/article/KDCMM40F0531D9VR.html",
+        "domain": "163.com",
+        "snippet": "用LangChain 构建 AI Agent 的人应该都遇到过这种情况:测试阶段一切正常,部署到生产环境就开始出各种问题。上下文管理混乱,Agent 的行为变得难以预测,最后不得不写一堆自定义代码来控制信息流向。 这是因为在v1.0 之前的 LangChain 对上下文工程的支持不够系统化。上下文工程的本质其实就是信息管理——给 AI 多少信息、什么时候给、以什么方式给。信息过载会导致模型困惑,信息不足则无法完成任务。这个平衡点一直很难把握。 LangChain v1.0 引入的中间件机制就是为了解决这1个问题。中间件的作用类似于一个信息协调层,在用户输入到达模型之前进行必要的处理: 规范化输入格式 注入相关背景知识 过滤敏感信息 限制工具调用权限 这种架构保证了模型接收到的始终是经过精心组织的上下文。 后端视角下的中间件模式 对于熟悉 FastAPI 的开发者来说,LangChain 中间件的概念几乎可以无缝迁移。FastAPI 的中间件拦截 HTTP 请求,LangChain 的中间件拦截 Agent 调用,底层逻辑完全一致。 FastAPI 中间件处理的典型任务: 身份认证 请求日志 CORS 配置 LangChain 中间件的对应场景: 上下文管理 安全控制 工具调度 运行时监控 执行流程也是相同的组合模式: FastAPI: Request → Middleware St...",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain V1.0 Context Engineering(上下文工程)详细指南",
+        "url": "https://blog.csdn.net/weixin_45644347/article/details/156789709",
+        "domain": "csdn.net",
+        "snippet": "Agent失败的两大原因 当AI Agent 表现不佳时,通常是以下两个原因之一: <table><tr><th>原因</th><th>说明</th><th>解决方案</th></tr><tr><td>LLM 能力不足</td><td>模型本身无法完成任务</td><td>换用更强大的模型</td></tr><tr><td>上下文不正确</td><td>没有传递\"正确\"的信息给 LLM</td><td>上下文工程</td></tr></table> 重要发现:大多数 Agent 失败是因为上下文问题,而非模型能力问题。 典型的 Agent 循环",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain v1.0 中间件详解:彻底搞定 AI Agent 上下文控制",
+        "url": "https://baijiahao.baidu.com/s?id=1847674946527091323&wfr=spider&for=pc",
+        "domain": "baidu.com",
+        "snippet": "用LangChain 构建 AI Agent 的人应该都遇到过这种情况:测试阶段一切正常,部署到生产环境就开始出各种问题。上下文管理混乱,Agent 的行为变得难以预测,最后不得不写一堆自定义代码来控制信息流向。 这是因为在v1.0 之前的 LangChain 对上下文工程的支持不够系统化。上下文工程的本质其实就是信息管理——给 AI 多少信息、什么时候给、以什么方式给。信息过载会导致模型困惑,信息不足则无法完成任务。这个平衡点一直很难把握。 LangChain v1.0 引入的中间件机制就是为了解决这1个问题。中间件的作用类似于一个信息协调层,在用户输入到达模型之前进行必要的处理: 规范化输入格式 注入相关背景知识 过滤敏感信息 限制工具调用权限 这种架构保证了模型接收到的始终是经过精心组织的上下文。 后端视角下的中间件模式 对于熟悉 FastAPI 的开发者来说,LangChain 中间件的概念几乎可以无缝迁移。FastAPI 的中间件拦截 HTTP 请求,LangChain 的中间件拦截 Agent 调用,底层逻辑完全一致。 FastAPI 中间件处理的典型任务: 身份认证 请求日志 CORS 配置 LangChain 中间件的对应场景: 上下文管理 安全控制 工具调度 运行时监控 执行流程也是相同的组合模式: FastAPI: Request → Middleware St...",
+        "is_bytedance": false
+      },
+      {
+        "title": "一文读懂AI智能体!LangChain V1.0保姆级教程,从模型调用到Agent编排,手把手带你入门!",
+        "url": "https://blog.csdn.net/m0_59235945/article/details/156006898",
+        "domain": "csdn.net",
+        "snippet": "学习目标:理解智能体系统的必要性与分层架构;区分内容块(ContentBlocks)与上下文(Context); 说明何时采用 Agent 编排而非单次模型调用。 关键术语 Agent:智能体,组合模型、工具与策略形成可执行的系统。 Tool:工具,以@tool声明的原子能力函数,支持类型校验与独立测试。 Middleware(中间件):包裹模型/工具调用,实现路由、裁剪、审计、错误防护等。 Content Blocks(内容块):标准化消息内容块,统一文本、工具调用与多模态引用的表示。 Context(执行上下文):通过invoke/stream的context参数注入(如租户、用户画像、灰度桶),不进入提示词文本本身;若将上下文写入消息内容,则会计入 token 与成本。 Static/Dynamic Model(静态/动态模型):静态模型在生命周期内固定;动态模型在运行时依据策略与状态进行路由与降级。 从“单次模型调用”发展为“具备工具、策略、状态与可观测的系统”。 核心构件:模型(Model)、工具(Tool)、中间件(Middleware)、上下文(Context)、结构化输出(Structured Output)、可观测(Observability)。 价值:可控与可扩展(错误防护、能力路由、合规审计)、稳定与韧性(重试、超时、断路器、降级与回退)、可观测(日志、指标、...",
+        "is_bytedance": false
+      },
+      {
+        "title": "langchain工具上下文;工具节点;",
+        "url": "https://www.cnblogs.com/asphxiasea/p/19768651",
+        "domain": "cnblogs.com",
+        "snippet": "访问上下文方式: 1. 访问短期记忆方式: 工具可以通过以下方式访问当前对话状态runtime.state。 对话期间存在的短期记忆state[\"messages\"](这个字段在agent一定存在): 自定义的短期记忆Custom State: langchain Agent与langgragh中state不同的是Agent里其实一直有state,而langgragh是自己显示定义并绑定的自定义state。 2. 更新短期记忆字段 往runtime.state里“更新或新增字段” 注意返回字段Command,Command的本质上是控制。 上下文语境提供在调用时传递的不可变配置数据。用于用户 ID、会话详细信息或在对话过程中不更改的应用程序特定设置。 通过以下方式访问上下文runtime.context 上下文语境的使用方式: 1. 自定义数据类 2. 在创建代理时配置 3. 在代理对话时调用 长期记忆 1. 创建InMemoryStore()实例并在创建代理时配置 2. 在创建代理时配置 从runtime.store取出并使用 流式返回工具信息 在工具执行过程中,实时传输工具的更新信息。这对于在长时间运行的操作期间向用户提供进度反馈非常有用。 使用runtime.stream_writer发出自定义更新: 工具节点; 工具节点与我之前写的普通逻辑节点有很大区别,虽然看上去差不多,...",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain V1.0 MCP (Model Context Protocol) 详细指南",
+        "url": "https://blog.csdn.net/weixin_45644347/article/details/156873577",
+        "domain": "csdn.net",
+        "snippet": "为什么使用 MCP <table><tr><th>优势</th><th>说明</th></tr><tr><td>标准化</td><td>统一的协议,一次实现,到处使用</td></tr><tr><td>解耦</td><td>AI 应用与工具/服务分离,独立开发和部署</td></tr><tr><td>可复用</td><td>MCP 服务器可被多个 AI 应用共享</td></tr><tr><td>生态丰富</td><td>社区已有大量现成的 MCP 服务器</td></tr><tr><td>类型安全</td><td>强类型定义,减少运行时错误</td></tr></table> LangChain 的 MCP 支持 LangChain 通过langchain-mcp-adapters库提供 MCP 支持: pipinstalllangchain-mcp-adapters 运行项目并下载源码bash 1 核心能力: 连接多个 MCP 服务器 加载MCP 工具并与 Agent 集成 访问MCP 资源和提示词 工具拦截器和回调系统 支持有状态和无状态会话 核心概念 MCP 架构 ┌───────────────────────────────────",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain1.0系列:中间件深度解析,让 AI智能体上下文控制不失控",
+        "url": "https://blog.csdn.net/u013970991/article/details/154784122",
+        "domain": "csdn.net",
+        "snippet": "相信很多用LangChain构建AI Agent 的开发者都有过这样的经历:本地测试时 Agent 表现得聪明又可靠,能精准理解需求、调用工具完成任务,但一旦部署到生产环境,各种问题就接踵而至。有时候 Agent 会因为对话历史太长而忽略关键信息,有时候会未经授权调用敏感工具,还有时候会因为输入里的敏感数据导致隐私泄露,最后不得不写一堆杂乱的自定义代码来“打补丁”,但效果往往不尽如人意。 这背后的核心问题,其实是上下文管理的失控。AIAgent的本质是通过对上下文的理解来决策和行动,而上下文工程的核心就是“信息的精细化管理”,该给 Agent 看什么信息、什么时候给、给多少,这些细节直接决定了 Agent 的行为边界和可靠性。在 LangChain v1.0 之前,框架对上下文的支持缺乏系统化的设计,开发者只能在参数配置和手写逻辑之间挣扎,而 v1.0 引入的中间件机制,正是为了解决这个痛点,给上下文管理提供了一套优雅且可扩展的解决方案。从 FastAPI 开发者熟悉的逻辑说起 对于熟悉 FastAPI 的开发者来说,理解 LangChain 中间件几乎没有门槛,因为两者的设计思想和底层逻辑高度一致。在 FastAPI 中,中间件是介于 HTTP 请求和接口处理函数之间的“拦截器”,可以在请求到达接口前做身份认证、日志记录,也可以在响应返回前做数据格式化、跨域处理;而在 LangC...",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain v1.0 全解析:静态与动态模型架构详解,收藏这篇就够了!",
+        "url": "https://blog.csdn.net/2401_85327249/article/details/156155902",
+        "domain": "csdn.net",
+        "snippet": "LangChain v1.0引入静态与动态模型两种形态,通过中间件实现运行时模型选择。统一初始化接口和标准化消息内容块简化跨提供商集成。动态模型选择支持成本优化与能力路由,中间件系统(before_model/after_model等钩子)增强Agent扩展性。v1.0解决了接口碎片化、Agent组合能力可扩展性和模型选择刚性问题,提供更灵活的大模型应用开发体验。 LangChain v1.0 在 Agent 与 Model 使用方式上引入“静态模型”和“动态模型”两种形态: 静态模型:在创建 Agent 或独立调用时一次性指定模型,执行期间不变。 动态模型:在运行时依据上下文与状态选择最合适的模型,通过中间件(middleware)实现。 统一的模型初始化与消息表示: 提供统一的模型初始化入口(如init_chat_model与create_agent),便于跨提供商切换。 标准化消息内容块(content_blocks)统一表示推理、工具调用、多模态输出等高级特性,降低跨提供商差异带来的复杂度。 统一初始化与接口一致性: create_agent成为v1.0 推荐的建 Agent 方式;模型既可用字符串( provider + model 标识),也可用具体模型实例,接口更简洁。 init_chat_model提供标准化初始化与参数传递(如temperature、timeout...",
+        "is_bytedance": false
+      },
+      {
+        "title": "LangChain v1.0:从零开始构建企业级AI智能体全攻略!",
+        "url": "https://blog.csdn.net/2301_80239908/article/details/154526629",
+        "domain": "csdn.net",
+        "snippet": "2025年9月,LangChain正式发布v1.0版本,标志着这个曾经被开发者戏称为\"玩具框架\"的工具包,终于完成了向生产级解决方案的关键一跃。作为深耕LangChain生态两年的开发者,我见证了从v0.1到v1.0的艰难蜕变。这次更新绝非简单的版本迭代——通过create_agent新接口、content_blocks标准化内容处理和命名空间简化三大核心改进,LangChain第一次真正解决了企业级Agent开发的痛点:开发效率提升40%、系统稳定性提高65%、模型切换成本降低80%。 create_agent:一行代码构建生产级智能体 告别200行模板代码——这是create_agent接口给开发者最直观的感受。在v1.0之前,构建一个基础的ReAct Agent需要导入langgraph.prebuilt.create_react_agent,手动配置提示词模板,处理工具调用格式,至少编写50行以上的样板代码。而现在,一切都变得无比简单: from langchain.agents import create_agentfrom langchain_openai import ChatOpenAI# 定义工具def get_weather(city: str) -> str: \"\"\"获取指定城市天气\"\"\" return f\"当前{city}天气晴朗,气温25℃\"# 创建智能体...",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "",
+    "elapsed": 1.57
+  },
+  "gemini": {
+    "count": 6,
+    "results": [
+      {
+        "title": "tencent.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEoqS6o8BtdZi0aApn3MiM-MWkseRi4s8U0mnSLcrDy3iOl9o1uMmeQjt4VnhK57aAKvBAOSWj92NWQQd5zNo5sCWG8ZxGSiMaGyvZLDBZE2ketrYhEOjNtkfCs5Qdw2C8--Lp_J91NzOes7fpkFQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "cnblogs.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEaCdG8JO_UkbUUpgj-nZ7vK4IkElJyh0aOvYP63IcBd8ppfD3oy6C8EXsD6_q5ys1FJGBaSAXN2zoVmqHlLAwrGLNHDo2MgPjVtZ-hVY-68xa7SORcDANhPYxsTZXXLS5lUFF5wQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "langchain.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcC6uVLBYx8t2iZTxbwNtRXWUuZLNfJdWSgTqqwXEDZxWIX-s6AlfHjRvenwSUnNd6uHn8Swp_YA6YbqFoAbNqAgCzS-Mi_xHcKr8W1GGsii_D28EAfEXDMgmcLDXXOBpno7efawRfUWgbHSORcVaIpCEXqNG7BwjRRfFjwO8=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFBBixEWGwBxhZsobUiq__m2nok0N5YG5csLgnoqqi5VoQBcyvPEqSPgv2l3IV3pto4re_XBUfFDlqjx8dL3bAyXBw1Vol3Xmcy6xyzh_q2gN2EvkWzB0rgtQEG89Pnp7kbbkozizj0xMZroV2B",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHN2Q4WTNUgkzDLHTBTgrrsLg-QzJ8ccdxlZ17eU735QviMscNF0pcAMLh_APg1ZUZHk0Yi8hRvg-pAOv-NiD6DWiUOPTZUAhSwnD96WzgTe1ZQ6UOJ-kpNYlDDrR5aUU95sRJVeHMoYo3iAISaDe5a-XZM7ZtN35O",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "medium.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0__EOgV4aCrAdiG2SBNmq6mJBPU5joIk6EGDn7tNtLPq8yGbzsJwFuqmdGt0v1KLdepGGJywWYThhz9qfqgPpax5x7EFkp6dce5-dCS_oNO_iQWVmKlwVjqdXPPKaRaL7ylYApVh8c1iW07iBE-GlHoA1sZKzzPRKlF8-jDog7mSWbSeiSn6EERVO_3Z96rCJxh2OGnj6y0Yx-xTbdr722K3iEkpDp7XfBOZ4706_V8gLWcZK960WP6WBB2tzrx1BOlxHnx0=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "在 LangChain v1.0 中，`ContextVar` 并不是直接用于“透传上下文”到 Agent 的核心机制。LangChain v1.0 引入了**中间件（Middleware）**和**上下文工程（Context Engineering）**来系统化地管理和传递 Agent 的上下文信息。\n\n`ContextVar` 是 Python 标准库 `contextvars` 模块的一部分，它提供了一种在异步代码中管理局部变量的方式，使得这些变量可以在函数调用栈中被访问，而无需显式传递。虽然 `ContextVar` 本身可以用于在 Python 应用程序的异步上下文中存储和检索信息，但在 LangChain v1.0 的 Agent 框架中，它并不是暴露给用户直接用来控制 Agent 上下文传递的主要方式。\n\nLangChain v1.0 的设计重点在于通过更结构化的方式来管理上下文，以提高 Agent 的可控性和可维护性。主要的上下文管理方式包括：\n\n1.  **中间件 (Middleware)**：\n    *   中间件可以在 Agent 执行流程的不同阶段介入，例如在模型调用前（`before_model`）进行输入预处理，或在模型调用后（`after_model`）进行输出验证。\n    *   通过组合不同的中间件，可以实现诸如输入格式规范化、注入背景知识、过滤敏感信息、限制工具调用权限等功能。\n    *   `create_agent` 函数的设计就是围绕中间件展开的，它允许用户通过配置中间件来定制 Agent 的行为。\n\n2.  **上下文工程 (Context Engineering)**：\n    *   这是指以正确的格式提供正确的信息和工具，以便 LLM 能够更好地实现输出。\n    *   LangChain v1.0 区分了不同类型的上下文：\n        *   **模型上下文 (Model Context)**：指传递给模型的输入，如指令、消息历史、工具和响应格式。这是“短暂的”上下文，即在单次模型调用中有效。\n        *   **工具上下文 (Tool Context)**：指工具可以访问和生成的信息，可以被视为“持久的”上下文，因为它涉及到状态、存储和运行时上下文。\n        *   **生命周期上下文 (Life-cycle Context)**：指在模型和工具调用之间发生的事情，如摘要、护栏、日志记录等，这也是“持久的”上下文。\n    *   通过 `context_schema`，可以定义上下文的结构，并将用户信息等传递到 Agent 的上下文中。\n\n**总结来说，LangChain v1.0 鼓励开发者使用中间件和上下文工程来管理 Agent 的上下文，而不是直接依赖 `ContextVar`。** 中间件提供了一个灵活的钩子系统，而上下文工程则提供了一种结构化的方式来思考和组织传递给 Agent 的信息。\n\n**参考来源:**\n\n*   langchain V1.0使用指南(一) 原创 - CSDN博客\n*   LangChain v1.0 中间件详解：彻底搞定AI Agent 上下文控制 - 腾讯云\n*   LangChain v1.0 中间件详解：彻底搞定AI Agent 上下文控制 - deephub - 博客园\n*   Context engineering in agents - Docs by LangChain\n*   Build Context-Aware...",
+    "elapsed": 54.6
+  }
+}

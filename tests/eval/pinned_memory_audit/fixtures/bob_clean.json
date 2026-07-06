@@ -1,0 +1,166 @@
+{
+  "sample_id": "bob_clean",
+  "sample_type": "negative",
+  "description": "bob干净置顶记忆(邮箱/住址/硬件/PPT偏好), 全keep测精确率(防过拟合gifford)",
+  "pinned_memory": {
+    "preferences": "使用PPT多年，偏好简洁风格，较少使用动画",
+    "basic_info": "电子邮箱：demo_user@example.com\n住址：上海市浦东新区示例路1号\n本地硬件：显卡4070 Ti Super，内存32GB，CPU AMD 9950x"
+  },
+  "conversation_index": [
+    {
+      "round": 139,
+      "topic": "可视化，Vega-Lite，后端渲染",
+      "summary": "对比Vega-Lite与Mermaid及Matplotlib，确认Vega-Lite加后端渲染是Agent图表生成的最佳方案。"
+    },
+    {
+      "round": 140,
+      "topic": "项目进度，图表工具，后端微调",
+      "summary": "用户确认图表工具完成，助手总结测试结论并推进后续任务。"
+    },
+    {
+      "round": 141,
+      "topic": "图表生成，轴标签，默认旋转",
+      "summary": "用户请求生成含长轴标签的图表，助手展示默认旋转效果并分析标签长度。"
+    },
+    {
+      "round": 142,
+      "topic": "响应延迟，图表对比，后端默认逻辑",
+      "summary": "展示无设置 labelAngle 时各组件平均响应延迟对比图及后端默认逻辑效果。"
+    },
+    {
+      "round": 143,
+      "topic": "标签旋转，默认效果，后端就绪",
+      "summary": "用户调整标签拥挤时旋转角度为45度，优化默认显示效果。"
+    },
+    {
+      "round": 144,
+      "topic": "LangChain,Subagent,Claude Code,架构对比",
+      "summary": "探讨 LangChain 与 Claude Code 实现子代理的原理、架构差异及工具描述设计。"
+    },
+    {
+      "round": 145,
+      "topic": "Agent 分身，Subagent 架构，并行处理",
+      "summary": "探讨主 Agent 分身机制，对比专家型与通用型 Subagent 架构差异。"
+    },
+    {
+      "round": 146,
+      "topic": "递归风险，工具隔离，架构设计",
+      "summary": "分析分身调用工具的递归风险，建议通过工具列表隔离避免自指。"
+    },
+    {
+      "round": 147,
+      "topic": "通用分身，专家工具，协同驾驶",
+      "summary": "用户反对通用分身，认为协同场景下专家工具更合适。"
+    },
+    {
+      "round": 148,
+      "topic": "复杂性封装，专家工具，上下文管理",
+      "summary": "封装半自动需求为专家工具可优化主 Agent 上下文并隔离复杂度。"
+    },
+    {
+      "round": 149,
+      "topic": "待办事项，PPT生成，文档编辑",
+      "summary": "用户查询待办，助手列出两项开发任务并询问推进方向。"
+    },
+    {
+      "round": 150,
+      "topic": "思维导图，渲染方案，Markmap",
+      "summary": "推荐Markmap作为思维导图渲染方案，替代现有Mermaid方案。"
+    },
+    {
+      "round": 151,
+      "topic": "Markmap,思维导图,Mermaid",
+      "summary": "Markmap 专注将 Markdown 层级转化为交互式思维导图，优于 Mermaid。"
+    },
+    {
+      "round": 152,
+      "topic": "Markmap,LLM,Markdown",
+      "summary": "讨论 Markmap 利用 Markdown 作为 LLM 母语的优势及实现链路。"
+    },
+    {
+      "round": 153,
+      "topic": "GFM,Markdown,语法对比",
+      "summary": "GFM 是 Markdown 超集，包含表格、任务列表等扩展语法，适合 LLM 生成。"
+    },
+    {
+      "round": 154,
+      "topic": "思维导图，Markmap，Mermaid，图表引擎",
+      "summary": "验证 Markmap 思维导图引擎，对比 Mermaid 并更新图表制作三引擎架构。"
+    },
+    {
+      "round": 155,
+      "topic": "图表工具，PPT 生成，工作区",
+      "summary": "图表工具功能验证完成，确认后续推进 PPT 生成或建立编辑工作区。"
+    },
+    {
+      "round": 156,
+      "topic": "Pandoc,GFM,后端修复",
+      "summary": "修复Pandoc后端GFM模式下的tex_math_single_backslash扩展bug"
+    },
+    {
+      "round": 157,
+      "topic": "Pandoc,GFM,修复验证",
+      "summary": "修复Pandoc GFM错误，验证报告确认所有特性通过。"
+    },
+    {
+      "round": 158,
+      "topic": "文档导出，格式验证，GFM特性",
+      "summary": "GFM转PDF与DOCX双格式验证通过，确认表格等特性支持并询问下一步。"
+    },
+    {
+      "round": 159,
+      "topic": "LaTeX,公式渲染,数学公式",
+      "summary": "用户测试LaTeX渲染效果，助手展示14类公式覆盖及渲染结果。"
+    },
+    {
+      "round": 160,
+      "topic": "公式渲染，格式对比，Word文档",
+      "summary": "助手提供Word版公式渲染测试文件，并对比PDF与DOCX格式优劣。"
+    },
+    {
+      "round": 161,
+      "topic": "Pandoc,数学公式,DOCX 渲染",
+      "summary": "Pandoc GFM 阅读器不识别公式，需开启 tex_math_dollars 扩展修复 DOCX 渲染问题。"
+    },
+    {
+      "round": 162,
+      "topic": "LaTeX扩展，GFM支持，参数配置",
+      "summary": "解释GFM扩展差异及后端参数修改方案"
+    },
+    {
+      "round": 163,
+      "topic": "PPT 生成，专家工具，GFM 中间表示",
+      "summary": "讨论将 PPT 生成功能封装为专家工具，利用 GFM 中间表示优化主 Agent 上下文与迭代流程。"
+    },
+    {
+      "round": 164,
+      "topic": "PPT 工具，文档格式，渲染修复",
+      "summary": "助手回顾昨晚关于 PPT 工具、文档格式及渲染修复的讨论，并询问用户下一步需求。"
+    },
+    {
+      "round": 165,
+      "topic": "待办事项，PPT工具，GFM源码",
+      "summary": "讨论待办事项合并方案，将PPT工具与中间文档编辑需求整合。"
+    },
+    {
+      "round": 166,
+      "topic": "PPT专家，内部编排，渲染引擎",
+      "summary": "设计PPT专家工具内部编排，涵盖解析、素材生成、组装渲染及质检流程。"
+    },
+    {
+      "round": 167,
+      "topic": "PPT 生成，python-pptx，沙盒安全",
+      "summary": "放弃 pandoc 做 PPT，推荐用 python-pptx 沙盒方案精确控制布局。"
+    },
+    {
+      "round": 168,
+      "topic": "GFM, 中间表示，PPT专家工具",
+      "summary": "确认GFM作为文档体系根基及PPT专家工具中间表示的核心地位。"
+    }
+  ],
+  "ground_truth": {
+    "delete": [],
+    "change": [],
+    "merge_groups": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "sample_id": "gifford_r122",
+  "sample_type": "negative",
+  "description": "真实: 检查补录任务(元操作), 不该记",
+  "user_message": "不对啊, 之前提到的那些任务没有录入吗?检查并补录. 还有已经回来的旅行以及取消的计划怎么还在?",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "姓名：测试用户\n所在城市：杭州",
+    "preferences": "出行偏好选择地铁"
+  },
+  "ground_truth": {
+    "should_add": [],
+    "should_not_add": [
+      "检查",
+      "补录",
+      "旅行"
+    ]
+  }
+}

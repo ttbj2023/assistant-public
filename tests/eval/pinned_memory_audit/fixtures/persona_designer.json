@@ -1,0 +1,135 @@
+{
+  "sample_id": "persona_designer",
+  "sample_type": "mixed",
+  "description": "UI设计师(创意画像, 含灰色提炼)",
+  "pinned_memory": {
+    "basic_info": "UI设计师, 工作3年, 主要做移动端",
+    "preferences": "审美偏极简, 注重留白和层次\n主力工具Figma, 偶尔用C4D做简单3D\n最近在学动效设计, 感觉挺有用, 想深入学下去\n昨天的首页设计稿被产品驳回了"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "设计",
+      "summary": "UI设计师3年, 主做移动端, 极简风格"
+    },
+    {
+      "round": 42,
+      "topic": "工具",
+      "summary": "主力Figma, 偶尔C4D做3D"
+    },
+    {
+      "round": 43,
+      "topic": "动效",
+      "summary": "最近在学动效设计, 想深入"
+    },
+    {
+      "round": 44,
+      "topic": "稿件",
+      "summary": "昨天的首页设计稿被产品驳回"
+    },
+    {
+      "round": 45,
+      "topic": "审美",
+      "summary": "坚持极简, 注重留白层次"
+    },
+    {
+      "round": 46,
+      "topic": "Figma",
+      "summary": "Figma组件库建设"
+    },
+    {
+      "round": 47,
+      "topic": "动效",
+      "summary": "动效学习有进展, 越来越感兴趣"
+    },
+    {
+      "round": 48,
+      "topic": "设计",
+      "summary": "移动端项目交付"
+    },
+    {
+      "round": 49,
+      "topic": "稿件",
+      "summary": "驳回后改版通过"
+    },
+    {
+      "round": 50,
+      "topic": "审美",
+      "summary": "极简风格受认可"
+    },
+    {
+      "round": 51,
+      "topic": "工具",
+      "summary": "Figma深度使用"
+    },
+    {
+      "round": 52,
+      "topic": "C4D",
+      "summary": "C4D做了一些小3D元素"
+    },
+    {
+      "round": 53,
+      "topic": "动效",
+      "summary": "动效成了新的兴趣方向"
+    },
+    {
+      "round": 54,
+      "topic": "设计",
+      "summary": "UI规范梳理"
+    },
+    {
+      "round": 55,
+      "topic": "Figma",
+      "summary": "Figma效率提升"
+    },
+    {
+      "round": 56,
+      "topic": "审美",
+      "summary": "极简审美稳定"
+    },
+    {
+      "round": 57,
+      "topic": "动效",
+      "summary": "动效能力持续提升"
+    },
+    {
+      "round": 58,
+      "topic": "工具",
+      "summary": "工具链顺畅"
+    },
+    {
+      "round": 59,
+      "topic": "设计",
+      "summary": "移动端经验丰富"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "设计能力提升"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天的首页设计稿被产品驳回了"
+    ],
+    "change": [
+      {
+        "old_content": "最近在学动效设计, 感觉挺有用, 想深入学下去",
+        "reason": "剥离学习过程, 提炼为兴趣方向"
+      }
+    ],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "稿件",
+      "assistant": "之前被驳回的首页设计稿改版后已通过。"
+    },
+    {
+      "round": 60,
+      "user": "动效和工具",
+      "assistant": "动效设计越学越感兴趣, 已成为新方向。Figma主力, 极简审美不变。"
+    }
+  ]
+}

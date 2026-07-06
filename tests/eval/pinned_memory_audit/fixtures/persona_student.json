@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_student",
+  "sample_type": "mixed",
+  "description": "大学生(学习画像)",
+  "pinned_memory": {
+    "basic_info": "计算机专业大三学生, 在某985\n想在算法方向深造",
+    "preferences": "用番茄钟学习, 专注25分钟休息5分钟\n准备考研, 目标本校人工智能实验室\n希望这学期课程作业能少一点"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "学业",
+      "summary": "计算机大三, 985, 想深造算法方向"
+    },
+    {
+      "round": 42,
+      "topic": "学习",
+      "summary": "用番茄钟, 专注25分钟"
+    },
+    {
+      "round": 43,
+      "topic": "考研",
+      "summary": "准备考研, 目标本校AI实验室"
+    },
+    {
+      "round": 44,
+      "topic": "课程",
+      "summary": "希望这学期作业少点, 腾出考研时间"
+    },
+    {
+      "round": 45,
+      "topic": "算法",
+      "summary": "算法方向深入学习中"
+    },
+    {
+      "round": 46,
+      "topic": "学习",
+      "summary": "番茄钟法坚持得好"
+    },
+    {
+      "round": 47,
+      "topic": "考研",
+      "summary": "考研复习进入强化期"
+    },
+    {
+      "round": 48,
+      "topic": "专业",
+      "summary": "计算机核心课成绩不错"
+    },
+    {
+      "round": 49,
+      "topic": "算法",
+      "summary": "做了几个算法项目"
+    },
+    {
+      "round": 50,
+      "topic": "课程",
+      "summary": "课程作业确实多, 时间紧"
+    },
+    {
+      "round": 51,
+      "topic": "学习",
+      "summary": "番茄钟提升专注"
+    },
+    {
+      "round": 52,
+      "topic": "考研",
+      "summary": "目标AI实验室不变"
+    },
+    {
+      "round": 53,
+      "topic": "算法",
+      "summary": "算法能力是长远方向"
+    },
+    {
+      "round": 54,
+      "topic": "学业",
+      "summary": "大三课业繁重"
+    },
+    {
+      "round": 55,
+      "topic": "学习",
+      "summary": "学习方法稳定"
+    },
+    {
+      "round": 56,
+      "topic": "考研",
+      "summary": "复习进度正常"
+    },
+    {
+      "round": 57,
+      "topic": "算法",
+      "summary": "继续深耕算法"
+    },
+    {
+      "round": 58,
+      "topic": "课程",
+      "summary": "对作业量还是不满"
+    },
+    {
+      "round": 59,
+      "topic": "深造",
+      "summary": "深造意愿坚定"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "学业考研并行"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "准备考研, 目标本校人工智能实验室",
+      "希望这学期课程作业能少一点"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "考研",
+      "assistant": "考研复习进入强化期, 目标AI实验室不变。算法方向继续深耕。"
+    },
+    {
+      "round": 60,
+      "user": "课业",
+      "assistant": "课程作业确实多, 时间紧。番茄钟学习法坚持得好。"
+    }
+  ]
+}

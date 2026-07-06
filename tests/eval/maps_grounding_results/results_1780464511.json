@@ -1,0 +1,490 @@
+[
+  {
+    "id": "01_poi_nearby_bj",
+    "query": "北京南站附近有什么好吃的餐厅推荐? 要评分高的",
+    "scenario": "explore_nearby",
+    "note": "核心场景: POI搜索+评分",
+    "result": {
+      "success": true,
+      "answer": "在北京南站附近，由于车站内及周边本身就有不少餐饮设施，如果您是为了赶车方便，可以直接在车站内解决。以下是为您整理的几家餐厅推荐：\n\n### 1. 车站内（最方便）\n如果您是在候车或刚下车，时间比较紧，可以直接在车站内寻找：\n*   **东方宫 (Dongfang Palace):** 位于北京南站B1层，这是一家很受欢迎的餐厅，主打牛肉面等，非常适合作为快捷餐点，评分不错。\n*   **永和豆浆 (Yon ho):** 位于北京南站高架层，提供快餐式的中式餐点（如豆浆、油条、简餐等），是赶时间时的稳妥选择。\n\n### 2. 车站周边及市中心方向\n北京南站周边本身并不是以高档餐饮聚集著称，很多评分高的知名餐厅通常位于市中心区域（如东城区、王府井等地），距离车站约有20-30分钟的车程。如果您有时间进城用餐，以下是一些评价较高的选择：\n\n*   **全聚德烤鸭 (Quanjude):** 北京南站内有该品牌门店，如果您想在出发前品尝地道的北京烤鸭，这非常方便。\n*   **地道北京风味与特色餐厅：**\n    *   **四季民福烤鸭店 (Siji Mingfu):** 评价非常高，是北京非常有名的烤鸭店，如果想吃更地道的烤鸭，建议去其门店（如南池子店等）。\n    *   **小云南 (Little Yunnan):** 位于东城区，评分很高，主打云南特色菜，环境很有特色。\n    *   **刘氏家常菜 (Liu's Family And Restaurant):** 位于东城区，评分较高，是口碑很好的平价家常菜馆。\n    *   **馅老满 (Xianlaoman):** 以各种口味的饺子闻名，非常适合体验北京平民美食，评分也很稳。\n\n**温馨提示：**\n*   **交通时间：** 如果您选择前往市中心（如王府井或东城区）用餐，请务必预留好往返北京南站的交通时间，以免耽误行程。\n*   **预订：** 像四季民福、小云南等热门餐厅，建议提前查看是否有排队情况或进行预订。\n\n建议您根据自己的候车时间决定：如果时间充裕，可以去上述提到的特色餐厅；如果时间紧张，建议直接在南站内的餐厅用餐，既快捷又省心。",
+      "sources": [
+        {
+          "title": "Dongfang Palace",
+          "uri": "https://maps.google.com/?cid=16834296557210154685",
+          "place_id": "places/ChIJnfDUsAVN8DURvbYX4IZvn-k"
+        },
+        {
+          "title": "Yon ho",
+          "uri": "https://maps.google.com/?cid=2539074646058400952",
+          "place_id": "places/ChIJTZJI_QVN8DURuPyCIPCaPCM"
+        },
+        {
+          "title": "Made In China",
+          "uri": "https://maps.google.com/?cid=6058060754532212889",
+          "place_id": "places/ChIJOdC57ctS8DURmaCgxSiOElQ"
+        },
+        {
+          "title": "Liu's Family And Restaurant",
+          "uri": "https://maps.google.com/?cid=789700123196767747",
+          "place_id": "places/ChIJRc84tClT8DURA745-hOU9Qo"
+        },
+        {
+          "title": "Beijing Dawanju Restaurant",
+          "uri": "https://maps.google.com/?cid=12073848540103996912",
+          "place_id": "places/ChIJ0_gFDcVS8DUR8HXE-Ebtjqc"
+        },
+        {
+          "title": "Siji Mingfu Roasted Duck Restaurant",
+          "uri": "https://maps.google.com/?cid=15145813146569934787",
+          "place_id": "places/ChIJj9xua8RS8DURwwe-k8-8MNI"
+        },
+        {
+          "title": "Little Yunnan",
+          "uri": "https://maps.google.com/?cid=1126369210876989132",
+          "place_id": "places/ChIJ70Cq9ydT8DURzI5CXNSqoQ8"
+        },
+        {
+          "title": "Xianlaoman Restaurant",
+          "uri": "https://maps.google.com/?cid=14341026132982324217",
+          "place_id": "places/ChIJD6_8nTdT8DUR-VsBM0mPBcc"
+        },
+        {
+          "title": "The Grandma's",
+          "uri": "https://maps.google.com/?cid=16022073912985314795",
+          "place_id": "places/ChIJC19BPs5S8DUR6-WK1FXXWd4"
+        }
+      ],
+      "maps_chunks_count": 9,
+      "search_queries": [
+        "restaurants near Beijing South Railway Station highly rated"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 4.0,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "02_route_plan",
+    "query": "从北京国贸到三里屯怎么走最快?",
+    "scenario": "plan_trip",
+    "note": "路线规划, 北京城区短途",
+    "result": {
+      "success": true,
+      "answer": "从北京国贸到三里屯，交通方式选择多样，以下是几种建议：\n\n### 1. 乘坐地铁（最稳妥、避开拥堵）\n这是北京市内最推荐的出行方式，因为早晚高峰期间国贸区域道路非常拥堵。\n*   **路线：**\n    1.  在 **国贸站** 乘坐 **地铁10号线**（开往呼家楼、团结湖方向）。\n    2.  乘坐 3 站，在 **团结湖站** 下车（D口或C口出）。\n    3.  从团结湖地铁站出来后，步行或骑共享单车前往三里屯太古里（步行约 10-15 分钟）。\n\n### 2. 打车/网约车（最舒适，但需考虑拥堵）\n*   **时间：** 非高峰时段约 15-20 分钟；早晚高峰期间可能需要 30-40 分钟甚至更久。\n*   **路线：** 直接定位至“三里屯太古里”或“三里屯SOHO”。\n*   **建议：** 如果是高峰期（周一至周五 8:00-9:30 或 17:30-19:30），强烈建议选择地铁，避免堵在路上。\n\n### 3. 公交车\n*   你可以选择乘坐 **特8路** 或其他经过东三环北路的公交车，但在高峰期同样会受到道路拥堵的影响，因此速度通常不如地铁。\n\n**总结建议：**\n如果你追求**最快且时间可控**，请首选 **地铁10号线**。",
+      "sources": [],
+      "maps_chunks_count": 0,
+      "search_queries": [],
+      "widget_token": false,
+      "elapsed_seconds": 4.29,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "03_location_qa",
+    "query": "杭州西湖在哪个区? 面积多大? 有什么著名的景点?",
+    "scenario": "ask_location",
+    "note": "基础地理知识问答",
+    "result": {
+      "success": true,
+      "answer": "杭州西湖位于浙江省杭州市的**西湖区**，其核心景区（西湖风景名胜区）的面积非常广阔，整个风景名胜区的总面积约为 **49平方公里**（其中水域面积约为6.38平方公里）。\n\n西湖拥有众多著名的自然景观和人文古迹，其中最广为人知的包括“西湖十景”以及其他标志性景点：\n\n### 著名景点：\n*   **断桥残雪**：西湖最著名的景点之一，尤其是冬雪后的断桥景象。\n*   **三潭印月**：西湖三岛之一，是人民币一元纸币背面图案的取景地。\n*   **苏堤**：西湖著名的长堤，绿柳成荫，是漫步游览的好去处。\n*   **雷峰塔**：历史悠久的古塔，以“雷峰夕照”闻名。\n*   **花港观鱼**：园林景观，以红鱼池和优美的园林环境著称。\n*   **曲院风荷**：以荷花和优美的湖畔亭台闻名。\n*   **柳浪闻莺**：位于湖东岸，以繁茂的柳树和鸟鸣声为特色。\n*   **灵隐寺**：位于西湖西侧，是杭州最古老、最著名的佛教寺院之一。\n*   **宝石山/保俶塔**：适合登高俯瞰西湖全景。\n*   **太子湾公园**：以郁金香花展和优美的溪流景观受到游客喜爱。\n\n西湖不仅是中国著名的旅游胜地，也是世界文化遗产，非常值得一游。",
+      "sources": [
+        {
+          "title": "杭州西湖风景区",
+          "uri": "https://maps.google.com/?cid=11543512711574102141",
+          "place_id": "places/ChIJUYdaKLtiSzQRfaCUqabLMqA"
+        },
+        {
+          "title": "断桥",
+          "uri": "https://maps.google.com/?cid=5808314838041294571",
+          "place_id": "places/ChIJLX_GQptiSzQR6_YUSZJHm1A"
+        },
+        {
+          "title": "杭州西湖风景名胜区管委会",
+          "uri": "https://maps.google.com/?cid=1912738954212104395",
+          "place_id": "places/ChIJIRlooNpiSzQRy1jd2fFpixo"
+        },
+        {
+          "title": "Duanqiao Canxue",
+          "uri": "https://maps.google.com/?cid=5805129758238835438",
+          "place_id": "places/ChIJlb50QptiSzQR7gLgGsL2j1A"
+        },
+        {
+          "title": "Three Pools Mirroring the Moon",
+          "uri": "https://maps.google.com/?cid=899724282822991838",
+          "place_id": "places/ChIJC-cSTbBiSzQR3h914Xd2fAw"
+        },
+        {
+          "title": "苏堤",
+          "uri": "https://maps.google.com/?cid=5391704278507588546",
+          "place_id": "places/ChIJ_cCbAbdiSzQRwgtmjnku00o"
+        },
+        {
+          "title": "Leifeng Pagoda",
+          "uri": "https://maps.google.com/?cid=3731032873515014509",
+          "place_id": "places/ChIJcZiMplJ9SzQRbdkqb6FKxzM"
+        },
+        {
+          "title": "南屏晚钟",
+          "uri": "https://maps.google.com/?cid=13400242689214675120",
+          "place_id": "places/ChIJMYqb6lJ9SzQRsHiqcro597k"
+        },
+        {
+          "title": "花港观鱼",
+          "uri": "https://maps.google.com/?cid=16475403374356722891",
+          "place_id": "places/ChIJi7n8TrNiSzQRy_TNGxRkpOQ"
+        },
+        {
+          "title": "Hongyuchi",
+          "uri": "https://maps.google.com/?cid=15432735212380945916",
+          "place_id": "places/ChIJVcT8Gkt9SzQR_P2g1ugWLNY"
+        },
+        {
+          "title": "Quyuan Fenghe",
+          "uri": "https://maps.google.com/?cid=16770069080776818312",
+          "place_id": "places/ChIJPY0_vsZiSzQRiL52MvpAu-g"
+        },
+        {
+          "title": "Orioles Singing in the Willows",
+          "uri": "https://maps.google.com/?cid=2423487824470224448",
+          "place_id": "places/ChIJ2eU8S6ZiSzQRQC4ID1b1oSE"
+        },
+        {
+          "title": "灵隐景区",
+          "uri": "https://maps.google.com/?cid=14303156000139536031",
+          "place_id": "places/ChIJ0Ro-oM18SzQRn2ZQy5kEf8Y"
+        },
+        {
+          "title": "Lingyin Temple",
+          "uri": "https://maps.google.com/?cid=13739566334886680172",
+          "place_id": "places/ChIJKaE-rCxjSzQRbBbWRsm-rL4"
+        },
+        {
+          "title": "Baoshi Mountain",
+          "uri": "https://maps.google.com/?cid=3092933558939225740",
+          "place_id": "places/ChIJJdDVtZFiSzQRjA51Tq9O7Co"
+        },
+        {
+          "title": "Precious Stone Hill Floating in the Rosy Cloud",
+          "uri": "https://maps.google.com/?cid=16984028371478914979",
+          "place_id": "places/ChIJ7cWiW5BiSzQRoycokdFjs-s"
+        },
+        {
+          "title": "Taiziwan Park",
+          "uri": "https://maps.google.com/?cid=9163961275127770016",
+          "place_id": "places/ChIJpU-ZP0x9SzQRoCttGzruLH8"
+        }
+      ],
+      "maps_chunks_count": 17,
+      "search_queries": [
+        "杭州西湖所在区 面积 著名景点"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 3.42,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "04_address_resolve",
+    "query": "望京SOHO的详细地址是什么? 邮编多少?",
+    "scenario": "resolve_address",
+    "note": "地址解析",
+    "result": {
+      "success": true,
+      "answer": "望京SOHO的详细地址及邮编如下：\n\n*   **详细地址**：北京市朝阳区阜通西大街望京SOHO\n*   **邮政编码**：100102",
+      "sources": [
+        {
+          "title": "Wangjing Soho",
+          "uri": "https://maps.google.com/?cid=4851795202835274172",
+          "place_id": "places/ChIJLUnYq0Wq8TURvNnw8wcKVUM"
+        },
+        {
+          "title": "Wangjing SOHO Center T1",
+          "uri": "https://maps.google.com/?cid=8244792747498782740",
+          "place_id": "places/ChIJw0DVAEWq8TURFMBhMVJja3I"
+        },
+        {
+          "title": "望京soho",
+          "uri": "https://maps.google.com/?cid=3550171040770231583",
+          "place_id": "places/ChIJo8-IpVqq8TURHw39gMC9RDE"
+        }
+      ],
+      "maps_chunks_count": 3,
+      "search_queries": [
+        "望京SOHO地址 邮编"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 1.35,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "05_tourism_sh",
+    "query": "上海外滩周边有什么好玩的景点? 步行能到的",
+    "scenario": "explore_nearby",
+    "note": "旅游推荐, 带坐标",
+    "result": {
+      "success": true,
+      "answer": "上海外滩周边有许多非常值得一逛的景点，且大部分都在步行范围内。以下为您推荐几个步行即可到达的特色景点：\n\n### 1. 经典地标与历史建筑\n*   **外滩风景区 (The Bund)**：这是上海最具代表性的地标，拥有全长约1.5公里的滨水步道，您可以沿途欣赏浦江两岸的壮丽风光。\n*   **万国建筑博览群**：就在中山东一路沿线，您可以近距离欣赏这些风格迥异的近代历史建筑。\n*   **外白渡桥 (Waibaidu Bridge)**：作为中国第一座全钢结构桥梁，它是上海的标志性景观，距离外滩北端非常近，步行即可到达。\n*   **陈毅广场**：位于外滩的核心地带，广场上有陈毅元帅的铜像，是外滩游客汇聚的中心点。\n\n### 2. 休闲与文化场馆\n*   **黄浦公园**：位于外滩的最北端，是中国最早的欧式公共花园，里面有上海市人民英雄纪念塔和外滩历史纪念馆，环境清幽，适合散步。\n*   **外滩历史纪念馆**：坐落于黄浦公园内，可以让您深入了解外滩的历史变迁。\n*   **外滩美术馆 (Rockbund Art Museum)**：如果您对当代艺术感兴趣，这里是一个很好的去处，展出各种中国及国际艺术作品。\n\n### 3. 体验类景点\n*   **外滩观光隧道**：如果您想通过另一种方式横跨黄浦江，可以体验这个连接外滩与浦东陆家嘴的自动化地下观光列车。\n\n### 4. 周边稍远但步行可达的区域\n*   **南京路步行街**：距离外滩不远，是上海最繁华的商业街之一，非常适合购物和感受上海的都市氛围。\n\n**建议行程：**\n您可以从**外白渡桥**出发，漫步经过**黄浦公园**，沿着外滩滨水步道向南行走，欣赏**万国建筑博览群**，最后到达**陈毅广场**。如果还有余力，可以步行前往附近的**南京路步行街**逛逛。\n\n希望这些信息能为您的上海之行提供帮助！",
+      "sources": [
+        {
+          "title": "The Bund",
+          "uri": "https://maps.google.com/?cid=5572918584525565796",
+          "place_id": "places/ChIJYUiHi1dwsjURZK_REO37Vk0"
+        },
+        {
+          "title": "Waibaidu Bridge",
+          "uri": "https://maps.google.com/?cid=7443246645971188636",
+          "place_id": "places/ChIJITbxC1ZwsjURnPu6dGO5S2c"
+        },
+        {
+          "title": "万国博览建筑群",
+          "uri": "https://maps.google.com/?cid=8050573944306610078",
+          "place_id": "places/ChIJXfFDlFdwsjURni9pPFliuW8"
+        },
+        {
+          "title": "Chen Yi Square",
+          "uri": "https://maps.google.com/?cid=14132551302688620127",
+          "place_id": "places/ChIJ08r06FdwsjURXz69RojoIMQ"
+        },
+        {
+          "title": "The Bund Historical Museum",
+          "uri": "https://maps.google.com/?cid=4781875164878832053",
+          "place_id": "places/ChIJVQusqfhwsjURtYHdgiCiXEI"
+        },
+        {
+          "title": "Huangpu Park",
+          "uri": "https://maps.google.com/?cid=9900354712059444316",
+          "place_id": "places/ChIJT9XkLVZwsjURXPyqAiggZYk"
+        },
+        {
+          "title": "上海市人民英雄纪念塔",
+          "uri": "https://maps.google.com/?cid=9393169347565239159",
+          "place_id": "places/ChIJLXesqfhwsjURd7u2JME9W4I"
+        },
+        {
+          "title": "Rockbund Art Museum",
+          "uri": "https://maps.google.com/?cid=14952948785085441898",
+          "place_id": "places/ChIJT1xoHFdwsjURamegJ7KLg88"
+        },
+        {
+          "title": "Bund Sightseeing Tunnel",
+          "uri": "https://maps.google.com/?cid=8695733669679925604",
+          "place_id": "places/ChIJJa-yxFdwsjURZAmtWrNzrXg"
+        },
+        {
+          "title": "Waitan Sightseeing Tunnel",
+          "uri": "https://maps.google.com/?cid=17622103566971294066",
+          "place_id": "places/ChIJlX301ftwsjURctF3CNRJjvQ"
+        },
+        {
+          "title": "Nanjing Road Pedestrian Street",
+          "uri": "https://maps.google.com/?cid=2673353610482772141",
+          "place_id": "places/ChIJ443NM0NwsjURrWjV1_GoGSU"
+        }
+      ],
+      "maps_chunks_count": 11,
+      "search_queries": [
+        "景点 near The Bund, Shanghai, walking distance"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 3.85,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "06_transit_route",
+    "query": "从上海虹桥机场到迪士尼怎么坐地铁? 需要多长时间?",
+    "scenario": "plan_trip",
+    "note": "公交路线规划",
+    "result": {
+      "success": true,
+      "answer": "从上海虹桥国际机场前往上海迪士尼度假区，乘坐地铁是最便捷的方式之一。\n\n### 乘车路线：\n1.  **乘坐地铁 2 号线**：在虹桥机场（虹桥2号航站楼站）乘坐地铁 2 号线（往浦东国际机场方向）。\n2.  **换乘地铁 11 号线**：在**龙阳路站**下车，站内换乘**地铁 11 号线**（往迪士尼方向）。\n3.  **抵达迪士尼**：乘坐 11 号线至终点站**迪士尼站**下车，从 1、2 或 3 号出口出站即可步行到达迪士尼乐园。\n\n### 时间预估：\n*   **全程时间**：通常需要 **1.5 小时到 2 小时左右**。\n    *   地铁行驶时间大约在 80-90 分钟左右，加上换乘和步行时间，建议预留充裕的时间，以免错过入园时段。\n\n### 温馨提示：\n*   **手机扫码/购票**：您可以使用“Metro大都会”APP 扫码乘车，或在车站自动售票机购买单程票。\n*   **运营时间**：请注意 11 号线开往迪士尼方向的末班车时间，避免因行程较晚而无法搭乘地铁。\n*   **交通高峰**：早晚高峰期间地铁人流较多，建议尽量避开或预留更多时间。",
+      "sources": [],
+      "maps_chunks_count": 0,
+      "search_queries": [],
+      "widget_token": false,
+      "elapsed_seconds": 2.28,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "07_overseas_sf",
+    "query": "San Francisco Fisherman's Wharf附近有什么好酒店推荐?",
+    "scenario": "explore_nearby",
+    "note": "海外POI, Google Maps强项",
+    "result": {
+      "success": true,
+      "answer": "旧金山的渔人码头（Fisherman's Wharf）附近有许多不同类型的酒店，既有高端的度假式酒店，也有舒适的连锁酒店。以下为您推荐几家评价较好的酒店，供您参考：\n\n### 推荐酒店列表\n\n*   **Argonaut Hotel (4.5星)**：这是一家位于修复后的仓库建筑内的精品酒店，风格优雅且极具历史感，靠近旧金山海事国家历史公园，位置非常好。\n*   **Hotel Caza (4.2星)**：一家现代风格的酒店，部分房间可以欣赏到海湾美景，并设有户外泳池和酒吧，非常适合休闲度假。\n*   **Hyatt Centric Fisherman's Wharf (4.2星)**：地理位置优越，提供现代化的客房和套房，配有时尚的餐厅和加热户外泳池，是深受游客欢迎的选择。\n*   **Hotel Zephyr (4.2星)**：这家酒店装修风格别致，设有健身房、带游戏室的酒廊以及户外火坑，氛围比较年轻化且有趣，非常适合家庭或朋友入住。\n*   **Holiday Inn Express & Suites (4.2星)**：如果您偏好性价比，这家酒店提供免费早餐和Wi-Fi，设施简约舒适，位于渔人码头的核心区域。\n*   **San Francisco Marriott Fisherman's Wharf (4.2星)**：一家非常成熟且设施完善的万豪酒店，适合寻求稳定品质服务的旅客。\n\n### 其他选择\n*   **Hotel Riu Plaza Fisherman's Wharf (4.0星)**：距离39号码头（PIER 39）很近，设施齐全。\n*   **Hotel Zoe Fisherman's Wharf (4.1星)**：一家风格精致的酒店，内部有意大利餐厅，环境舒适。\n*   **Columbus Motor Inn (4.5星)**：如果您更倾向于汽车旅馆模式（带停车场且更便捷），这是一家评价很高的选择。\n\n**建议：**\n*   **位置：** 上述酒店大部分都处于渔人码头步行范围内，您可以根据对酒店风格（精品 vs 现代 vs 经济）的需求进行选择。\n*   **预订：** 在旅游旺季，渔人码头附近的酒店价格波动较大，建议您通过酒店官网或在线旅行平台提前查询实时房态和价格。\n\n希望这些信息能帮您找到心仪的下榻之处！",
+      "sources": [
+        {
+          "title": "Argonaut Hotel",
+          "uri": "https://maps.google.com/?cid=7413280154573704405",
+          "place_id": "places/ChIJJ__3qOGAhYAR1YzR-QVD4WY"
+        },
+        {
+          "title": "Hotel Caza",
+          "uri": "https://maps.google.com/?cid=4059950754888440306",
+          "place_id": "places/ChIJMVWF5OOAhYAR8lm0drPXVzg"
+        },
+        {
+          "title": "Hyatt Centric Fisherman's Wharf San Francisco",
+          "uri": "https://maps.google.com/?cid=7886658016621593787",
+          "place_id": "places/ChIJpVWaeeSAhYARu4S3Sa4Jc20"
+        },
+        {
+          "title": "Hotel Zephyr",
+          "uri": "https://maps.google.com/?cid=3796778664752422608",
+          "place_id": "places/ChIJ99URUeOAhYAR0J5ZUxTesDQ"
+        },
+        {
+          "title": "Holiday Inn Express & Suites San Francisco Fishermans Wharf by IHG",
+          "uri": "https://maps.google.com/?cid=12536054940402979311",
+          "place_id": "places/ChIJyavVeeSAhYAR7xGAp4wD-a0"
+        },
+        {
+          "title": "San Francisco Marriott Fisherman's Wharf",
+          "uri": "https://maps.google.com/?cid=1608295128851941453",
+          "place_id": "places/ChIJxS5qD-SAhYARTQg2CebPURY"
+        },
+        {
+          "title": "Hotel Riu Plaza Fisherman´s Wharf",
+          "uri": "https://maps.google.com/?cid=1678594775224778075",
+          "place_id": "places/ChIJ6y4RoXeBhYARW30Z8w2RSxc"
+        },
+        {
+          "title": "Hotel Zoe Fisherman’s Wharf",
+          "uri": "https://maps.google.com/?cid=11442169563890392942",
+          "place_id": "places/ChIJG6eKvOSAhYARbh95W5jAyp4"
+        },
+        {
+          "title": "Columbus Motor Inn",
+          "uri": "https://maps.google.com/?cid=13314371968109301424",
+          "place_id": "places/ChIJYw-vVOSAhYARsM6SLsMmxrg"
+        }
+      ],
+      "maps_chunks_count": 9,
+      "search_queries": [
+        "hotels near Fisherman's Wharf, San Francisco"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 4.05,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "08_weather_query",
+    "query": "北京今天天气怎么样?",
+    "scenario": "ask_location",
+    "note": "天气查询, Maps不支持, 预期降级",
+    "result": {
+      "success": true,
+      "answer": "抱歉，我无法直接获取北京实时的天气预报信息。建议您通过手机自带的天气应用、搜索引擎（如百度）或气象部门的官方网站查询最新的天气情况。",
+      "sources": [],
+      "maps_chunks_count": 0,
+      "search_queries": [],
+      "widget_token": false,
+      "elapsed_seconds": 1.51,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "09_compare_food",
+    "query": "成都春熙路附近有什么必吃美食?",
+    "scenario": "explore_nearby",
+    "note": "美食推荐, 二线城市",
+    "result": {
+      "success": true,
+      "answer": "成都春熙路商圈是成都美食最集中的区域之一，无论是地道小吃还是特色川菜、火锅，都有很多值得推荐的选择。以下是一些在春熙路附近广受好评的必吃美食：\n\n### 1. 经典成都名小吃\n如果你想一次性尝到多种成都地道小吃，这些老字号是首选：\n*   **龙抄手（总店）**：成都非常著名的老字号，主打各种馅料的抄手，口味地道。\n*   **钟水饺**：以甜辣风味的红油水饺闻名，是成都小吃的代表之一。\n*   **盘飧市**：一家非常有历史底蕴的餐馆，以卤味和地道川菜出名，很多当地人也会去。\n*   **华兴街煎蛋面**：如果你喜欢简单地道的面食，可以尝试这家，口味质朴且具有地方特色。\n\n### 2. 川菜与火锅\n成都的美食灵魂在于火锅，春熙路周边有很多口碑极佳的餐厅：\n*   **蜀大侠火锅（春熙店）**：在游客和当地人中都有较高评价，是体验成都传统火锅的好去处。\n*   **马旺子·川小馆**：这是一家非常火爆的川菜馆，不仅味道正宗，装修也很有特色，常需排队。\n*   **陈麻婆豆腐（总店）**：如果想品尝正宗的四川“麻婆豆腐”，这里是公认的地标级名店。\n\n### 3. 特色美食聚集地\n*   **春熙坊唐宋美食街**：这里汇集了多种成都地道小吃，逛街之余非常方便在此一站式品尝美食。\n*   **IFS国际金融中心/春熙路步行街**：该区域内有很多现代化的餐饮选择，例如**烤匠麻辣烤鱼**（IFS店），也是当地非常受欢迎的特色菜。\n\n### 建议与提示：\n*   **排队情况**：春熙路是热门景区，像“马旺子”、“龙抄手”等名店，在用餐高峰期可能需要排队。建议通过大众点评等App提前查询排号情况，或错峰用餐。\n*   **口味建议**：成都菜普遍偏辣，如果不能吃辣，点餐时可以提前向店员说明。\n*   **探索方式**：春熙路周边分布着许多小巷子，有时不起眼的“苍蝇馆子”（路边小餐馆）反而藏着最地道的成都味道。",
+      "sources": [
+        {
+          "title": "龙抄手总店",
+          "uri": "https://maps.google.com/?cid=12869900994801012939",
+          "place_id": "places/ChIJefJOmkDF7zYRy5CPYcQSm7I"
+        },
+        {
+          "title": "钟水饺",
+          "uri": "https://maps.google.com/?cid=9408439982416968937",
+          "place_id": "places/ChIJXyUuJS7F7zYR6byL4lB-kYI"
+        },
+        {
+          "title": "盘飧市",
+          "uri": "https://maps.google.com/?cid=9544076733065993226",
+          "place_id": "places/ChIJxSzrrEfF7zYRChx41zhfc4Q"
+        },
+        {
+          "title": "Huaxing Street Jiandanmian",
+          "uri": "https://maps.google.com/?cid=12490535866780715152",
+          "place_id": "places/ChIJI286WEbF7zYRkIi9cTFMV60"
+        },
+        {
+          "title": "蜀大侠·来成都必吃的火锅(春熙店)",
+          "uri": "https://maps.google.com/?cid=3370485859825326452",
+          "place_id": "places/ChIJM-KT2j7F7zYRdJldKwhfxi4"
+        },
+        {
+          "title": "Ma Wang Zi Chuan Restaurant",
+          "uri": "https://maps.google.com/?cid=15791323567895507616",
+          "place_id": "places/ChIJwaBCFELF7zYRoHKqdR4NJts"
+        },
+        {
+          "title": "Chenmapo Tofu (Head Store)",
+          "uri": "https://maps.google.com/?cid=6810479045214248838",
+          "place_id": "places/ChIJGRfDkjDF7zYRhp88sJuug14"
+        },
+        {
+          "title": "春熙坊唐宋美食街",
+          "uri": "https://maps.google.com/?cid=4252823883949380300",
+          "place_id": "places/ChIJxyjebUfF7zYRzJIZP8oQBTs"
+        },
+        {
+          "title": "Chunxi Old Street Snack City",
+          "uri": "https://maps.google.com/?cid=17216553444505203950",
+          "place_id": "places/ChIJk1rKQUfF7zYR7rRC_CN87e4"
+        },
+        {
+          "title": "Kaojiang Spicy Grilled Fish Heijindian",
+          "uri": "https://maps.google.com/?cid=2911372993680087280",
+          "place_id": "places/ChIJC3KBF0HF7zYR8Jj3CFBGZyg"
+        },
+        {
+          "title": "IfS广场",
+          "uri": "https://maps.google.com/?cid=12013603206089456297",
+          "place_id": "places/ChIJIUXuFUfF7zYRqbp0E3fkuKY"
+        },
+        {
+          "title": "Chunxi Road Pedestrian Street",
+          "uri": "https://maps.google.com/?cid=8168797238489881587",
+          "place_id": "places/ChIJk6nPP0fF7zYR85th6s5lXXE"
+        },
+        {
+          "title": "苍蝇馆子",
+          "uri": "https://maps.google.com/?cid=3933190410791851961",
+          "place_id": "places/ChIJW2YiAana7zYRuZc49dZ_lTY"
+        }
+      ],
+      "maps_chunks_count": 13,
+      "search_queries": [
+        "成都春熙路附近必吃美食"
+      ],
+      "widget_token": false,
+      "elapsed_seconds": 3.96,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  },
+  {
+    "id": "10_long_route",
+    "query": "从北京到上海自驾怎么走? 大概多远? 过路费多少?",
+    "scenario": "plan_trip",
+    "note": "长途路线规划",
+    "result": {
+      "success": true,
+      "answer": "从北京到上海自驾是一条非常成熟的路线，以下是详细信息：\n\n### 1. 路线规划\n北京到上海最主要的自驾路线是走 **京沪高速 (G2)**。这是一条纵贯中国东部的高速公路，路线直接且路况良好。\n\n*   **主要途经城市：** 北京 → 天津 → 沧州 → 济南 → 徐州 → 淮安 → 常州 → 无锡 → 苏州 → 上海。\n*   **路程概况：** 全程约 **1,200公里 - 1,250公里** 左右（视出发地和目的地具体位置而定）。\n\n### 2. 行车时间\n*   如果不算休息时间，纯驾驶时长通常在 **13 - 15小时** 左右。\n*   考虑到中途加油、吃饭和休息，建议预留 **16 - 18小时** 的行程时间。如果是一个人开车，建议分两天行驶，中途在徐州或淮安等地休息一晚，会更安全。\n\n### 3. 过路费预估\n*   **预估金额：** 走京沪高速的小型客车（7座及以下）过路费大约在 **550元 - 650元人民币** 之间。\n*   **影响因素：**\n    *   具体的收费标准会因为您的出发地（如北京的五环或六环）和目的地（上海的出口位置）略有差异。\n    *   **ETC优惠：** 使用ETC通常会有一定的通行费折扣。\n    *   **节假日：** 如果是在国家法定的节假日（如春节、清明节、劳动节、国庆节）期间出行，且符合国家规定的免费政策，则可以免收通行费。\n\n### 温馨提示：\n1.  **路况查询：** 出发前建议打开高德地图或百度地图，实时查看路况信息，避开拥堵路段。\n2.  **安全驾驶：** 长途驾驶非常消耗体力，请务必每隔2-3小时进入服务区休息，切勿疲劳驾驶。\n3.  **车辆检查：** 出发前请检查胎压、机油、刹车等车辆状况，确保长途行驶安全。\n\n*注：以上数据为估算值，实际费用请以缴费站显示为准。*",
+      "sources": [],
+      "maps_chunks_count": 0,
+      "search_queries": [],
+      "widget_token": false,
+      "elapsed_seconds": 2.98,
+      "model": "gemini-3.1-flash-lite-preview"
+    }
+  }
+]

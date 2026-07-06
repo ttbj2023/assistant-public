@@ -1,0 +1,132 @@
+{
+  "sample_id": "syn_meta_ops",
+  "sample_type": "positive",
+  "description": "元操作日志(多表述变体), 测召回",
+  "pinned_memory": {
+    "basic_info": "姓名：李四\n2026年6月20日整理了置顶记忆\n职业：产品经理\n刚才检查并更新了任务清单",
+    "preferences": "偏好用Notion做笔记\n昨天补录了遗漏的信息"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "任务梳理",
+      "summary": "梳理了本月待办, 确认了3个重点项目的进度"
+    },
+    {
+      "round": 42,
+      "topic": "补录信息",
+      "summary": "把之前遗漏的会议纪要补录进任务系统"
+    },
+    {
+      "round": 43,
+      "topic": "日程调整",
+      "summary": "调整了下周的日程安排, 腾出周三做深度工作"
+    },
+    {
+      "round": 44,
+      "topic": "工具配置",
+      "summary": "完成了Rime输入法的同步配置, 现在多设备可用"
+    },
+    {
+      "round": 45,
+      "topic": "记忆回顾",
+      "summary": "回顾了置顶记忆, 清理了几条过时内容"
+    },
+    {
+      "round": 46,
+      "topic": "任务检查",
+      "summary": "再次检查了当前待办, 确认没有遗漏"
+    },
+    {
+      "round": 47,
+      "topic": "项目讨论",
+      "summary": "讨论了ProjectA的架构方案"
+    },
+    {
+      "round": 48,
+      "topic": "健身计划",
+      "summary": "聊了聊日常锻炼的安排"
+    },
+    {
+      "round": 49,
+      "topic": "旅行取消",
+      "summary": "确认恩施旅行因故取消, 已通知同行人"
+    },
+    {
+      "round": 50,
+      "topic": "工具调研",
+      "summary": "调研了PPT导出工具, 找到了一个成熟的免费方案"
+    },
+    {
+      "round": 51,
+      "topic": "日程",
+      "summary": "确认了下周的几个会议时间"
+    },
+    {
+      "round": 52,
+      "topic": "技术讨论",
+      "summary": "讨论了Debian系统在旧设备上的部署"
+    },
+    {
+      "round": 53,
+      "topic": "健康",
+      "summary": "聊了近期停药后的身体感受"
+    },
+    {
+      "round": 54,
+      "topic": "设备",
+      "summary": "确认旧电脑SSD升级后运行流畅"
+    },
+    {
+      "round": 55,
+      "topic": "任务",
+      "summary": "处理了几个待办, 清理了已完成项"
+    },
+    {
+      "round": 56,
+      "topic": "输入法",
+      "summary": "Rime配置运行稳定, 不再需要调试"
+    },
+    {
+      "round": 57,
+      "topic": "待办整理",
+      "summary": "整理了待办, 删除了已完成的旅行相关项"
+    },
+    {
+      "round": 58,
+      "topic": "日常",
+      "summary": "聊了聊最近的阅读"
+    },
+    {
+      "round": 59,
+      "topic": "工具",
+      "summary": "确认PPT导出工具满足需求, 已投入使用"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "回顾了最近的工作, 规划下周"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "2026年6月20日整理了置顶记忆",
+      "刚才检查并更新了任务清单",
+      "昨天补录了遗漏的信息"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "最近怎么样",
+      "assistant": "Rime输入法同步配置早已稳定运行, PPT导出工具也已投入使用。之前补录遗漏任务、检查待办这些维护动作都做完了, 记忆也清理过。"
+    },
+    {
+      "round": 60,
+      "user": "总结下近期",
+      "assistant": "近期完成了输入法同步和PPT工具落地, 待办清理完毕, 恩施旅行已取消也不必再提。"
+    }
+  ]
+}

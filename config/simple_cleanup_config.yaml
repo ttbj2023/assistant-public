@@ -1,0 +1,76 @@
+# 简化清理工具配置文件
+# 用于替代复杂的ProjectCleanupManager
+
+# 白名单保护文件（不会被归档）
+protected_files:
+  # MD文档
+  markdown_files:
+    - "CLAUDE.md"
+    - "README.md"
+    - "AGENTS.md"
+
+  # 核心配置文件
+  config_files:
+    - "pyproject.toml"
+    - "uv.lock"
+    - "conftest.py"
+    - ".gitignore"
+    - ".dockerignore"
+    - "config.yaml"
+    - ".env.example"
+    - ".env"
+    - ".env.test"
+
+# 忽略的根目录文件(不归档, 不删除)
+ignore_root_files:
+  - "=*"
+
+# 归档规则
+archive_rules:
+  # 根目录MD文档归档位置
+  root_markdown_archive: "docs/archive"
+
+  # 根目录其他文件归档位置
+  root_other_archive: "archive"
+
+  # reports目录归档位置
+  reports_archive: "reports/archive"
+
+# 清理规则
+cleanup_rules:
+  # 需要清理的目录
+  cleanup_directories:
+    - "htmlcov"
+
+  # 归档文件保留天数
+  old_archives_days: 3
+
+  # 需要清理过期文件的目录
+  archive_directories:
+    - "archive"
+    - "docs/archive"
+    - "reports/archive"
+    - "logs"
+
+  # 运行时保护文件模式(cleanup_old_archives 不删除)
+  # 仅保护 *.pid 等"创建后不更新 mtime 但进程可能仍持有"的文件;
+  # 日志不在此列, 靠 cutoff(mtime<old_archives_days) 兜底——活跃日志持续写入, mtime 恒新不会进清理候选.
+  protected_runtime_patterns:
+    - "*.pid"
+
+# 排除的目录（不处理）
+exclude_directories:
+  - "src"
+  - "scripts"
+  - "tests"
+  - "docs"
+  - "config"
+  - "data"
+  - "examples"
+  - "docker"
+  - ".git"
+  - ".claude"
+  - ".venv"
+  - ".vscode"
+  - ".github"
+  - "temp"

@@ -1,0 +1,67 @@
+{
+  "sample_id": "syn_project_pollution",
+  "sample_type": "positive",
+  "description": "④过渡状态污染(公司架构/团队动态/当前监控栈)混入置顶, 新scope审计应删除, 身份+口味保留",
+  "pinned_memory": {
+    "basic_info": "姓名陈思远，在杭州做后端开发，使用Go和Python\n所在公司为电商平台，后端采用Go微服务架构，共20个服务，使用gRPC通信\n团队正在推进GitOps，使用ArgoCD做持续部署，配合GitHub Actions",
+    "preferences": "比较宅，喜欢科幻小说和单机游戏，最喜欢《三体》和塞尔达\n监控告警体系使用Prometheus、Grafana和AlertManager，正在考虑引入PagerDuty"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "自我介绍",
+      "summary": "介绍姓名、城市、职业和技术栈"
+    },
+    {
+      "round": 42,
+      "topic": "公司架构",
+      "summary": "聊了公司电商平台的微服务架构和gRPC通信"
+    },
+    {
+      "round": 43,
+      "topic": "团队实践",
+      "summary": "团队推进GitOps和ArgoCD持续部署"
+    },
+    {
+      "round": 44,
+      "topic": "爱好",
+      "summary": "喜欢科幻和单机游戏, 爱三体和塞尔达"
+    },
+    {
+      "round": 45,
+      "topic": "监控",
+      "summary": "讨论了Prometheus+Grafana监控体系, 考虑引入PagerDuty"
+    },
+    {
+      "round": 50,
+      "topic": "项目进展",
+      "summary": "GitOps推进顺利, 监控体系稳定运行"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "近期工作围绕架构和监控优化"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "所在公司为电商平台，后端采用Go微服务架构，共20个服务，使用gRPC通信",
+      "团队正在推进GitOps，使用ArgoCD做持续部署，配合GitHub Actions",
+      "监控告警体系使用Prometheus、Grafana和AlertManager，正在考虑引入PagerDuty"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "项目进展",
+      "assistant": "GitOps推进顺利, 监控体系也稳定了, 最近主要在做这些优化。"
+    },
+    {
+      "round": 60,
+      "user": "总结",
+      "assistant": "近期工作集中在架构升级和监控告警优化上。"
+    }
+  ]
+}

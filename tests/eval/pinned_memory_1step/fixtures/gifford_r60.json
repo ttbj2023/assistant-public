@@ -1,0 +1,18 @@
+{
+  "sample_id": "gifford_r60",
+  "sample_type": "positive",
+  "description": "真实: 左洛复用药(长期事实), 该记",
+  "user_message": "具体来说, 从去年2月23日开始服用左洛复. 期间稳定保持200mg/日的剂量",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "",
+    "preferences": ""
+  },
+  "ground_truth": {
+    "should_add": [
+      "左洛复",
+      "200mg"
+    ],
+    "should_not_add": []
+  }
+}

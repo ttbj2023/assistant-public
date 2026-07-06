@@ -1,0 +1,20 @@
+{
+  "sample_id": "neg_current_stack",
+  "sample_type": "negative",
+  "description": "④过渡状态-当前基础设施配置: 项目栈会随项目变, 拒绝",
+  "user_message": "API网关这边, 我们在Envoy上配置了限流和熔断, 用Lua filter做了自定义鉴权, 还接了Prometheus做指标采集",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "姓名陈思远，在杭州做后端开发，使用Go开发微服务，使用Python进行脚本编写和数据分析，偏好使用PostgreSQL",
+    "preferences": "比较宅，喜欢科幻小说和单机游戏，最喜欢《三体》和塞尔达"
+  },
+  "ground_truth": {
+    "should_add": [],
+    "should_not_add": [
+      "限流",
+      "熔断",
+      "Lua",
+      "Prometheus"
+    ]
+  }
+}

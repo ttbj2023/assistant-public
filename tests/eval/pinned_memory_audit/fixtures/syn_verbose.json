@@ -1,0 +1,133 @@
+{
+  "sample_id": "syn_verbose",
+  "sample_type": "change",
+  "description": "冗长偏好表述, 测提炼精简",
+  "pinned_memory": {
+    "basic_info": "职业：前端工程师",
+    "preferences": "我个人比较倾向于在写代码的时候使用驼峰命名法，因为可读性更好，这也是大多数团队的习惯\n喜欢用VSCode，装了Python和Git插件"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "命名",
+      "summary": "讨论了驼峰命名法的可读性优势"
+    },
+    {
+      "round": 42,
+      "topic": "编辑器",
+      "summary": "用VSCode, 装了Python和Git插件"
+    },
+    {
+      "round": 43,
+      "topic": "前端",
+      "summary": "聊了前端工程师的工作内容"
+    },
+    {
+      "round": 44,
+      "topic": "命名",
+      "summary": "团队统一采用驼峰命名"
+    },
+    {
+      "round": 45,
+      "topic": "VSCode",
+      "summary": "VSCode配置优化了, 效率提升"
+    },
+    {
+      "round": 46,
+      "topic": "工具",
+      "summary": "讨论了编辑器选择"
+    },
+    {
+      "round": 47,
+      "topic": "命名",
+      "summary": "驼峰命名成为团队规范"
+    },
+    {
+      "round": 48,
+      "topic": "前端",
+      "summary": "前端项目进展顺利"
+    },
+    {
+      "round": 49,
+      "topic": "VSCode",
+      "summary": "VSCode插件生态满足需求"
+    },
+    {
+      "round": 50,
+      "topic": "代码",
+      "summary": "代码风格统一"
+    },
+    {
+      "round": 51,
+      "topic": "命名",
+      "summary": "驼峰命名法使用熟练"
+    },
+    {
+      "round": 52,
+      "topic": "编辑器",
+      "summary": "VSCode作为主力工具"
+    },
+    {
+      "round": 53,
+      "topic": "工作",
+      "summary": "聊了前端工程化"
+    },
+    {
+      "round": 54,
+      "topic": "命名",
+      "summary": "坚持驼峰命名习惯"
+    },
+    {
+      "round": 55,
+      "topic": "VSCode",
+      "summary": "VSCode工作流稳定"
+    },
+    {
+      "round": 56,
+      "topic": "前端",
+      "summary": "前端技能持续提升"
+    },
+    {
+      "round": 57,
+      "topic": "代码",
+      "summary": "代码规范执行良好"
+    },
+    {
+      "round": 58,
+      "topic": "工具",
+      "summary": "对VSCode很满意"
+    },
+    {
+      "round": 59,
+      "topic": "命名",
+      "summary": "命名规范无变化"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "工具和风格稳定"
+    }
+  ],
+  "ground_truth": {
+    "delete": [],
+    "change": [
+      {
+        "old_content": "我个人比较倾向于在写代码的时候使用驼峰命名法，因为可读性更好，这也是大多数团队的习惯",
+        "reason": "剥离论证过程, 提炼为偏好"
+      }
+    ],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "命名规范",
+      "assistant": "驼峰命名法已成为团队统一规范, 执行良好。"
+    },
+    {
+      "round": 60,
+      "user": "编辑器",
+      "assistant": "VSCode加Python和Git插件的工作流稳定, 作为主力工具。"
+    }
+  ]
+}

@@ -1,0 +1,278 @@
+{
+  "query": "大模型 RAG 最新研究进展 2026",
+  "category": "学术",
+  "expect": "gemini/zhipu",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Unlocking dependable responses with Gemini Enterprise Agent Platform’s Agentic RAG",
+        "url": "https://research.google/blog/unlocking-dependable-responses-with-gemini-enterprise-agent-platforms-agentic-rag/",
+        "domain": "research.google",
+        "site": "Google Research",
+        "snippet": "Unlocking dependable responses with Gemini Enterprise Agent Platform’s Agentic RAG\nJune 5, 2026\nCyrus Rashtchian, Research Scientist, and Da-Cheng Juan, Engineering Manager, Google Research\nWe introduce our new agentic RAG framework. Based on a collaboration between Google Research and Google Cloud, our multi-agent workflow goes beyond standard RAG by breaking down complex enterprise queries and iteratively searching for sufficient context before generating dependable responses.\nQuick links\nRAG Engine Cross Corpus Retrieval\nCurrent single-step retrieval-augmented generation (RAG) systems weren...",
+        "publish_time": "2026-06-05T00:00:00+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 0.9588464498519897,
+        "is_bytedance": false
+      },
+      {
+        "title": "RAG新SOTA，还在5亿条数据上跑进秒级，只有它了",
+        "url": "https://biznews.sohu.com/a/1038319918_129720",
+        "domain": "sohu.com",
+        "site": "搜狐",
+        "snippet": "RAG新SOTA，还在5亿条数据上跑进秒级，只有它了\n机器之心Pro\n2026-06-18 12:24\n编辑｜Sia\n前阵子，Claude Code 意外泄露了 512,000 行 TypeScript 源码。\n好家伙，Anthropic 这波莫不是把 Claude Code 的「底裤」都露出来了？\nAI 圈扒完之后发现，最有意思的地方不是模型，而是 Claude Code 这个 Coding Agent 外面那层运行系统。\n泄露的大部分代码，都在处理这些事：什么时候读文件，什么时候调用工具，什么时候压缩上下文，什么时候继续下一步。\n也就是今天越来越火的 Agent Harness。\n一次意外，也算给行业提了个醒。\nAgent 时代，真正重要的不只是模型智商，还有模型外面那套上下文组织、工具调用和任务循环系统。\n这套系统里，连接「模型」和「外部知识世界」的基础设施——RAG，也必须跟着进化。\n为啥嘞？\n如果有人想知道「某条产品路线到底受谁影响？」，答案可能藏在这样一条链里：\nA 公司收购了 B 公司、B 公司的 CTO 后来加入了 C 项目、 C 项目又影响了某条产品路线。\n三件事分开看，未必都和用户的问题特别相似；只有把它们串起来，才是真正的答案。\n传统 RAG 可以迅速在资料库里找到几段「看起来最像」的文本，但未必拧得清它们之间是啥关系。\n对 Agent 来说，这就很要命。\n因...",
+        "publish_time": "2026-06-18T12:24:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.902765691280365,
+        "is_bytedance": false
+      },
+      {
+        "title": "RAG新SOTA，还在五亿条数据上跑进秒级，只有它了",
+        "url": "https://www.51cto.com/article/846824.html",
+        "domain": "51cto.com",
+        "site": "51CTO",
+        "snippet": "RAG新SOTA，还在五亿条数据上跑进秒级，只有它了\n2026-06-18 14:08:30\nAI 圈扒完之后发现，最有意思的地方不是模型，而是 Claude Code 这个 Coding Agent 外面那层运行系统。\n前阵子，Claude Code 意外泄露了 512,000 行 TypeScript 源码。\n好家伙，Anthropic 这波莫不是把 Claude Code 的「底裤」都露出来了？\nAI 圈扒完之后发现，最有意思的地方不是模型，而是 Claude Code 这个 Coding Agent 外面那层运行系统。\n泄露的大部分代码，都在处理这些事：什么时候读文件，什么时候调用工具，什么时候压缩上下文，什么时候继续下一步。\n也就是今天越来越火的 Agent Harness。\n一次意外，也算给行业提了个醒。\nAgent 时代，真正重要的不只是模型智商，还有模型外面那套上下文组织、工具调用和任务循环系统。\n这套系统里，连接「模型」和「外部知识世界」的基础设施——RAG，也必须跟着进化。\n为啥嘞？\n如果有人想知道「某条产品路线到底受谁影响？」，答案可能藏在这样一条链里：\nA 公司收购了 B 公司、B 公司的 CTO 后来加入了 C 项目、 C 项目又影响了某条产品路线。\n三件事分开看，未必都和用户的问题特别相似；只有把它们串起来，才是真正的答案。\n传统 RAG 可以迅速在资料...",
+        "publish_time": "2026-06-18T14:08:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8821027278900146,
+        "is_bytedance": false
+      },
+      {
+        "title": "香港科技大学（广州）提出Ψ-RAG：让AI在海量文档中“顺藤摸瓜”，精准找到你要的答案",
+        "url": "http://news.qq.com/rain/a/20260511A043N000",
+        "domain": "qq.com",
+        "site": "腾讯网",
+        "snippet": "香港科技大学（广州）提出Ψ-RAG：让AI在海量文档中“顺藤摸瓜”，精准找到你要的答案\n科技行者\n问AI · 智能代理在Ψ-RAG中如何实现多步推理？\n这项由香港科技大学（广州）研究团队完成的工作发表于2026年第43届国际机器学习会议（ICML 2026），发表地点为韩国首尔，收录于PMLR 306论文集，论文编号为arXiv:2605.00529。对希望深入了解技术细节的读者，可通过该编号在arXiv上查阅完整论文，代码也已在GitHub上公开。\n**当AI需要\"查资料\"时，问题出在哪里**\n每天我们都在用搜索引擎找资料，但你有没有遇到过这样的情况：你问的问题需要把好几篇文章的信息拼凑在一起才能回答，但搜索结果只给你一篇文章，看完这篇再找下一篇，找着找着就迷失了？对于现在的AI助手来说，这个问题更为棘手。\n当一个AI大模型被要求回答问题时，它有两种选择：要么靠自己\"肚子里\"学来的知识回答，要么去外部文档库里查找相关资料再回答。后者这种方式就叫做\"检索增强生成\"，英文缩写是RAG（Retrieval-Augmented Generation）。RAG的好处显而易见——AI可以用最新的、最准确的外部资料来回答，而不是仅凭记忆。\n然而，当文档库变得非常庞大，尤其是需要从多篇文章中\"顺藤摸瓜\"地找到答案时，现有的RAG方法就开始力不从心了。比如这样一个问题：\"影响碧昂丝的那位流行歌星，...",
+        "publish_time": "2026-05-11T12:04:00+08:00",
+        "auth_info": "一般权威",
+        "rank_score": 0.8720704317092896,
+        "is_bytedance": false
+      },
+      {
+        "title": "RAG（检索增强生成）技术全解析：2026年最新进展与落地实践",
+        "url": "https://cloud.tencent.com/developer/article/2649862",
+        "domain": "tencent.com",
+        "site": "腾讯云",
+        "snippet": "RAG（检索增强生成）技术全解析：2026年最新进展与落地实践\njack.yang\n发布于 2026-04-02 21:20:29\n概述\nRAG（Retrieval-Augmented Generation，检索增强生成）通过为大语言模型（LLM）动态注入外部知识，有效解决了模型“幻觉”、知识过时和私有数据缺失三大核心痛点。截至2026年，RAG已从简单的“向量检索+生成”模式，演进为包含自适应检索、图检索（Graph RAG）、多模态RAG等在内的复杂智能认知系统，成为企业级AI应用的基石。\n大模型部署\n#RAG\n#检索增强生成",
+        "publish_time": "2026-04-02T21:20:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8685455322265625,
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 2.63
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "6 月 25 日开班：构建大语言模型 RAG 智能体",
+        "url": "",
+        "domain": "",
+        "site": "ref_1",
+        "snippet": "欢迎报名 NVIDIA 深度学习培训中心（DLI）6 月 25 日举办的在线 AI 培训班《构建大语言模型 RAG 智能体》，帮助您掌握如何使用大语言模型（LLM）打造智能检索与代理系统，轻松构建兼具对话管理、文档推理与检索增强生成（RAG）能力的高效 AI 应用。本课程由 NVIDIA 认证讲师全天实时中文授课和答疑，配合云端实验环境的动手实操，完成课内测试，可获 NVIDIA 课程证书。 如果您正在备考 NVIDIA 生成式 AI 中级认证（NCP-GENL / NCP-AAI），本课为认证推荐培训。 探索智能检索与代理系统 构建高效可扩展的 LLM 应用 开课时间 2026 年 6 月 25 日 课程名称 《构建大语言模型 RAG 智能体》 课程概要 掌握 LLM 系统的构建与部署，结合内部与外部推理打造可预测、可扩展的智能代理，以满足不断变化的用户需求 学习目标 构建 LLM 系统，利用内部和外部推理组件实现与用户的可预测交互 设计对话管理和文档推理系统，用于维护状态并将信息强制转换为结构化格式 利用嵌入模型进行高效的内容检索的相似性查询和生成对话护栏 开发、模块化和评估 RAG 模型，无需任何微调即可回答有关研究论文数据集的问题 预备知识 熟悉深度学习基础原理，特别需要掌握 PyTorch 和迁移学习 具备中级 Python 编程经验，包括面向对象编程和库的使用 课程涵盖...",
+        "publish_time": "2026-06-17",
+        "is_bytedance": false
+      },
+      {
+        "title": "软件所提出增强图基础模型泛化性的双曲RAG框架",
+        "url": "",
+        "domain": "",
+        "site": "ref_2",
+        "snippet": "近日，中国科学院软件研究所研究团队提出了一种面向图基础模型的双曲检索增强生成框架。该研究从表示空间的几何特性出发，系统重构了检索增强生成（RAG）流程，以提升图基础模型在零样本场景下的泛化能力。相关成果论文Generalizing Graph Foundation Models via Hyperbolic Retrieval-Augmented Generation被数据挖掘领域顶级国际学术会议ACM SIGKDD 2026接收，第一作者博士生靳毅凡，通讯作者为李江梦副研究员。 图基础模型通过大规模预训练实现了跨域图表示学习，但其参数化知识难以应对推理阶段的数据分布变化，泛化能力受限。RAG算法通过动态引入外部知识库，提供了无需重新训练的解决思路。 然而，研究团队指出，现有基于欧氏空间的RAG方法存在几何缺陷：欧氏空间体积呈多项式增长，而外部知识库呈指数型层次扩展结构，二者不匹配。 这带来两个问题：一是语义粒度丢失，粗细概念在欧氏空间中被压缩到邻近区域，难以区分；二是枢纽现象，欧氏空间的有限容量使得大量实体拥挤，部分枢纽节点反复出现在不同查询结果中，降低了检索结果的多样性和特异性。因此，提升图基础模型泛化能力，不仅要引入外部知识，还需构建在几何上适配层次化知识库的索引与检索机制。 针对上述问题，研究团队提出了HyRAG框架，在双曲空间中系统性重构RAG流程。该框架首先将外部知识库...",
+        "publish_time": "2026-06-18",
+        "is_bytedance": false
+      },
+      {
+        "title": "RAG 还在说“我信息不够“?谷歌Gemini这套 Agentic RAG 直接逼它接着搜",
+        "url": "",
+        "domain": "",
+        "site": "ref_3",
+        "snippet": "谷歌 Gemini 企业级智能体平台的 Agentic RAG：让大模型的回答终于靠谱了 封面图 “ 发布时间：2026 年 6 月 5 日 “ 原文：https://research.google/blog/unlocking-dependable-responses-with-gemini-enterprise-agent-platforms-agentic-rag/ 这篇文章要聊的，是谷歌新推出的一套 agentic RAG（智能体检索增强生成）框架。它由 Google Research 和 Google Cloud 联手打造，核心思路是：先把复杂的企业级问题拆开，然后一遍遍地去找上下文，确认信息够了，再动手生成答案。说白了，就是让模型别急着回答，先把上下文功课做扎实。 老一套的 RAG，为啥不够用了 笔者先把问题摆出来。现在主流的那种\"一步到位\"的 RAG 系统，压根就不是为今天这种跨多个数据源、要绕好几道弯的查询设计的。 举个例子。假设有人问：\"X 项目用的那台服务器，具体参数是什么？\"系统大概能翻到一堆跟 X 项目相关的文档，但这些文档里可能只写了个服务器编号。它不知道下一步该拿着这个编号，再去另一个数据库里查一遍才能找到真正的参数。结果呢？要么给个残缺的答案，要么干脆甩一句\"没找到\"。 问题就出在这儿——信息散落在一个个彼此孤立的数据\"孤岛\"上，得一层层往里挖才能把事...",
+        "publish_time": "2026-06-08",
+        "is_bytedance": false
+      },
+      {
+        "title": "一文搞懂 Agent 的进化：从 RAG/ReAct 到 Skills/Harness/Loop，你的旧地图为什么不够用了",
+        "url": "",
+        "domain": "",
+        "site": "ref_4",
+        "snippet": "如果你是 2024 年入门 AI 应用的，你脑子里大概有一张这样的地图： 想让模型用上外部知识，上 RAG；想让它一步步推理着干活，用 ReAct；想让它调工具，配 Function Call；想让它别瞎答，加个 prompt 模板把话说清楚。这套组合拳，过去两年是绝对的主流，几乎所有教程都这么教。 然后 2026 年了。你打开现在最能打的那些 Agent 系统——Claude Code、Codex——掀开看里面的设计，会有一种说不出的别扭：你熟悉的那些词，好像还在，又好像都不在了。它不太提 RAG，检索代码直接用 grep；它不怎么强调 Function Call，工具全走一个叫 MCP 的东西；它满嘴是你没怎么听过的新词——Skills、Harness、Loop。 这时候很多人会冒出一个念头：是不是我那套又过时了？AI 圈三个月一换血,我刚学会的东西是不是又成废纸了？ 我要说的是：没废，但你得换种看法。 你那张旧地图上的每个概念都没有错，也没有死。真正变了的是——它们各自只是一块零件，而 2026 年的系统，已经不靠\"拼零件\"运转了，它换上了三个新底座。还盯着零件看的人，会越来越看不懂新系统为什么长这样。 这篇就干一件事：带你把旧地图和新地图叠在一起看，看清楚那些旧概念，到底被新范式怎么\"吃\"进去了。 先把旧地图摊开：每个概念，都只解决了一个零件 我们先公平地说，2024 那套...",
+        "publish_time": "2026-06-24",
+        "is_bytedance": false
+      },
+      {
+        "title": "RAG + 知识图谱 + Harness + Agent：数据算法团队必修课！",
+        "url": "",
+        "domain": "",
+        "site": "ref_5",
+        "snippet": "对数据算法团队而言，真正的挑战不是调用模型API，而是如何让Agent真正理解你的业务数据。答案不在模型本身——RAG解决知识检索，知识图谱构建实体关联，Harness则是让Agent稳定、可控、可进化的生产级运行时基础设施。 2026亚马逊云科技中国峰会专门为数据算法团队设置了完整议程：从RAG架构与知识图谱技术趋势，到AI Agent数据底座4个关键架构决策，再到Memory记忆系统、语义缓存破解Token爆炸——全是能带回团队落地的硬核内容。 6月23-24日，上海世博中心。数据是护城河，不是模型。 立即扫码线下参会 来现场带走数据算法团队的Agent落地蓝图！ 大会介绍： 面向数据团队： 面向Agent构建者： 面向行业创新者： 面向通用业务用户： 面向模型实践者： 面向AI基础架构师： 面向出海构建者：",
+        "publish_time": "2026-06-20",
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 0.69
+  },
+  "baidu": {
+    "count": 10,
+    "results": [
+      {
+        "title": "软件所提出增强图基础模型泛化性的双曲RAG框架",
+        "url": "https://www.iscas.ac.cn/xwdt2016/kyjz2016/202606/t20260618_8230908.html",
+        "domain": "ac.cn",
+        "snippet": "软件所提出增强图基础模型泛化性的双曲RAG框架 近日,中国科学院软件研究所研究团队提出了一种面向图基础模型的双曲检索增强生成框架。该研究从表示空间的几何特性出发,系统重构了检索增强生成(RAG)流程,以提升图基础模型在零样本场景下的泛化能力。相关成果论文Generalizing Graph Foundation Models via Hyperbolic Retrieval-Augmented Generation被数据挖掘领域顶级国际学术会议ACM SIGKDD 2026接收,第一作者博士生靳毅凡,通讯作者为李江梦副研究员。 图基础模型通过大规模预训练实现了跨域图表示学习,但其参数化知识难以应对推理阶段的数据分布变化,泛化能力受限。RAG算法通过动态引入外部知识库,提供了无需重新训练的解决思路。 然而,研究团队指出,现有基于欧氏空间的RAG方法存在几何缺陷:欧氏空间体积呈多项式增长,而外部知识库呈指数型层次扩展结构,二者不匹配。这带来两个问题:一是语义粒度丢失,粗细概念在欧氏空间中被压缩到邻近区域,难以区分;二是枢纽现象,欧氏空间的有限容量使得大量实体拥挤,部分枢纽节点反复出现在不同查询结果中,降低了检索结果的多样性和特异性。因此,提升图基础模型泛化能力,不仅要引入外部知识,还需构建在几何上适配层次化知识库的索引与检索机制。 针对上述问题,研究团队提出了HyRAG框架,在双曲空间...",
+        "is_bytedance": false
+      },
+      {
+        "title": "软件所提出增强图基础模型泛化性的双曲RAG框架",
+        "url": "http://www.is.cas.cn/xwdt2016/kyjz2016/202606/t20260618_8230908.html",
+        "domain": "cas.cn",
+        "snippet": "软件所提出增强图基础模型泛化性的双曲RAG框架 近日,中国科学院软件研究所研究团队提出了一种面向图基础模型的双曲检索增强生成框架。该研究从表示空间的几何特性出发,系统重构了检索增强生成(RAG)流程,以提升图基础模型在零样本场景下的泛化能力。相关成果论文Generalizing Graph Foundation Models via Hyperbolic Retrieval-Augmented Generation被数据挖掘领域顶级国际学术会议ACM SIGKDD 2026接收,第一作者博士生靳毅凡,通讯作者为李江梦副研究员。 图基础模型通过大规模预训练实现了跨域图表示学习,但其参数化知识难以应对推理阶段的数据分布变化,泛化能力受限。RAG算法通过动态引入外部知识库,提供了无需重新训练的解决思路。 然而,研究团队指出,现有基于欧氏空间的RAG方法存在几何缺陷:欧氏空间体积呈多项式增长,而外部知识库呈指数型层次扩展结构,二者不匹配。这带来两个问题:一是语义粒度丢失,粗细概念在欧氏空间中被压缩到邻近区域,难以区分;二是枢纽现象,欧氏空间的有限容量使得大量实体拥挤,部分枢纽节点反复出现在不同查询结果中,降低了检索结果的多样性和特异性。因此,提升图基础模型泛化能力,不仅要引入外部知识,还需构建在几何上适配层次化知识库的索引与检索机制。 针对上述问题,研究团队提出了HyRAG框架,在双曲空间...",
+        "is_bytedance": false
+      },
+      {
+        "title": "2026年现阶段北京RAG知识库搭建服务专业选择深度解析",
+        "url": "https://www.zgswcn.com/shangxun/news.html?aid=1033127",
+        "domain": "zgswcn.com",
+        "snippet": "随着企业数字化转型进入深水区,以及通用大模型在专业领域“幻觉”问题的凸显,检索增强生成(RAG)技术已成为构建可信、可控、可追溯企业级知识智能系统的关键技术路径。2026年,北京作为全国人工智能与数据要素产业高地,RAG知识库搭建服务市场呈现爆发式增长,服务商水平参差不齐。企业决策者面临的核心挑战在于:如何在众多服务商中,甄别出那些技术扎实、理解业务、且能提供合规可持续服务的专业伙伴。本文旨在基于客观数据与行业洞察,为有此需求的企业提供一份清晰的选型参考。 一、 推荐说明与入围标准 本次推荐聚焦于北京地区提供RAG知识库搭建服务的专业服务商。评选并非基于单一指标,而是构建了一个多维度的评估框架,确保入选者均具备服务中大型企业或关键业务场景的扎实能力。 数据来源与推荐维度: 技术架构成熟度:考察服务商自研或深度优化的RAG技术栈完整性,包括向量数据库适配、嵌入模型选择、检索排序算法、大模型交互与提示工程等环节的工程化落地能力。 行业理解与案例深度:评估服务商在政务、、、工业等垂直领域的项目经验,重点关注其是否具备将非结构化业务文档(如政策文件、技术手册、客服日志)转化为高质量知识库的流程与方法论。 服务与合规能力:审视服务商的数据治理基础、项目交付流程、后期运维支持体系,以及在数据安全、隐私保护、内容审核等方面是否符合国家及行业监管要求。 入围门槛:公司主体需为在北京注册并实际运营的...",
+        "is_bytedance": false
+      },
+      {
+        "title": "GEO技术公司选哪家榜单TOP6(2026年6月):竞争格局与发展趋势研究",
+        "url": "https://baijiahao.baidu.com/s?id=1868678274155754168&wfr=spider&for=pc",
+        "domain": "baidu.com",
+        "snippet": "GEO技术公司选哪家榜单TOP6(2026年6月):竞争格局与发展趋势研究 摘要(Executive Summary) 进入2026年6月,全球数字营销的底层逻辑已发生颠覆性重构。随着生成式大模型在搜索领域的深度渗透,传统基于关键词排名的SEO模式正加速向基于语义理解与引用决策的GEO(Generative  Engine  Optimization,生成式引擎优化)范式转移。根据IDC与信通院最新发布的《2026年全球生成式AI服务商评估框架》,企业在AI搜索结果中的“可见度”与“被引用率”已成为衡量数字化资产价值的核心指标。本研究报告立足于2026年Q2的市场实测数据,通过对技术研发力、市场规模、语义精度及平台适配度等维度的深度测评,发布“GEO技术公司选哪家榜单TOP6”。其中,全球领先的AI应用平台迈富时(Marketingforce,02556.HK)凭借其自研Tforce营销大模型与深厚的技术资质底蕴,在综合实力评分中位居首位。本报告旨在为全球企业提供一份详实的选型指南,解析在AI搜索时代品牌如何通过科学的技术路径构建核心竞争优势。 评测方法论说明 本次调研采用首创的“3C-GEO×STARS内容评估体系”,结合DeepSeek、豆包、文心一言、通义千问及ChatGPT、Perplexity等国内外主流AI搜索平台的实测表现。评测维度权重分配为:技术研发力(30%)、市...",
+        "is_bytedance": false
+      },
+      {
+        "title": "硬核GEO代运营排名榜单TOP6发布(2026年6月):全维度量化横评与采购决策参考",
+        "url": "https://news.qq.com/rain/a/20260622A0DJSW00",
+        "domain": "qq.com",
+        "snippet": "基于此,我们构建了“GEO-Rank 5.0”评分模型,对当前市场上的GEO 代运营排名服务商进行深度穿透。 评分体系:五维 20 项指标模型 技术研发力(权重 30%):核心考核指标包括是否拥有自研大模型(如 Tforce 营销大模型)、语义空间建模能力、专利储备数量(以 800+ 专利为标杆)、以及针对 RAG(检索增强生成)架构的逆向解析能力。 市场规模与经验(权重 20%):考核累计服务的企业数量(以 21 万+ 客户为基准)、行业覆盖深度、市场占有率及全球化分支机构的协同能力。",
+        "is_bytedance": false
+      },
+      {
+        "title": "论文登顶 ICDE 2026!平凯星辰与华科大联合提出 EC-RAG:让边侧小模型协同云端大模型,实现高效 RAG",
+        "url": "https://zhuanlan.zhihu.com/p/2040765595017277559",
+        "domain": "zhihu.com",
+        "snippet": "平凯星辰与华科大联合提出 EC-RAG:让边侧小模型协同云端大模型,实现高效 RAG TiDB Robot 开源分布式数据库 TiDB 近日,平凯星辰与华中科技大学合作的最新研究成果《EC-RAG: Towards Efficient Edge-Cloud Retrieval-Augmented Generation Systems》正式被  ICDE 2026 大会收录。该研究针对 边缘计算 环境下大模型部署的痛点,提出了一种全新的云边协同 RAG 框架,在提升回答质量的同时,显著降低云端 API 调用成本,并保持较低平均延迟。 ICDE 是数据库领域三大顶级国际会议之一(与 SIGMOD、VLDB 齐名),入选论文代表了数据库及其应用领域的最高研究水平。 研究背景:边缘侧 RAG 的“既要又要” 随着 生成式 AI 的普及,检索增强生成(RAG)已成为解决大模型(LLM)幻觉、增强专业领域知识的关键技术。然而,在实际落地中,开发者往往面临两难境地: 云端LLM 昂贵:完全依赖云端 LLM API 虽然能够保证生成质量,但每次调用都会产生额外成本,且随着查询量和检索上下文长度增加,API 费用会快速累积。 边缘侧 SLM 能力有限:将小语言模型(SLM)部署在资源受限的边缘服务器上虽响应快、更安全,但受限于模型参数量,其处理复杂查询时的生成质量往往不尽如人意。 如何在有限的资源下...",
+        "is_bytedance": false
+      },
+      {
+        "title": "2026年RAG技术全景演进:从基础检索到认知智能的七大核心范式深度解析",
+        "url": "https://cloud.tencent.com/developer/article/2695163",
+        "domain": "tencent.com",
+        "snippet": "概述 本文立足于2026年的技术现状,对2023年以来rag技术的演进路径进行系统性复盘与前瞻性重构.我们将深入剖析七种关键rag范式的底层逻辑,工程实现,性能边界及最新优化方向.文章结合大量对比表格,架构流程图描述及实战案例,旨在为ai架构师,算法工程师及技术决策者提供一份详尽的rag技术选型与落地指南.在2026年的今天,理解这些变体不仅是掌握一项技术,更是理解ai如何从\"文本处理器\"进化为\"... 文章被收录于专栏: 大模型系列 摘要与导读 自2023年检索增强生成(retrieval-augmented generation, rag)技术爆发以来,人工智能领域经历了一场从\"参数记忆\"向\"外挂认知\"的深刻范式转移.截至2026年6月,rag已不再仅仅是一种缓解大语言模型(llm)幻觉的临时补丁,而是演变为构建企业级可信ai系统的核心基础设施.在过去三年中,我们见证了rag从简单的\"检索-生成\"二元结构,裂变为包含校正,自省,推测,融合,自主代理及图增强等七大关键变体的庞大技术家族. 本文立足于2026年的技术现状,对2023年以来rag技术的演进路径进行系统性复盘与前瞻性重构.我们将深入剖析七种关键rag范式的底层逻辑,工程实现,性能边界及最新优化方向.文章结合大量对比表格,架构流程图描述及实战案例,旨在为ai架构师,算法工程师及技术决策者提供一份详尽的rag技术选型与落地...",
+        "is_bytedance": false
+      },
+      {
+        "title": "企业级LLM RAG检索延迟优化:从理论极限到工程落地的全景实战指南",
+        "url": "https://cloud.tencent.com/developer/article/2694112",
+        "domain": "tencent.com",
+        "snippet": "在2024年至2026年的大模型应用浪潮中,检索增强生成(RAG)已从实验室的概念验证迅速演变为企业级知识管理的核心基础设施。然而,随着企业知识库规模从百万级向量膨胀至十亿级,并发用户从内部试点的数十人扩展至面向客户的数千人,一个残酷的现实逐渐浮出水面:功能上的“准确”仅仅是入场券,体验上的“即时”才是留存率与生产效率的决定性因素。 文章被收录于专栏: 大模型系列 序言:当RAG从“可用”迈向“好用”,延迟成为生死线 在2024年至2026年的大模型应用浪潮中,检索增强生成(RAG)已从实验室的概念验证迅速演变为企业级知识管理的核心基础设施。然而,随着企业知识库规模从百万级向量膨胀至十亿级,并发用户从内部试点的数十人扩展至面向客户的数千人,一个残酷的现实逐渐浮出水面:功能上的“准确”仅仅是入场券,体验上的“即时”才是留存率与生产效率的决定性因素。 在企业级生产环境中,检索延迟不再是一个单纯的技术指标,它是业务价值的直接载体。对于客服机器人而言,超过800毫秒的首字延迟会导致用户满意度断崖式下跌;对于代码辅助工具而言,超过500毫秒的补全等待会打断开发者的心流状态;对于金融风控决策支持系统而言,秒级的检索滞后可能意味着错失交易窗口或合规风险。更严峻的是,RAG系统的延迟具有显著的“长尾效应”和“级联放大”特征——检索阶段的100毫秒抖动,经过重排序、上下文组装、LLM推理等环节的叠加...",
+        "is_bytedance": false
+      },
+      {
+        "title": "2026 年 RAG 技术最新进展与落地实践指南_rag最新进展-CSDN博客",
+        "url": "https://blog.csdn.net/2501_92406411/article/details/158391326",
+        "domain": "csdn.net",
+        "snippet": "RAG(Retrieval-Augmented Generation,检索增强生成)在过去两年几乎成为所有AI应用的默认架构:向量库 + 检索 + 大模型生成。但 2026 年,行业出现清晰信号:传统RAG 正在被更高层的「记忆型 AI 系统」取代。本文系统解析 RAG 技术最新进展、失效原因、四大新范式,以及个人开发者的真实落地路径。 What is RAG? RAG 是一种将外部知识库与大模型结合的技术范式:先将文档切块、向量化存入数据库,用户提问时检索相关片段,再与问题一起送入模型生成答案。其核心价值是让模型能够回答训练数据之外的问题,同时降低幻觉。2026 年,RAG 的形态已从单一「检索→生成」流程,演进为 Graph-RAG、AgenticRAG 与长期记忆系统等多种范式。 一、为什么传统 RAG 正在失效 1. 检索延迟成为系统瓶颈 经典流程:用户问题 → 向量检索 → 拼接上下文 → 生成。 问题在于: 延迟不可避免(向量搜索 + rerank) 上下文窗口仍然昂贵 召回质量强依赖 embedding 与切分策略 当模型本身上下文达到百万 token、具备更强推理能力时,RAG 的「必要性」开始下降。 2. 向量库不是「真正的知识」 传统RAG 的核心假设:把文本切块 → 向量化 → 就等于知识库。 但真实世界的知识是结构化关系、时间变化、跨文档推理。向量相似度只能...",
+        "is_bytedance": false
+      },
+      {
+        "title": "别再手搓RAG了!2026年还在自己写知识库的企业,正在被Dify用户甩开三个身位",
+        "url": "https://cloud.tencent.com/developer/article/2692514",
+        "domain": "tencent.com",
+        "snippet": "2026年还在自己写知识库的企业,正在被Dify用户甩开三个身位 jack.yang 概述 本文将深入剖析这场分化的根源,系统解构Dify在2026年的企业级知识库能力演进,通过真实案例与量化对比揭示“平台化RAG”相对于“手搓RAG”的结构性优势,并为仍处在转型十字路口的企业提供一份可操作的迁移路线图。我们试图回答一个核心问题:当RAG从技术Demo演变为企业基础设施,什么样的工程实践才能支撑起真正的智能化转型? 文章被收录于专栏: 大模型系列 引言:一场静悄悄的“代差”战争 2026年的企业AI战场,正在发生一场残酷而静默的分化。 一边是仍在“手搓RAG”(Retrieval-Augmented Generation)的团队:他们花费数月时间搭建向量数据库、编写分块脚本、调试检索策略、处理数据清洗管道、对接大模型API、构建评估体系……每当业务需求变更或底层模型升级,都要重新经历一轮痛苦的适配与回归测试。他们的工程师是优秀的,但他们的时间被消耗在了重复造轮子上。 另一边是使用Dify等成熟LLMOps平台的团队:他们在数天内完成知识库的导入、索引与上线;通过可视化界面调整检索参数、编排多步推理工作流、接入多种数据源;当新模型发布时,一键切换并完成效果对比;当业务方提出新的问答场景时,拖拽几个节点即可快速验证。他们的工程师将精力聚焦于业务理解、Prompt工程和效果优化等高价值环...",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "",
+    "elapsed": 1.3
+  },
+  "gemini": {
+    "count": 11,
+    "results": [
+      {
+        "title": "turingpost.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH3OT_IjDOY9Tfmsu4S2jXynqbWdxPhNZsVGqDA2ZSys1PVZH-y8F7wh5AlzqRYSV24kjN3Ld1o2UaUkhjMd6dmvVc_7-qg2080RnHTzr3QJfkMSxxzwWsBGZGq72eTlg==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "dataforest.ai",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH-UMuGS1McmUSyOyDmgQbC9dbf1lo1a8O6DlpANOYlR_pRxiYuZAZ4sJLPOMo0JXqeWW-Oz4pVaoSNHWPGWPhWCe_m7aSg-_9EvRhb0ITRQIe6C-o57c8ZbhBoO4TY4zx7nZVLEAimBu2_nXkcUFbdNrKQew8PIFXF-Mkcc1lR39a_Wo-dWW2Tda0=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "tencent.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCAVOqk3Qxk_N_0CRS6Tl5J_U1Cw4H71l4byfj9mkFd5fwebLcGQrIUwRbEK_0x82kWzcJVDVOIbzFXA8SE6PleMSkhx8RtwUoLIPjM-7cuT08-o1NDyepfGEPw0VTYIVEVxtOvzoqBs1au1Yw",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "decodethefuture.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEqG-urcg0-Vk4U7f7HqffiC6SVNLm_W393qT-w74dLiLAxfG6t6EOjwQQNKiLCfBSq05IlqB8YvUcEnOVN6uk0J8RXy1n3kgeVF6zfRAbdE_fvBYG3cnCg2SZTC1o=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "segmentfault.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFJ8OoJHZw2U0GM0RF-qEUdchgKz4PUmT71bvNuL6Dd2ck7VE2qwK6nPiibpPyysDbAnDQUjuo2TQBvT6YThF-N_lW80NfduXj3hWfrBhmR_f2SFjzkifGJ0eLcetZ5M4InQNe9kQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGOG9IajGxR0Vu2TKe6lDxPhWCGmhgJY0GoCOpMQ83D7vuQvYU4JdAW1CqWb0rPfStnrJUWVAuFl5CHCC-PigaAW9aAUDO6hY9ZwC7-slZqzbF14VMomRS25Eb9--z7q90Lw8mKNkvLmA4LXBjJYP_b",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "substack.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEKpfUO2u1HMzNZjx9zMYMA-V83-hE7EkF7l1IDaXadbzl__NTn4iCsf34x6Cp4lgensvFtTgrjdH46sfhcyzTkESUYkiNDZKBa1VIchT7Qb0MaPEeE0D8jBJokC9r8WXdlSMnIzsMj5uxBwGqQouLqbFfUOfMjVrBfLbmH6QJG8KxjDpvxaA==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "flotorch.ai",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHGwYDrPxF1xlLnfSobIHLZsUG37Mz-7Us2lufSBIdSNNKaYn1p5rNI5L9lyODAKyvio922npNHIvUlbJ98jl6LRznOj6Az95az8O7EKw6M90jRoj933gusSPnc9QazAYRrVXAJ0lc29lyh6bmQLwtUCFe2d4eupbcHjlEG-93glbcFF0kOTtjoJYWrtpFnG9AY5mWug77MASBy2XTMjIv0KaSWr3c=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "tencent.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFtnV4xCu9_8KtWtrtoYVEcoqXIq4kmugiWkTr0HHdLPG2JgfKk2l1u4QX1fr7k9t4Oua3Gl18zfjbcOUql4s976ugDwzP9ffX-Au1BvAmQCGnrk70Mhwg3fujYcBeDLaFST6-IaG4e6FIrJDl2",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "squirro.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHu_RsJn5S75fRwPj-2krPRjP0DA0MmkIYbxYyyjDM6H4fXgwFK3_oAjpjtwXx2ZK_ObAyJhzj3UltyFa7N-9Nk9zyVNmYzNIH-xp0kpViBlldRTuEiFTtWyNzg2yX5tLFEd8MN98bcjSkItpqh",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEV1j4rDO8lg4-vsRZ80jQUDg0Fc0WumsxZiZxG-R4DL79XDvy0xw6B3pNFA9IV5crApLYGz4QMDIMrkR2Fj0WPioV3FLrLYBIO9Dsi6UaDDYneMn1jWa0yoqgbSOn-49LPYd-HQioYd_j4tE0=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "2026年，大模型RAG（检索增强生成）技术的研究进展呈现出多方面、深层次的演进，旨在克服传统RAG的局限性，并将其能力扩展到更广泛的应用场景。\n\n**核心进展方向：**\n\n*   **超越基础检索，走向智能化与多模态：** RAG已不再局限于简单的向量检索，而是朝着更智能、更自适应的方向发展。这包括：\n    *   **长文档理解与记忆增强：** 针对书籍、报告等长篇幅文档，出现了如MiA-RAG（Mindscape-Aware RAG）等技术，通过构建文档的“全局视图”来指导检索和生成，以更好地理解和利用长文档信息。HGMem（Hypergraph-based Memory）等方法则专注于构建长期的记忆系统。\n    *   **自适应检索（Adaptive Retrieval）：** RAG系统能够动态判断何时需要检索，以及如何过滤不准确或冗余的信息，从而提高检索效率和回答质量。\n    *   **多模态RAG：** RAG的能力已扩展到图像、代码、音频、视频等多种模态，实现跨模态的检索和理解。\n    *   **Agentic RAG（智能体RAG）：** RAG被整合进智能体（Agent）的框架中，使其能够自主地规划检索步骤、选择工具、评估检索结果，并根据需要进行多轮检索，以处理更复杂的任务。\n    *   **Graph RAG（图RAG）：** 利用知识图谱来增强检索能力，特别适用于需要关系推理和复杂查询的场景，克服了传统向量检索在理解实体关系方面的不足。\n\n*   **提升检索质量与效率：**\n    *   **混合检索（Hybrid Search）：** 结合了向量检索（关注语义相似性）和传统关键词检索（如BM25，关注精确匹配），以提高检索的准确性和鲁棒性。\n    *   **重排（Re-ranking）与查询转换：** 引入更复杂的重排算法（如Cross-Encoders）来优化检索结果的排序，并通过查询转换和扩展技术来优化用户输入的查询，以确保检索到最相关的信息。\n    *   **优化分块策略（Chunking Strategies）：** 从固定的分块大小转向更智能的语义分块或动态分块，以更好地保留上下文连贯性。\n\n*   **强调评估与落地实践：**\n    *   **评估驱动的RAG：** RAG系统的成功越来越依赖于对其整个管道（包括检索质量、分块、重排、模型选择等）进行全面的评估和优化，而非仅仅关注大模型本身。\n    *   **LLM无关性：** 设计上更加灵活，能够与多种大模型无缝集成，避免厂商锁定。\n    *   **企业级应用：** RAG被视为构建可靠企业级AI应用的关键基础设施，尤其在金融、客服等领域，以解决数据准确性、时效性和合规性问题。\n\n**未来趋势：**\n\n到2026年至2028年，RAG将不再被视为一个独立的架构，而是逐渐融入AI系统的基础能力层，实现记忆、推理、行动和学习的全面融合。未来的AI系统将不再严格区分“RAG系统”和“AI系统”，RAG将成为AI实现更高级智能的基石。\n\n**主要解决的痛点：**\n\n*   **模型幻觉（Hallucination）：** 通过引入外部真实信息，减少模型“一本正经地胡说八道”的情况。\n*   **知识过时（Knowledge Cutoff）：** 允许模型访问最新的外部数据，解决模型训练数据截止日期带来的信息滞后问题。\n*   **私有数据盲区：** 使模型能够利用企业内部的私有数据和知识，解决模型对特定领域或组织内部信息不了...",
+    "elapsed": 20.66
+  }
+}

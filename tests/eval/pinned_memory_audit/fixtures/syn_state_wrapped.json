@@ -1,0 +1,137 @@
+{
+  "sample_id": "syn_state_wrapped",
+  "sample_type": "change",
+  "description": "状态包装的偏好(内核是偏好, 表述是过程), 测提炼",
+  "pinned_memory": {
+    "basic_info": "职业：全栈工程师",
+    "preferences": "最近在试用Notion，感觉比OneNote好，打算长期用Notion\n关注某Web框架的生态，若成熟则采用\n已确定使用Git作为版本控制"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "笔记工具",
+      "summary": "最近在试用Notion, 感觉比OneNote好"
+    },
+    {
+      "round": 42,
+      "topic": "Web框架",
+      "summary": "关注某Web框架的生态, 若成熟则采用"
+    },
+    {
+      "round": 43,
+      "topic": "版本控制",
+      "summary": "已确定使用Git, 团队统一"
+    },
+    {
+      "round": 44,
+      "topic": "Notion",
+      "summary": "Notion用了一段时间, 决定长期用"
+    },
+    {
+      "round": 45,
+      "topic": "框架",
+      "summary": "该框架生态还在发展, 继续观望"
+    },
+    {
+      "round": 46,
+      "topic": "Git",
+      "summary": "Git工作流已固化, 运行良好"
+    },
+    {
+      "round": 47,
+      "topic": "笔记",
+      "summary": "Notion成了主力笔记工具"
+    },
+    {
+      "round": 48,
+      "topic": "技术",
+      "summary": "讨论了笔记工具的对比"
+    },
+    {
+      "round": 49,
+      "topic": "框架",
+      "summary": "框架还没达到采用标准"
+    },
+    {
+      "round": 50,
+      "topic": "版本控制",
+      "summary": "Git使用已成习惯"
+    },
+    {
+      "round": 51,
+      "topic": "Notion",
+      "summary": "Notion替代了所有旧笔记"
+    },
+    {
+      "round": 52,
+      "topic": "框架",
+      "summary": "决定再等等看框架成熟度"
+    },
+    {
+      "round": 53,
+      "topic": "工作",
+      "summary": "聊了技术选型方法论"
+    },
+    {
+      "round": 54,
+      "topic": "笔记",
+      "summary": "Notion深度使用中"
+    },
+    {
+      "round": 55,
+      "topic": "Git",
+      "summary": "团队Git规范已建立"
+    },
+    {
+      "round": 56,
+      "topic": "框架",
+      "summary": "框架生态仍不足, 暂不采用"
+    },
+    {
+      "round": 57,
+      "topic": "Notion",
+      "summary": "确认Notion是长期选择"
+    },
+    {
+      "round": 58,
+      "topic": "技术",
+      "summary": "讨论了其他工具"
+    },
+    {
+      "round": 59,
+      "topic": "版本控制",
+      "summary": "Git作为标准无变化"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "工具链稳定下来"
+    }
+  ],
+  "ground_truth": {
+    "delete": [],
+    "change": [
+      {
+        "old_content": "最近在试用Notion，感觉比OneNote好，打算长期用Notion",
+        "reason": "剥离试用/打算过程, 提炼为已采纳偏好"
+      },
+      {
+        "old_content": "关注某Web框架的生态，若成熟则采用",
+        "reason": "剥离关注/条件, 提炼为倾向"
+      }
+    ],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "工具近况",
+      "assistant": "Notion已成为长期主力笔记工具。之前关注的那个Web框架生态仍不足, 决定暂不采用。"
+    },
+    {
+      "round": 60,
+      "user": "版本控制",
+      "assistant": "Git作为团队标准已固化, 工作流运行良好。"
+    }
+  ]
+}

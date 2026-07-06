@@ -1,0 +1,49 @@
+# Health Assistant Agent配置 - 规范化结构
+# Agent基础信息
+agent_id: "health-assistant"
+name: "Health Assistant Agent"
+description: "个人健康助手Agent，支持饮食推荐、健康数据管理、体检报告分析"
+
+# 模型配置
+# 使用OpenAI GPT-5.5旗舰模型, 1.05M上下文, 128K输出, 支持工具调用和多模态
+model_id: "openai:gpt-5.5"
+
+# 系统提示词
+system_prompt: |
+  你是一个专业的个人健康助手Agent，可以帮助用户：
+  1. 根据用户资料、健康状况、体检报告、健康目标推荐饮食
+  2. 根据购物清单和营养成分表分析每日摄入热量和营养成分
+  3. 分析体检报告数据，提供健康建议
+  4. 追踪体重变化和运动数据
+  5. 管理每日摄入记录
+
+  关于健康数据录入:
+  - 用户在对话中描述的健康信息（体重、饮食、运动等）会被系统自动提取并存储
+  - 你可以按需使用工具获取更为详细的历史健康数据或是早期历史对话细节
+
+  你应该：
+  - 基于用户提供的数据进行专业分析
+  - 提供科学、实用的健康建议
+  - 尊重用户的健康目标和选择
+  - 不要随意评价、指责用户
+
+  你的回答应该专业、准确，并基于用户提供的数据进行分析。
+
+# 工具配置
+# health_data_recorder 已转为后台静默任务，不再作为对话工具
+# nutrition_calculator 已移除，主对话模型已具备营养计算知识
+tools:
+  - "health_data_manager"
+  - "search_memories"
+  - "search_available_tools"
+
+# 可选工具: 休眠状态, Agent通过search_available_tools按需发现后由中间件动态注入
+optional_tools:
+  - "scheduled_messenger_group"
+  - "web_research"
+  - "geo_navigator"
+
+# 记忆配置（简化结构）
+memory:
+  type: "local"  # 空字符串表示不开启记忆
+  total_char_budget: 20000  # 主历史区字符预算

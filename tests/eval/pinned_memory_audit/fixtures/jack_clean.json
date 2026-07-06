@@ -1,0 +1,116 @@
+{
+  "sample_id": "jack_clean",
+  "sample_type": "negative",
+  "description": "jack干净标准置顶记忆(姓名/城市/职业/宠物/技术栈/兴趣), 全keep测精确率",
+  "pinned_memory": {
+    "basic_info": "姓名：陈思远\n城市：杭州\n职业：后端开发\n住址：西湖区文三路附近\n宠物：Nemo (美短混血猫)",
+    "preferences": "技术栈：Go(微服务), Python(脚本和数据分析), PostgreSQL(数据库)\n兴趣爱好：科幻小说、单机游戏（最喜欢：三体、塞尔达）"
+  },
+  "conversation_index": [
+    {
+      "round": 1,
+      "topic": "自我介绍，昵称确认，日常协助",
+      "summary": "助手与用户陈思远交流，询问其昵称偏好并询问今日需求。"
+    },
+    {
+      "round": 2,
+      "topic": "科幻小说，单机游戏，用户画像",
+      "summary": "助手调侃思远宅系爱好，并询问其名字偏好及称呼。"
+    },
+    {
+      "round": 3,
+      "topic": "技术栈，微服务，数据分析",
+      "summary": "用户确认了 Go、Python 和 PostgreSQL 的技术栈偏好，助手给予肯定并询问称呼。"
+    },
+    {
+      "round": 4,
+      "topic": "待办事项，任务管理，优先级设置",
+      "summary": "助手协助用户创建两项待办事项并针对任务细节提供建议"
+    },
+    {
+      "round": 5,
+      "topic": "待办事项，Kubernetes，状态更新",
+      "summary": "助手更新待办事项状态并列出当前任务清单。"
+    },
+    {
+      "round": 6,
+      "topic": "AI 绘画，猫咪头像，风格调整",
+      "summary": "用户请求绘制美短混血猫 Nemo 的萌系卡通头像，助手展示效果并询问反馈。"
+    },
+    {
+      "round": 7,
+      "topic": "时序数据库选型，技术栈评估，监控存储",
+      "summary": "推荐在现有PG栈使用TimescaleDB存储监控指标，兼顾运维与开发效率。"
+    },
+    {
+      "round": 8,
+      "topic": "宠物医院，文三路，疫苗接种",
+      "summary": "推荐文三路附近宠物医院并建议更新疫苗预约任务"
+    },
+    {
+      "round": 9,
+      "topic": "提醒设置，邮件通知，对话测试",
+      "summary": "用户设置5分钟后向指定邮箱发送检查对话测试结果的提醒邮件。"
+    },
+    {
+      "round": 10,
+      "topic": "体重增长，猫咪健康，数据计算",
+      "summary": "助手计算猫咪Nemo的体重增长数据并建议关注健康与兽医预约。"
+    },
+    {
+      "round": 11,
+      "topic": "待办管理，数据分析，Nemo 体重",
+      "summary": "助手完成新建待办并删除旧任务，提议直接运行脚本分析数据。"
+    },
+    {
+      "round": 12,
+      "topic": "待办列表，任务进度，K8s升级，数据分析",
+      "summary": "助手展示当前两条待办任务详情并询问用户推进方向"
+    },
+    {
+      "round": 13,
+      "topic": "宠物医院，疫苗接种，文三路",
+      "summary": "用户询问带宠物打疫苗的医院推荐，助手提供附近名单并提醒待办已删。"
+    },
+    {
+      "round": 14,
+      "topic": "OpenTelemetry,Jaeger迁移,Go微服务,gRPC追踪",
+      "summary": "电商平台Go微服务迁移至OpenTelemetry替换Jaeger的技术优势与实施规划"
+    },
+    {
+      "round": 15,
+      "topic": "个人档案，技术栈，待办事项",
+      "summary": "总结陈思远的个人信息、技术栈偏好及待办事项，涵盖 K8s 升级与 Nemo 体重分析。"
+    },
+    {
+      "round": 16,
+      "topic": "猫咪照片，数据库选型，TimescaleDB",
+      "summary": "分享猫咪照片并确认数据库选型结论为 TimescaleDB"
+    },
+    {
+      "round": 17,
+      "topic": "收据存档,K8s策略,待办更新",
+      "summary": "助手存档收据并总结K8s NetworkPolicy最佳实践，更新待办事项。"
+    },
+    {
+      "round": 18,
+      "topic": "技术待办，Nemo照片，文件导出",
+      "summary": "助手导出技术待办PDF并找回Nemo照片，提供旧图链接及重绘服务。"
+    },
+    {
+      "round": 19,
+      "topic": "PDF 下载，链接生成，技术清单",
+      "summary": "用户请求重新生成未保存的 PDF 下载链接，助手已提供新链接。"
+    },
+    {
+      "round": 20,
+      "topic": "个人档案，技术栈，兴趣爱好",
+      "summary": "助手确认用户陈思远的宠物、工作、住址、技术栈、待办及喜好等个人信息。"
+    }
+  ],
+  "ground_truth": {
+    "delete": [],
+    "change": [],
+    "merge_groups": []
+  }
+}

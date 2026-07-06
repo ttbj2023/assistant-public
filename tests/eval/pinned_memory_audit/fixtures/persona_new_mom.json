@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_new_mom",
+  "sample_type": "mixed",
+  "description": "新手妈妈(育儿画像)",
+  "pinned_memory": {
+    "basic_info": "宝宝8个月大, 纯母乳喂养\n宝宝对鸡蛋和蛋白过敏\n昨晚宝宝发烧38.5, 今早已退",
+    "preferences": "认同亲密育儿法, 注重回应宝宝需求\n计划下周带宝宝接种麻腮风疫苗"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "宝宝",
+      "summary": "宝宝8个月大, 纯母乳喂养"
+    },
+    {
+      "round": 42,
+      "topic": "过敏",
+      "summary": "宝宝对鸡蛋和蛋白过敏"
+    },
+    {
+      "round": 43,
+      "topic": "发烧",
+      "summary": "昨晚宝宝发烧38.5, 今早已退"
+    },
+    {
+      "round": 44,
+      "topic": "育儿",
+      "summary": "认同亲密育儿法, 注重回应需求"
+    },
+    {
+      "round": 45,
+      "topic": "疫苗",
+      "summary": "计划下周接种麻腮风疫苗"
+    },
+    {
+      "round": 46,
+      "topic": "喂养",
+      "summary": "母乳喂养顺利, 打算喂到1岁"
+    },
+    {
+      "round": 47,
+      "topic": "过敏",
+      "summary": "辅食避开鸡蛋类"
+    },
+    {
+      "round": 48,
+      "topic": "发烧",
+      "summary": "发烧是病毒性的, 已恢复"
+    },
+    {
+      "round": 49,
+      "topic": "育儿",
+      "summary": "亲密育儿法实践分享"
+    },
+    {
+      "round": 50,
+      "topic": "疫苗",
+      "summary": "麻腮风疫苗已接种, 无异常"
+    },
+    {
+      "round": 51,
+      "topic": "宝宝",
+      "summary": "宝宝发育达标"
+    },
+    {
+      "round": 52,
+      "topic": "喂养",
+      "summary": "开始引入辅食"
+    },
+    {
+      "round": 53,
+      "topic": "过敏",
+      "summary": "过敏管理成日常"
+    },
+    {
+      "round": 54,
+      "topic": "育儿",
+      "summary": "坚持亲密育儿"
+    },
+    {
+      "round": 55,
+      "topic": "疫苗",
+      "summary": "后续疫苗已排期"
+    },
+    {
+      "round": 56,
+      "topic": "宝宝",
+      "summary": "宝宝会爬了"
+    },
+    {
+      "round": 57,
+      "topic": "喂养",
+      "summary": "母乳加辅食混合"
+    },
+    {
+      "round": 58,
+      "topic": "过敏",
+      "summary": "确认蛋白过敏持续"
+    },
+    {
+      "round": 59,
+      "topic": "育儿",
+      "summary": "育儿方式不变"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "宝宝健康成长"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨晚宝宝发烧38.5, 今早已退",
+      "计划下周带宝宝接种麻腮风疫苗"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "疫苗",
+      "assistant": "麻腮风疫苗已接种, 无异常。后续疫苗已排期。"
+    },
+    {
+      "round": 60,
+      "user": "宝宝",
+      "assistant": "宝宝发育达标, 母乳加辅食混合喂养, 鸡蛋蛋白过敏持续注意。亲密育儿法继续。"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+# 默认文档模板
+# 适用于: 通用文档、日常报告
+
+fonts:
+  default: "Noto Sans CJK SC, Microsoft YaHei, PingFang SC, Arial, sans-serif"
+  heading: "Noto Sans CJK SC, Microsoft YaHei, PingFang SC, Arial, sans-serif"
+  code: "Noto Sans Mono CJK SC, Consolas, Courier New, monospace"
+  western: "Arial, sans-serif"
+
+font_sizes:
+  body: 12
+  h1: 22
+  h2: 18
+  h3: 15
+  h4: 13
+  h5: 12
+  h6: 12
+  caption: 10
+
+colors:
+  text: "#1f2933"
+  heading: "#1a1a2e"
+  link: "#2b6cb0"
+  table_border: "#d0d7de"
+  table_header_bg: "#f0f4f8"
+  table_zebra: "#fafbfc"
+  code_bg: "#f6f8fa"
+  blockquote_bg: "#f7fafc"
+  blockquote_border: "#4a90d9"
+  blockquote_text: "#4b5563"
+
+spacing:
+  line_height: 1.62
+  paragraph_before: 0
+  paragraph_after: 0.85
+
+margins:
+  top: "18mm"
+  bottom: "18mm"
+  left: "18mm"
+  right: "18mm"
+
+headings:
+  h1:
+    border_bottom: "2px solid #2d3748"
+    padding_bottom: "0.3em"
+  h2:
+    border_bottom: "1px solid #e2e8f0"
+    padding_bottom: "0.2em"
+  h3: {}
+  h4: {}
+
+tables:
+  border_collapse: true
+  border_color: "#d0d7de"
+  cell_padding: "8px 10px"
+  header_bg: "#f0f4f8"
+  header_color: "#2d3748"
+  zebra: true
+  font_size: 11
+
+code_blocks:
+  background: "#f6f8fa"
+  border: "1px solid #d0d7de"
+  border_left: "3px solid #4a90d9"
+  padding: "12px 14px"
+  font_size: 10.5
+  line_height: 1.5
+
+blockquotes:
+  border_left: "4px solid #4a90d9"
+  background: "#f7fafc"
+  padding: "8px 12px"
+  color: "#4b5563"
+
+page_break:
+  h1_break_after: avoid
+  h2_break_after: avoid
+  table_break_inside: avoid
+  pre_break_inside: avoid
+  blockquote_break_inside: avoid

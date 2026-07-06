@@ -1,0 +1,139 @@
+{
+  "sample_id": "persona_translator",
+  "sample_type": "mixed",
+  "description": "自由译者(冗长画像, 测提炼)",
+  "pinned_memory": {
+    "basic_info": "我是一名自由职业者, 主要做翻译工作, 已经做了大概三年了, 平时接中日互译的法律类稿件比较多\n住在成都",
+    "preferences": "我一般习惯晚上工作, 因为比较安静效率高, 用Trados这个软件\n昨天接了个加急的合同翻译熬夜到三点"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "职业",
+      "summary": "自由职业中日法律翻译3年"
+    },
+    {
+      "round": 42,
+      "topic": "居住",
+      "summary": "住在成都"
+    },
+    {
+      "round": 43,
+      "topic": "工作",
+      "summary": "习惯晚上工作, 用Trados"
+    },
+    {
+      "round": 44,
+      "topic": "急单",
+      "summary": "昨天接加急合同熬夜到三点"
+    },
+    {
+      "round": 45,
+      "topic": "翻译",
+      "summary": "法律类稿件是专长"
+    },
+    {
+      "round": 46,
+      "topic": "工具",
+      "summary": "Trados提升翻译效率"
+    },
+    {
+      "round": 47,
+      "topic": "作息",
+      "summary": "夜间工作效率最高"
+    },
+    {
+      "round": 48,
+      "topic": "职业",
+      "summary": "自由职业的灵活性"
+    },
+    {
+      "round": 49,
+      "topic": "急单",
+      "summary": "加急单偶尔有, 不常态"
+    },
+    {
+      "round": 50,
+      "topic": "翻译",
+      "summary": "中日互译熟练"
+    },
+    {
+      "round": 51,
+      "topic": "成都",
+      "summary": "成都生活成本低适合自由职业"
+    },
+    {
+      "round": 52,
+      "topic": "工作",
+      "summary": "夜间是黄金时间"
+    },
+    {
+      "round": 53,
+      "topic": "工具",
+      "summary": "Trados作为主力CAT"
+    },
+    {
+      "round": 54,
+      "topic": "法律",
+      "summary": "法律翻译领域深耕"
+    },
+    {
+      "round": 55,
+      "topic": "作息",
+      "summary": "坚持夜间工作"
+    },
+    {
+      "round": 56,
+      "topic": "翻译",
+      "summary": "翻译质量受认可"
+    },
+    {
+      "round": 57,
+      "topic": "职业",
+      "summary": "3年经验积累"
+    },
+    {
+      "round": 58,
+      "topic": "急单",
+      "summary": "近期没有加急"
+    },
+    {
+      "round": 59,
+      "topic": "工具",
+      "summary": "Trados使用熟练"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "翻译工作稳定"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天接了个加急的合同翻译熬夜到三点"
+    ],
+    "change": [
+      {
+        "old_content": "我是一名自由职业者, 主要做翻译工作, 已经做了大概三年了, 平时接中日互译的法律类稿件比较多",
+        "reason": "剥离冗长表述, 提炼为身份与专长"
+      },
+      {
+        "old_content": "我一般习惯晚上工作, 因为比较安静效率高, 用Trados这个软件",
+        "reason": "剥离原因, 提炼为偏好"
+      }
+    ],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "急单",
+      "assistant": "近期没有加急单了, 不再熬夜。"
+    },
+    {
+      "round": 60,
+      "user": "工作",
+      "assistant": "继续夜间工作用Trados, 中日法律翻译专长, 成都生活稳定。"
+    }
+  ]
+}

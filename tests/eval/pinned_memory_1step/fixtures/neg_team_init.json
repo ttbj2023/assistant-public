@@ -1,0 +1,20 @@
+{
+  "sample_id": "neg_team_init",
+  "sample_type": "negative",
+  "description": "④过渡状态-团队当前动态/正在推进的事: 团队实践会变, 无惯性, 拒绝",
+  "user_message": "团队最近在推进GitOps, 用ArgoCD做持续部署, 配合GitHub Actions的CI流水线, 部署效率提升了三倍",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "姓名陈思远，在杭州做后端开发，使用Go开发微服务，使用Python进行脚本编写和数据分析，偏好使用PostgreSQL",
+    "preferences": "比较宅，喜欢科幻小说和单机游戏，最喜欢《三体》和塞尔达"
+  },
+  "ground_truth": {
+    "should_add": [],
+    "should_not_add": [
+      "GitOps",
+      "ArgoCD",
+      "流水线",
+      "部署效率"
+    ]
+  }
+}

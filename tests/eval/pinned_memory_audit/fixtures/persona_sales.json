@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_sales",
+  "sample_type": "mixed",
+  "description": "医疗器械销售(商务画像)",
+  "pinned_memory": {
+    "basic_info": "医疗器械销售, 负责华东三省\n沟通风格直接, 不喜欢绕弯子\n昨天签下了苏州第一人民医院的单子",
+    "preferences": "外勤为主, 主要用微信和电话联系客户\n希望公司调整提成比例"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "工作",
+      "summary": "医疗器械销售, 负责华东三省"
+    },
+    {
+      "round": 42,
+      "topic": "沟通",
+      "summary": "沟通风格直接, 不绕弯子"
+    },
+    {
+      "round": 43,
+      "topic": "签约",
+      "summary": "昨天签下苏州第一人民医院的单子"
+    },
+    {
+      "round": 44,
+      "topic": "客户",
+      "summary": "外勤为主, 微信和电话联系客户"
+    },
+    {
+      "round": 45,
+      "topic": "提成",
+      "summary": "希望公司调整提成比例"
+    },
+    {
+      "round": 46,
+      "topic": "区域",
+      "summary": "华东市场开拓进展"
+    },
+    {
+      "round": 47,
+      "topic": "沟通",
+      "summary": "直接风格受客户认可"
+    },
+    {
+      "round": 48,
+      "topic": "签约",
+      "summary": "苏州单子已回款"
+    },
+    {
+      "round": 49,
+      "topic": "外勤",
+      "summary": "外勤效率提升"
+    },
+    {
+      "round": 50,
+      "topic": "提成",
+      "summary": "提成制度调整方案在讨论"
+    },
+    {
+      "round": 51,
+      "topic": "工作",
+      "summary": "聊了销售技巧"
+    },
+    {
+      "round": 52,
+      "topic": "客户",
+      "summary": "微信维护客户关系"
+    },
+    {
+      "round": 53,
+      "topic": "沟通",
+      "summary": "直接风格是优势"
+    },
+    {
+      "round": 54,
+      "topic": "区域",
+      "summary": "华东业绩达标"
+    },
+    {
+      "round": 55,
+      "topic": "签约",
+      "summary": "近期有几个意向客户"
+    },
+    {
+      "round": 56,
+      "topic": "外勤",
+      "summary": "外勤路线优化"
+    },
+    {
+      "round": 57,
+      "topic": "提成",
+      "summary": "提成调整暂无进展"
+    },
+    {
+      "round": 58,
+      "topic": "客户",
+      "summary": "客户维护到位"
+    },
+    {
+      "round": 59,
+      "topic": "沟通",
+      "summary": "保持直接风格"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "销售工作稳定"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天签下了苏州第一人民医院的单子",
+      "希望公司调整提成比例"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "苏州单子",
+      "assistant": "苏州第一人民医院的单子已回款。华东业绩达标。"
+    },
+    {
+      "round": 60,
+      "user": "工作和提成",
+      "assistant": "提成调整暂无进展, 继续外勤微信联系客户, 保持直接沟通风格。"
+    }
+  ]
+}

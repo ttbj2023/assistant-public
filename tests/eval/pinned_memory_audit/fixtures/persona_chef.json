@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_chef",
+  "sample_type": "mixed",
+  "description": "粤菜厨师(餐饮画像)",
+  "pinned_memory": {
+    "basic_info": "粤菜厨师, 从业15年, 擅长煲汤\n不吃香菜",
+    "preferences": "做菜讲究火候, 偏好猛火快炒\n上周研究了一道新菜式\n打算明年考高级技师证"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "职业",
+      "summary": "粤菜厨师15年, 擅长煲汤"
+    },
+    {
+      "round": 42,
+      "topic": "忌口",
+      "summary": "不吃香菜"
+    },
+    {
+      "round": 43,
+      "topic": "新菜",
+      "summary": "上周研究了一道新菜式"
+    },
+    {
+      "round": 44,
+      "topic": "考证",
+      "summary": "打算明年考高级技师证"
+    },
+    {
+      "round": 45,
+      "topic": "火候",
+      "summary": "偏好猛火快炒, 讲究火候"
+    },
+    {
+      "round": 46,
+      "topic": "粤菜",
+      "summary": "粤菜技艺精湛"
+    },
+    {
+      "round": 47,
+      "topic": "新菜",
+      "summary": "新菜式已加入菜单"
+    },
+    {
+      "round": 48,
+      "topic": "煲汤",
+      "summary": "煲汤是拿手绝活"
+    },
+    {
+      "round": 49,
+      "topic": "考证",
+      "summary": "高级技师证复习中"
+    },
+    {
+      "round": 50,
+      "topic": "火候",
+      "summary": "猛火快炒是风格"
+    },
+    {
+      "round": 51,
+      "topic": "忌口",
+      "summary": "香菜绝对不碰"
+    },
+    {
+      "round": 52,
+      "topic": "职业",
+      "summary": "厨师生涯感悟"
+    },
+    {
+      "round": 53,
+      "topic": "粤菜",
+      "summary": "粤菜传承"
+    },
+    {
+      "round": 54,
+      "topic": "新菜",
+      "summary": "新菜受好评"
+    },
+    {
+      "round": 55,
+      "topic": "考证",
+      "summary": "考证计划明确"
+    },
+    {
+      "round": 56,
+      "topic": "火候",
+      "summary": "火候把控精准"
+    },
+    {
+      "round": 57,
+      "topic": "煲汤",
+      "summary": "煲汤技艺成熟"
+    },
+    {
+      "round": 58,
+      "topic": "忌口",
+      "summary": "忌口习惯不变"
+    },
+    {
+      "round": 59,
+      "topic": "职业",
+      "summary": "继续深耕粤菜"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "厨师工作充实"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "上周研究了一道新菜式",
+      "打算明年考高级技师证"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "新菜",
+      "assistant": "上周研究的新菜式已加入菜单, 反馈不错。"
+    },
+    {
+      "round": 60,
+      "user": "考证和风格",
+      "assistant": "高级技师证明年考的计划明确。猛火快炒、讲究火候的风格不变, 香菜绝对不碰。"
+    }
+  ]
+}

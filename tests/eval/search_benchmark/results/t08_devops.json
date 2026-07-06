@@ -1,0 +1,123 @@
+{
+  "query": "Docker multi-stage build 多阶段构建 减小镜像",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Multi-stage builds",
+        "url": "https://docs.docker.com/get-started/docker-concepts/building-images/multi-stage-builds/#:~:text=For",
+        "domain": "docker.com",
+        "site": "Docker",
+        "snippet": "Multi-stage builds\nTable of contents\nExplanation\nTry it out\nCreate the Dockerfile\nBuild the container image\nRun the Spring Boot application\nUse multi-stage builds\nExplanation\nIn a traditional build, all build instructions are executed in sequence, and in a single build container: downloading dependencies, compiling code, and packaging the application. All those layers end up in your final image. This approach works, but it leads to bulky images carrying unnecessary weight and increasing your security risks. This is where multi-stage builds come in.\nMulti-stage builds introduce multiple stages ...",
+        "publish_time": "2026-01-21T21:42:42+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Building best practices",
+        "url": "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/?t=1743422743028",
+        "domain": "docker.com",
+        "site": "Docker",
+        "snippet": "Building best practices\nUse multi-stage builds\nMulti-stage builds let you reduce the size of your final image, by creating a cleaner separation between the building of your image and the final output. Split your Dockerfile instructions into distinct stages to make sure that the resulting output only contains the files that are needed to run the application.\nUsing multiple stages can also let you build more efficiently by executing build steps in parallel.\nSee Multi-stage builds for more information.\nCreate reusable stages\nIf you have multiple images with a lot in common, consider creating a re...",
+        "publish_time": "2025-04-02T21:54:47+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Docker 多阶段构建怎么让最终镜像又小又安全？",
+        "url": "https://wenku.csdn.net/answer/85kncqqbr1rt",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "Docker 多阶段构建怎么让最终镜像又小又安全？\n时间: 2026-03-07 22:20:28 AIGC 浏览: 31\nDocker 多阶段构建通过分离构建环境与运行环境，仅将编译产物复制到精简的运行时镜像中，显著减小体积并提升安全性。关键优化包括：选用 Alpine 或 slim 基础镜像；合理分层（如先复制依赖文件再构建）以提升缓存命中率；合并 RUN 指令减少镜像层数；利用 .dockerignore 排除无关文件；在构建阶段清理 npm 缓存、apt 列表等临时文件；对静态编译语言可进一步使用 scratch 镜像。实际案例显示，Java 和 .NET 应用经多阶段优化后体积可缩减 60%–70%，同时移除构建工具降低了攻击面。\nDocker 多阶段构建镜像体积优化策略\n1. 多阶段构建的核心原理与优势\n多阶段构建是 Docker 17.05 版本引入的重要特性，它通过在单个 Do\nckerfile 中定义多个构建阶段来实现镜像优化 [ref_1]。其核心原理是将构建环境与运行环境分离，仅将必要的运行文件复制到最终镜像中 [ref_5]。\n优化维度 传统构建方式 多阶段构建方式\n镜像体积 包含所有构建工具和中间文件，体积庞大 仅包含运行环境，体积显著减小\n安全性 构建工具可能带来安全风险 运行环境纯净，攻击面减小 [ref_6]\n构建效率 每次构建都需要安装完整工具链 ...",
+        "publish_time": "2026-03-07T22:20:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9998530149459839,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "如何通过多阶段构建Multi-stage Build压榨Docker镜像体积至原本的十分之一",
+        "url": "https://m.php.cn/faq/2571833.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "如何通过多阶段构建Multi-stage Build压榨Docker镜像体积至原本的十分之一\n舞夢輝影\n2026-06-01\n411人浏览\n多阶段构建是解决镜像臃肿的必要手段，通过builder与runner阶段分离，将900mb镜像压缩至90mb以下；需选对基础镜像、精简每步操作并建立体积验证机制。\n多阶段构建不是“锦上添花”的技巧，而是解决镜像臃肿问题的必要手段。它能将原本包含编译器、调试工具、源码、缓存等大量冗余内容的镜像，精简为仅含可执行文件或运行时依赖的最小集合——实际项目中从 900MB 压到 90MB 甚至更低，压缩率超 90%，完全可行。\n拆分构建与运行环境，彻底隔离无用层\n核心逻辑是：让“需要巨量工具才能编译”的阶段和“只需要一个二进制或 Python 包就能跑”的阶段互不污染。\n第一阶段（builder）使用完整镜像（如 golang:1.22、python:3.9-slim 或 \nnode:18），安装编译依赖、拉取源码、执行构建\n第二阶段（runner）切换为极简镜像（如 alpine:3.19、python:3.9-slim 或 distroless），只通过 COPY --from=builder 复制最终产物（如 app  二进制、/opt/venv、build/ 目录）\n构建工具链、中间文件、node_modules 源码、__pycache__、测...",
+        "publish_time": "2026-05-31T23:22:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9997836947441101,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "怎么在Docker中利用Multi-Stage构建显著降低生产环境镜像的体积",
+        "url": "https://m.php.cn/faq/2391995.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "怎么在Docker中利用Multi-Stage构建显著降低生产环境镜像的体积\n舞夢輝影\n2026-04-29\n871人浏览\n多阶段构建可最小化生产镜像体积，核心是构建与运行环境物理隔离，仅传递成品；构建阶段用完整镜像（如golang:1.21），运行阶段用极简镜像（如scratch），通过copy --from=builder精确复制产物。\n直接用多阶段构建（Multi-Stage Builds）就能把生产镜像体积压到最低——关键不是“能不能做”，而是“怎么分得干净”。核心就一条：构建环境和运行环境必须物理隔离，中间只传成品，不传工具、不传源码、不传缓存。\n明确划分两个阶段：构建阶段只干活，运行阶段只执行\n构建阶段用功能完整的镜像（如 golang:1.21、maven:3.8、node:18），专注下载依赖、编译代码、生成产物；运行阶段换极简镜像（如 alpine:3.19、scratch 或 distroless/static-debian12），只接收最终二进制文件或打包好的 dist 目录。\n构建阶段必须用 AS  命名，比如 FROM golang:1.21 AS builder\n运行阶段不能有 AS ，也不能包含任何构建命令（RUN go build、RUN npm install 等全删掉）\n复制必须用 COPY --from=builder 显式指定来源阶段，路径要...",
+        "publish_time": "2026-04-29T12:33:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.999578058719635,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Docker 中的多阶段构建（multi-stage build）有什么优势？（发布时间：2025-06-08 14:26:01）",
+        "url": "https://blog.csdn.net/weixin_45422672/article/details/148513019",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "Docker 多阶段构建的优势\nDocker 的多阶段构建（multi-stage build）是一种优化镜像大小和构建过程的技术，主要优势包括：\n1. 显著减小最终镜像体积\n只保留必要内容：可以仅将编译后的可执行文件复制到最终镜像，而不包含编译工具链、中间文件等\n减少层数：避免安装开发依赖导致的多余镜像层\n2. 提高安全性\n减少攻击面：最终镜像不包含编译器、调试工具等可能被利用的组件\n不暴露构建环境：构建过程中的临时文件和敏感信息不会留在最终镜像中\n3. 优化构建过程\n分阶段缓存：可以更精细地控制构建缓存，加速重复构建\n并行构建：不同构建阶段可以并行执行（部分情况）\n4. 简化构建流程\n单 Dockerfile 管理：无需维护多个 Dockerfile 或复杂构建脚本\n清晰的阶段划分：使构建过程更易理解和维护\n示例对比\n传统单阶段构建\nFROM golang:1.21 as builder\nWORKDIR /app\nCOPY . .\nRUN go build -o myapp .\n# 最终镜像包含整个Go工具链和源代码\nFROM debian:bullseye-slim\nCOPY --from=builder /app/myapp /usr/local/bin/myapp\nCMD [\"myapp\"]\n多阶段构建优化版\n# 第一阶段：构建阶段\nFROM golang:1.21 as...",
+        "publish_time": "2025-06-08",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "[Docker] 使用 Dockerfile 的多级构建 (multi-stage builds)（发布时间：2018-06-28 20:50:00）",
+        "url": "https://blog.csdn.net/weixin_34342905/article/details/85999065",
+        "domain": "csdn.net",
+        "site": "ref_2",
+        "snippet": "Multi-stage build 即在一个 Dockerfile 中使用多个 FROM 指令。\n每个 FROM 指令可以使用不同的基础镜像，并且每一个都开启新的构建阶段。\n你可以有选择地拷贝一个阶段的产品到另一个中，留下不想包含在最终 image 中的东西。\nFROM golang:1.7.3\nWORKDIR /go/src/github.com/alexellis/href-counter/\nRUN go get -d -v golang.org/x/net/html\nCOPY app.go .\nRUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .\n \nFROM alpine:latest \nRUN apk --no-cache add ca-certificates\nWORKDIR /root/\nCOPY --from=0 /go/src/github.com/alexellis/href-counter/app .\nCMD [\"./app\"] $ docker build -t alexellis2/href-counter:latest .\n最终结果是同样小的生产环境 image，并显著减小了复杂性。\n不需要创建任何中间 image，并且你不需要提取任何文件到本地系统中。\n它是如何工作的？...",
+        "publish_time": "2018-06-28",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "六种减小Docker镜像大小的方法",
+        "url": "https://blog.csdn.net/asasd101/article/details/110252584",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "5. 多阶段编译\n在Docker 17.05版本以后，新引入了multi-stage builds这一概念，这将会极大地简化我们上述的所有操作。\n简单来说，multi-stage builds支持我们将Docker镜像的编译分成多个“阶段”。比如常见的软件编译的情况，我们可以将编译阶段单独提出来，软件编译完成后直接将二进制文件拷贝到一个新的基础镜像中，这样做最大的好处就是，第二个镜像不再包含任何编译阶段使用的中间依赖，干干净净明明白白。\n以最常见的Java项目为例，编译Jar包的时候，我们需要使用到JDK、Maven等工具，但在实际运行阶段，我们只需要JRE环境即可。简单比较下\n差别一倍有余。\n以Vulhub中的Shiro 1.2.4环境为例，在其Dockerfile中可以看到两个\nFROM maven:3-jdk-8 AS builder LABEL MAINTAINER=\"phithon <root@leavesongs.com>\" COPY ./code/ /usr/src/ WORKDIR /usr/src RUN cd /usr/src; \\ mvn -U clean package -Dmaven.test.skip=true FROM openjdk:8u102-jre LABEL MAINTAINER=\"phithon <root@leavesongs.com>\" ...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Docker 系列（二十一）：多阶段构建 (Multi-stage Build)（发布时间：2024-11-17 10:00:00）",
+        "url": "https://blog.csdn.net/mmc123125/article/details/143825636",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "Docker 系列（二十一）：多阶段构建 (Multi-stage Build) - 提升构建效率和安全性\n在现代软件开发中，构建效率和安全性是至关重要的。传统的 Docker 构建流程中，镜像往往包含大量冗余文件，比如开发工具、编译器和中间构建结果。这不仅增加了镜像体积，还可能暴露安全风险。为了解决这些问题，Docker 在 17.05 版本中引入了多阶段构建 (Multi-stage Build) 功能。\n本文将带你深入理解多阶段构建的核心原理，并通过实例展示如何使用它来优化镜像构建流程。\n1. 什么是多阶段构建？\n多阶段构建是一种通过多个构建阶段生成最终镜像的技术。在这个过程中，你可以将中间构建结果保留在临时阶段，而最终阶段只会包含需要的内容。多阶段构建的最大优势是可以显著减小镜像体积，同时提高构建过程的可维护性和安全性。\n2. 多阶段构建的优势\n2.1 减少镜像体积\n传统构建方式往往会将不必要的工具和中间文件打包到最终镜像中，而多阶段构建仅保留运行所需的文件。\n2.2 提高构建安全性\n不需要的构建工具和调试信息不会进入生产环境，降低了被攻击的风险。\n2.3 简化 Dockerfile\n通过分离构建阶段，不同阶段可以使用不同的基础镜像和工具链，代码更清晰。\n3. 多阶段构建的工作原理\n多阶段构建通过在单个 Dockerfile 中定义多个\nFROM\n指令，每个\nFROM\n定义...",
+        "publish_time": "2024-11-17",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "docker如何减少镜像的大小",
+        "url": "https://docs.pingcode.com/baike/3474971",
+        "domain": "pingcode.com",
+        "site": "ref_5",
+        "snippet": "使用多阶段构建、多层缓存、压缩文件、精简基础镜像、删除临时文件、优化指令顺序是减少 Docker 镜像大小的几种有效方法。多阶段构建是其中最有效的技巧之一，通过在一个 Dockerfile 中使用多个 FROM 语句，可以将构建和运行的环境分离，以确保最终镜像中只包含必要的运行时依赖。\n一、多阶段构建\n多阶段构建是一种在同一个 Dockerfile 中定义多个构建阶段的技术。每个阶段都有自己的 FROM 语句，通过这种方式，可以在构建过程中使用完整的开发环境，但最终只保留运行时所需的部分。这不仅显著减少了镜像大小，还提高了安全性，因为减少了潜在的攻击面。\n示例\n例如，我们可以在一个 Dockerfile 中定义两个阶段：构建阶段和运行阶段。\nFROM golang:alpine AS builder\nWORKDIR /app\nCOPY . .\nRUN go build -o myapp\n运行阶段\nFROM alpine:latest\nWORKDIR /app\nCOPY --from=builder /app/myapp .\nCMD [\"./myapp\"]\n在这个示例中，只有最终运行阶段的镜像会被保留下来，而构建阶段产生的中间产物都不会被包含在最终镜像中。这种方法不仅减少了镜像大小，还使得镜像内容更加简洁、可控。\n二、多层缓存\nDocker 的分层结构和缓存机制使得每一层都可以独立缓...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "其他"
+      }
+    ]
+  }
+}

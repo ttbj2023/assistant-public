@@ -1,0 +1,299 @@
+{
+  "query": "Python asyncio TaskGroup 和 gather 区别",
+  "category": "编程",
+  "expect": "zhipu/gemini",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "How to Use asyncio.gather() in Python",
+        "url": "https://superfastpython.com/asyncio-gather/",
+        "domain": "superfastpython.com",
+        "site": "Super Fast Python",
+        "snippet": "How to Use asyncio.gather() in Python\nNovember 19, 2022 Python Asyncio\nWe need ways to work with collections of tasks in a way that they can be treated as a group.\nThe asyncio.gather() module function provides this capability and will return an iterable of return values from the awaited asks.\nIn this tutorial, you will discover how to await asyncio tasks concurrently with asyncio.gather().\nAfter completing this tutorial, you will know:\nThat the asyncio.gather() function will wait for a collection of tasks to complete and retrieve all return values.\nHow to use asyncio.gather() with collections ...",
+        "publish_time": "2022-11-19T00:00:00+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false
+      },
+      {
+        "title": "How to use asyncio.TaskGroup",
+        "url": "https://superfastpython.com/asyncio-taskgroup/",
+        "domain": "superfastpython.com",
+        "site": "Super Fast Python",
+        "snippet": "How to use asyncio.TaskGroup\nJune 29, 2023 Python Asyncio\nA problem with tasks is that it is a good idea to assign and keep track of the asyncio.Task objects.\nThe reason is that if we don't the tasks may be garbage collected, terminating the task.\nA helpful solution is to use a TaskGroup to create and manage a collection of tasks. It has a number of benefits, such as canceling all tasks in the group if one task fails.\nIn this tutorial, you will discover how to use the TaskGroup  in asyncio.\nAfter completing this tutorial, you will know:\nHow to use the TaskGroup to create and manage a collectio...",
+        "publish_time": "2023-06-29T00:00:00+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false
+      },
+      {
+        "title": "如何在Python 3.11中使用TaskGroup重构复杂的异步逻辑？",
+        "url": "https://m.php.cn/faq/2691889.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "如何在Python 3.11中使用TaskGroup重构复杂的异步逻辑？\nP粉602998670\n2026-06-22\n625人浏览\ntaskgroup 是 python 3.11 推荐替代 asyncio.gather() 的并发控制方式，核心优势在于错误原样抛出、任一失败即终止全部任务，并支持精确异常捕获与上下文感知取消；适用于需降级处理、任务依赖或库函数错误区分的场景。\nTaskGroup 是 Python 3.11 引入的正式替代 asyncio.gather() 和手动 asyncio.create_task() + await 的首选方式，但它不是“万能胶”——用错场景反而会让错误更难调试。\n什么时候必须用 TaskGroup 而不是 asyncio.gather()\n核心区别在错误传播和生命周期控制：gather() 默认“全等”（所有任务完成才返回），出错时默认取消其余任务但不抛出；TaskGroup 则强制“任一失败即终止全部”，且错误原样抛出，支持 except 捕获。\n需要精确捕获某子任务的异常（比如 HTTP 请求失败后做降级处理）→ 必须用 TaskGroup\n子任务之间有依赖或需共享取消信号（如一个超时导致全部退出）→ TaskGroup  自带上下文感知取消\n你正在写库函数，希望调用方能用 try/except 区分不同子任务的错误类型 → TaskG...",
+        "publish_time": "2026-06-22T01:16:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9999880790710449,
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.11的任务组有什么优势_对比TaskGroup与gather的错误处理",
+        "url": "https://m.php.cn/faq/2342649.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "Python 3.11的任务组有什么优势_对比TaskGroup与gather的错误处理\nP粉602998670\n2026-04-16\n266人浏览\ntaskgroup 会自动取消其余任务，gather 默认不会；taskgroup 用 async with 管理生命周期，抛出 exceptiongroup 并需 except* 捕获，而 gather 无语法约束、异常不聚合、需手动处理返回值。\nTaskGroup 会自动取消其余任务，gather 默认不会\n当某个子任务抛出异常时，asyncio.TaskGroup 立即触发协作式取消：所有仍在运行的任务收到 CancelledError，并尽快退出。这是结构化并发的强制保障，避免“孤儿任务”继续占用连接、内存或 CPU。\nasyncio.gather() 默认行为相反：只要一个任务失败，它立刻把异常向上抛，但其他任务照常运行——哪怕你没做任何处理，它们也会在后台悄悄跑完或卡死。这容易导致资源泄漏、超时叠加、状态不一致。\n用 gather(..., return_exceptions=True) 可以把异常转成返回值，但你要自己遍历结果、逐个判断是否为 Exception  实例\nTaskGroup 不需要你手动检查；离开 async with 块时，所有异常（包括多个）会被打包进 ExceptionGroup 一次抛出\n若想只捕...",
+        "publish_time": "2026-04-16T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9999305009841919,
+        "is_bytedance": false
+      },
+      {
+        "title": "Python 3.11中如何使用TaskGroup管理任务_对比gather实现更安全的并发",
+        "url": "https://m.php.cn/faq/2437650.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "Python 3.11中如何使用TaskGroup管理任务_对比gather实现更安全的并发\nP粉602998670\n2026-05-08\n239人浏览\npython 3.11+ 并发应优先用 asyncio.taskgroup 而非 gather，因其提供结构化并发：强制 async with 边界、自动资源清理、协作取消、exceptiongroup 异常聚合及动态任务支持。\n直接说结论：Python 3.11+ 的并发任务，只要涉及错误传播、资源清理或动态增删子任务，就该用 asyncio.TaskGroup，而不是 asyncio.gather。这不是“升级替代”，而是语义根本不同——TaskGroup  是结构化并发的强制边界，gather 只是结果聚合工具。\nTaskGroup 必须用 async with，否则 RuntimeErrors 立刻报\nTaskGroup  不是普通类，不能 tg = asyncio.TaskGroup()，也不能手动调用 __aenter__。它只接受一种写法：async with asyncio.TaskGroup() as tg:。一旦漏掉 async with，运行时会抛 RuntimeError: TaskGroup is closed 或 no active task group。\n所有子任务必须在 async with  块内...",
+        "publish_time": "2026-05-08T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.999923825263977,
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 2.16
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "completed()和gather()函数差异（发布时间：2024-04-24 15:56:52）",
+        "url": "https://zhuanlan.zhihu.com/p/694274673",
+        "domain": "zhihu.com",
+        "site": "ref_1",
+        "snippet": "asyncio.as_completed() 和 asyncio.gather() 都是 asyncio 模块中用于并发执行多个异步任务的函数，但它们在行为和使用场景上有一些差异：as_completed() 函数接受一组协程（或其他 future 对象）作为参数，但它返回一个迭代器，该迭代器在每个传入的协程完成时产生一个结果。这意味着你可以在协程完成时立即处理它们的结果，而无需等待所有协程都完成。as_completed() 的主要优点在于它允许你按照协程完成的顺序处理它们的结果。这对于一些需要实时响应的场景（例如，当某些协程可能比其他协程更早完成时）特别有用。此外，如果某个协程抛出异常，as_completed() 会继续迭代并产生其他已完成协程的结果，而不会立即取消所有其他协程。 1. 异步迭代器：as_completed() 返回一个生成器，可以异步迭代完成的协程或任务。2. 完成顺序：它按照协程或任务的完成顺序产生结果。3. 实时处理：允许你在每个任务完成时立即处理它，而不是等待所有任务完成。4. 超时：可以接受一个 timeout 参数，如果在超时时间内有任务完成，就会返回这些任务的结果。5. 异常处理：当任务中抛出异常时，可以通过异常捕获机制处理这些异常。6. 任务取消：不会自动取消未完成的任务，需要显式地取消。gather() 函数接受一组协程（或其他 future...",
+        "publish_time": "2024-04-24",
+        "is_bytedance": false
+      },
+      {
+        "title": "从头造轮子：python3 asyncio之 gather （3）（发布时间：2022-01-17 10:31:00）",
+        "url": "https://www.cnblogs.com/MrVolleyball/p/15812407.html",
+        "domain": "cnblogs.com",
+        "site": "ref_2",
+        "snippet": "前言\n书接上文，本文造第三个轮子，也是asyncio包里面非常常用的一个函数\ngather\n一、知识准备\n● 相对于前两个函数，\ngather\n的使用频率更高，因为它支持多个协程任务“同时”执行\n● 理解\n__await__\n__iter__\n的使用\n● 理解关键字async/await，async/await是3.5之后的语法，和yield/yield from异曲同工\n● 今天的文章有点长，请大家耐心看完\n二、环境准备\n组件\n版本\npython\n3.7.7\n三、\ngather\n的实现\n先来看下官方gather的使用方法：\n|># more main.py\nimport asyncio\nasync def hello():\n print('enter hello ...')\n return 'return hello ...'\nasync def world():\n print('enter world ...')\n return 'return world ...'\nasync def helloworld():\n print('enter helloworld')\n ret = await asyncio.gather(hello(), world())\n print('exit helloworld')\n return ret\nif __name__ == \"__main_...",
+        "publish_time": "2022-01-17",
+        "is_bytedance": false
+      },
+      {
+        "title": "【初阶】【python网络编程技术初阶，中阶，高阶课程】asyncio 快速上手：事件循环、任务与协程（发布时间：2025-08-12 15:33:37）",
+        "url": "https://blog.csdn.net/jrckkyy/article/details/150272722",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "asyncio 快速上手：事件循环、任务与协程\n副标题：Python 3.12 下 create_task / gather / 取消的正确姿势\n摘要\nPython 3.12 原生提供的\nasyncio\n让我们能够轻松编写高并发的网络与 IO 密集型代码。本教程基于标准库，带你掌握事件循环、协程、任务调度的核心用法，包括\ncreate_task\n创建任务、\ngather\n聚合结果、取消任务等，并在 NetLab 工程骨架中提供同步和异步版对照，实现从零到稳的 asyncio 入门。本篇含端到端自动化测试、性能测评、安全与边界思考，全部代码可直接运行。\n导语：痛点与场景\n初接触 Python 异步编程时，很多人会被这些问题困扰：\n事件循环 究竟是怎么驱动协程执行的？\ncreate_task\n和\nawait func()\n有什么区别？\n多任务如何并发执行并收集结果？\n协程任务如何优雅地取消，避免资源泄露？\n本篇文章会结合代码示例逐一解答，并给出测试与调优方法。\n知识地图\nasyncio 基础\n事件循环\n协程 coroutine\nTask - create_task\ngather 聚合任务结果\n取消 cancel\n安全/资源释放\n环境与工程初始化\n1. 工程目录\nmkdir netlab && cd netlab\nmkdir -p netlab/{\ncommon,clients,serv...",
+        "publish_time": "2025-08-12",
+        "is_bytedance": false
+      },
+      {
+        "title": "asyncio的详细使用（发布时间：2024-02-11 20:51:07）",
+        "url": "https://zhuanlan.zhihu.com/p/682071293",
+        "domain": "zhihu.com",
+        "site": "ref_4",
+        "snippet": "实际运行一个协程的方式：1、在asyncio中使用run() 运行2、等待一个协程，在协程中await一个协程3、asyncio.create_task()函数用来并发运行作为 asyncio任务的多个协程。4、asyncio.TaskGroup类提供了create_task()的更现代化的替代 如果一个对象可以在await语句中使用，那么它就是可等待对象。可等待对象有三种主要类型:协程,任务和Future.asyncio.create_task(coro,*,name=NULL,context=NULL)asyncio.TaskGroup.create_task()  重要保存一个指向此函数的结果的引用，以避免任务在执行过程中消失。 事件循环将只保留对任务的弱引用。 未在其他地方被引用的任务可能在任何时候被作为垃圾回收，即使是在它被完成之前。 如果需要可靠的“发射后不用管”后台任务，请将它们放到一个多项集中:class asyncio.TaskGroup持有一个任务分组的 异步上下文管理器。 可以使用 create_task() 将任务添加到分组中。 当该上下文管理器退出时所有任务都将被等待。coroutine  asyncio.sleep(delay,result=NULL)¶七、并发运行任务awaitable  asyncio.gather(*aws,return_excep...",
+        "publish_time": "2024-02-11",
+        "is_bytedance": false
+      },
+      {
+        "title": "python3 asyncio 并发编程模块 简介（发布时间：2022-04-11 06:16:56）",
+        "url": "https://blog.csdn.net/whatday/article/details/124090009",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "目录\n楔子\n创建一个协程并执行\n多个协程合作\nTask 与 Future\n执行任务\n调用常规函数\ncall_soon\ncall_later\ncall_at\n以上三者的执行顺序\n多个task并发执行\nasyncio.wait\nasyncio.gather\nasyncio.as_completed\n同步原语\n锁\n事件\n队列\n协程与线程结合\n关于 async with 和 async for\nasync with\nasync for\nawait\n手动实现异步\nasyncio 提供的信号机制\n实现 TCP 服务端、客户端\n并发请求网络\n小结\n楔子\nasyncio 是 Python 在 3.5 版本中正式引入的标准库，这是 Python 未来并发编程的主流，非常重要的一个模块。有一个 Web 框架叫 sanic，就是基于 asyncio，使用 sanic 可以达到匹配 Go 语言的并发量（有点夸张了，还是有差距的，但至少在一个量级）。\nasyncio 模块提供了使用协程构建并发应用的工具，threading 模块通过应用线程实现并发，multiprocessing 使用系统进程实现并发。asyncio 使用一种单线程、单进程模式实现并发，应用的各个部分会彼此合作，在最优的时刻显式的切换任务。大多数情况下，会在程序阻塞等待读写数据时发生这种上下文切换，不过 asyncio 也支持调度代码在将来...",
+        "publish_time": "2022-04-11",
+        "is_bytedance": false
+      }
+    ],
+    "elapsed": 0.6
+  },
+  "baidu": {
+    "count": 10,
+    "results": [
+      {
+        "title": "Python 3.11 的TaskGroup有什么用_异步并发任务的异常处理优化",
+        "url": "https://www.php.cn/faq/2378169.html",
+        "domain": "php.cn",
+        "snippet": "TaskGroup 是 Python 3.11 引入的结构化并发工具,确保子任务共生死、异常原样抛出且支持多异常分类捕获;而 asyncio.gather 不自动取消已启动任务、异常信息模糊且不支持按类型分别处理。 TaskGroup 是什么,和 asyncio.gather 有什么区别 TaskGroup 是 Python 3.11 引入的正式语法糖,用来替代手写asyncio.create_task+try/finally或asyncio.gather的繁琐异常传播逻辑。它不是新调度器,也不改变事件循环行为,而是提供一种「结构化并发(structured concurrency)」的语义:所有子任务共生死,任一出错即取消其余,且错误原样抛出,不被吞掉。 对比asyncio.gather(return_exceptions=False)(默认): gather遇到第一个异常就中止,但已启动的其他协程不会被取消(可能继续运行、产生副作用) gather抛出的是ExceptionGroup(3.11+)或单个异常(旧版),但无法区分哪个子任务失败,也难做针对性清理 TaskGroup内所有任务共享生命周期,取消信号会传播到底层协程,且支持在except块中按类型捕获不同子任务的异常 怎么用 TaskGroup 启动并等待多个异步任务 核心是用async with asyncio.Ta...",
+        "is_bytedance": false
+      },
+      {
+        "title": "为什么Python 3.11推出的TaskGroup比gather更好用?",
+        "url": "https://www.php.cn/faq/2693996.html",
+        "domain": "php.cn",
+        "snippet": "async with asyncio.TaskGroup() as tg: tg.create_task(some_coro()) 一旦离开这个块,tg就失效;把tg存到类属性或全局变量里再调用create_task,会立刻抛RuntimeError: TaskGroup is closed。这不是限制,是强制你划清生命周期边界。 TaskGroup 抛的是 ExceptionGroup,不是单个异常 哪怕只有一个子任务失败,async with块退出时抛出的也是ExceptionGroup,老式except ValueError:完全捕获不到。 必须用 Python 3.11+ 新增的except* ValueError:语法 如果多个任务分别抛TimeoutError和JSONDecodeError,except* TimeoutError:只处理前者,后者继续向上冒泡 不能在async with块内对单个tg.create_task()包try/except来“吞异常”——这会破坏组内统一熔断逻辑 tg.create_task() 和 asyncio.create_task() 的行为差异 表面都是启动协程,但背后控制权完全不同: tg.create_task()创建的任务,其取消信号由 TaskGroup 统一调度:任一失败 → 全部收到CancelledError→ 等待...",
+        "is_bytedance": false
+      },
+      {
+        "title": "asyncio.TaskGroup如何解决嵌套任务异常传播问题?对比asyncio.gather有何优势?",
+        "url": "https://blog.csdn.net/bdgtd88178/article/details/150014285",
+        "domain": "csdn.net",
+        "snippet": "asyncio.TaskGroup(Python3.11+)通过​​结构化并发范式​​和​​异常组(ExceptionGroup)​​ 机制,系统性地解决了嵌套任务中的异常传播问题,相比asyncio.gather在并发任务管理上具有显著优势。以下是具体分析: 一、asyncio.TaskGroup解决嵌套任务异常传播的机制 ​​异常隔离与聚合​​ 当嵌套任务组中的​​任意子任务​​抛出异常时,TaskGroup会捕获该异常,并立即​​触发组内所有其他任务的取消操作​​(协作式取消),避免产生“孤儿任务”。举例:dLhaibao.com 所有未处理异常(包括嵌套子任务中的异常)会被收集到ExceptionGroup对象中,在退出async with块时​​统一抛出​​。开发者可通过except*语法精细匹配异常类型,避免漏处理。 示例代码: asyncdefnested_task(): asyncwithasyncio.TaskGroup()asinner_tg: inner_tg.create_task(risky_subtask())# 若此处异常,外层TaskGroup也能捕获 asyncdefmain(): try: asyncwithasyncio.TaskGroup()asouter_tg: outer_tg.create_task(nested_task())dLha...",
+        "is_bytedance": false
+      },
+      {
+        "title": "如何在Python 3.11中使用TaskGroup重构复杂的异步逻辑?",
+        "url": "https://www.php.cn/faq/2691889.html",
+        "domain": "php.cn",
+        "snippet": "TaskGroup 是 Python 3.11 推荐替代 asyncio.gather() 的并发控制方式,核心优势在于错误原样抛出、任一失败即终止全部任务,并支持精确异常捕获与上下文感知取消;适用于需降级处理、任务依赖或库函数错误区分的场景。 TaskGroup 是 Python 3.11 引入的正式替代asyncio.gather()和手动asyncio.create_task()+await的首选方式,但它不是“万能胶”——用错场景反而会让错误更难调试。 什么时候必须用TaskGroup而不是asyncio.gather() 核心区别在错误传播和生命周期控制:gather()默认“全等”(所有任务完成才返回),出错时默认取消其余任务但不抛出;TaskGroup则强制“任一失败即终止全部”,且错误原样抛出,支持except捕获。",
+        "is_bytedance": false
+      },
+      {
+        "title": "如何快速掌握Python异步任务组协议:asyncio.TaskGroup终极指南-CSDN博客",
+        "url": "https://blog.csdn.net/gitblog_00094/article/details/139083016",
+        "domain": "csdn.net",
+        "snippet": "什么是asyncio.TaskGroup? 🤔 asyncio.TaskGroup是Python 3.11标准库中引入的新功能,它提供了一个更安全、更直观的方式来管理多个异步任务。与传统的asyncio.gather()相比,TaskGroup具有更好的错误处理能力和资源管理机制。 在传统的异步编程中,开发者经常使用asyncio.create_task()创建任务,然后手动收集和管理这些任务。而TaskGroup通过上下文管理器的方式,让任务管理变得异常简单和安全。",
+        "is_bytedance": false
+      },
+      {
+        "title": "从`asyncio.gather` 到 `TaskGroup`:Python 结构化并发、取消传播与异常聚合实战指南",
+        "url": "https://blog.csdn.net/windowshht/article/details/161408696",
+        "domain": "csdn.net",
+        "snippet": "这段代码简单、直观,适合很多“并发获取多个结果”的场景。 但问题出现在异常上。默认情况下,如果gather(..., return_exceptions=False)中某个 awaitable 抛出异常,这个异常会立刻传播给等待gather的调用方;而其他 awaitable 不会因此自动取消,会继续运行。官方文档也明确指出,TaskGroup相比gather提供了更强的安全保证:当某个任务或子任务抛出异常时,TaskGroup会取消剩余任务。(Python documentation) 这就是核心差异: gather:更像“把几个任务放在一起等结果” TaskGroup:更像“这组任务属于同一个生命周期” 一键获取完整项目代码text 1 2 在生产环境中,生命周期比结果更重要。比如你并发调用三个外部服务:库存、价格、优惠。如果价格服务失败,库存请求还在慢慢跑,优惠请求还在重试,整个请求链路就可能变得混乱、浪费资源,甚至产生副作用。",
+        "is_bytedance": false
+      },
+      {
+        "title": "TaskGroup",
+        "url": "https://blog.csdn.net/yangjia96/article/details/148934966",
+        "domain": "csdn.net",
+        "snippet": "在传统的asyncio.gather()中,如果没有设置return_exceptions=True,那么第一个发生的异常会立即传播并中断gather的执行,其他任务可能会继续运行直到其自然完成,或者直到事件循环停止。这使得在所有任务都完成之后再统一处理异常变得困难。 TaskGroup则提供了更一致的异常处理模型。当TaskGroup内部的任何子任务抛出异常时,这个异常不会立即向上冒泡中断TaskGroup的执行(除非它是关键的、无法恢复的异常)。相反,TaskGroup会记录这个异常,并取消所有其他正在运行的子任务,然后等待所有子任务完成后,在async with语句块的末尾将捕获到的异常重新抛出。",
+        "is_bytedance": false
+      },
+      {
+        "title": "别再乱用asyncio.gather了!详解create_task与gather的5个核心区别及适用场景",
+        "url": "https://blog.csdn.net/lake5/article/details/153383345",
+        "domain": "csdn.net",
+        "snippet": "在Python异步编程的世界里,asyncio.create_task()和asyncio.gather()是两个高频出现的函数,但很多开发者对它们的理解停留在“都能并发执行任务”的层面。实际上,这两个函数在任务调度、异常处理、内存管理等方面有着本质区别,用错了不仅影响性能,还可能导致难以调试的bug。 我见过不少项目,开发者习惯性地把所有异步调用都塞进gather(),结果在异常处理时发现任务莫名其妙地中断;也见过有人过度使用create_task(),导致事件循环被大量未管理的任务淹没。这两种情况都源于对这两个核心API的误解。 这篇文章将深入剖析create_task()和gather()的5个核心区别,并通过实际场景告诉你:什么时候应该独立调度任务,什么时候需要统一管理。无论你是正在构建高并发的Web服务,还是处理批量文件操作,理解这些差异都能让你的代码更健壮、更高效。 1. 任务调度机制:独立启动 vs 批量管理 1.1 create_task:即发即弃的独立调度 asyncio.create_task()的核心思想是“创建即调度”。当你调用这个函数时,它会立即将协程包装成Task对象并加入事件循环的待执行队列,然后立即返回控制权。 importasyncio importtime asyncdefdownload_file(filename:str, size:int)...",
+        "is_bytedance": false
+      },
+      {
+        "title": "asyncio.TaskGroup如何解决嵌套任务异常传播问题?对比asyncio.gather有何优势?",
+        "url": "https://download.csdn.net/download/bdgtd88178/91611088",
+        "domain": "csdn.net",
+        "snippet": "在Python中,异步编程是处理并发任务的关键技术。特别是在使用asyncio库时,开发者经常会遇到需要处理嵌套任务和异常传播的问题。传统的方法,如使用asyncio.gather,能够方便地运行多个异步任务并等待它们全部完成,但如果这些任务中有任何一个抛出了异常,这个异常不会被自动传播,开发者需要手动处理这些异常。 asyncio.TaskGroup的出现是为了解决这一问题。TaskGroup是asyncio库中的一个较新功能,提供了创建一组子任务的方式,并且这些子任务之间可以相互独立运行。TaskGroup最重要的一点是它提供了一种机制,可以自动收集所有子任务中的异常并将其重新抛出,让异常处理变得更加方便和直观。当使用TaskGroup时,如果组内任何一个任务抛出了异常,这个异常会被收集并可以被TaskGroup的调用者捕获,这意味着开发者不再需要在每个任务内部进行异常捕获处理,从而简化了代码结构。 此外,TaskGroup还有以下优势: 1. 更好的资源管理:使用TaskGroup时,可以确保所有任务在结束时都能够被正确地清理和释放资源,这在使用asyncio.gather时并不是那么直接。 2. 任务取消:TaskGroup提供了取消所有任务的便捷方法,这在asyncio.gather中并不直接支持。 3. 代码结构清晰:使用TaskGroup可以使代码结构更加清晰,有利于...",
+        "is_bytedance": false
+      },
+      {
+        "title": "Python协程:asyncio基本用法",
+        "url": "https://blog.csdn.net/qq_43347021/article/details/143802177",
+        "domain": "csdn.net",
+        "snippet": "随着现代应用程序对并发执行的需求越来越高,异步编程(Asynchronous Programming)成为了提高性能的重要工具。Python 通过asyncio提供了内置的支持,允许我们以非阻塞的方式处理 I/O 密集型任务。 本文将带你从基础到进阶,了解如何使用 Python 协程与asyncio库管理并发任务。我们将通过实际的代码示例,并对每个示例进行优化,增加任务耗时的打印,帮助你更好地理解异步编程。 在Python 中,协程是一个可以暂停执行并在以后恢复执行的函数。你可以通过async def来定义一个协程函数,而await用于暂停协程的执行,直到某个异步操作完成。 异步编程的核心优势是能够并发地执行 I/O 密集型任务,而不需要阻塞主线程。例如,进行大量的文件读写或网络请求时,异步编程能够帮助你高效地利用系统资源,提高程序的响应速度。 2.1 启动单个协程 首先,我们来看一个简单的异步任务。下面的代码展示了如何定义和执行一个基本的异步任务,使用asyncio.sleep()模拟一个耗时的 I/O 操作。 importasyncioimporttimeasyncdefmain():print(\"Start\")start_time=time.time()awaitasyncio.sleep(1)# 模拟一个异步操作,例如 I/O 操作print(f\"End (took{tim...",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "",
+    "elapsed": 1.25
+  },
+  "gemini": {
+    "count": 14,
+    "results": [
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhXmRKE43sizPbxtVH-gCDSgolxMnvXVXu7bDmDURXqQ66rN148L1CrF_OvmIb9ikMkFMC37WRBUlhvYNw5dzhwpH9LaqqyO2V4V6ok6iN13buFgsFhkBKeZfV0vhJJccF7kgAY-Jf_l4I-gmfg342mgb-",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "towardsdatascience.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFE8nzQMQK41JHzXdC7iTweMxLn-DkRPNgj-hvv_uR98UurUmMJbvH68_agkD91ykHfRZVYvV7pM5xisgFYskvKH4AHWfl7ooG70MJhkxhz5w2zvwyrvFo4hj05EGMV8NXX7mE1BImqicrAZ0YilBDVAg1Nfwt7crBW5e-APeEEpsv6wZ2whGEXRqlnjJAXSEjHoHeH55l6dph93KPL4UZWuI3vFwXC",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "csdn.net",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjCTlPerWpiAfzIcTyRwBAVnkZAcmNsQrVJKsYFpWfsjBcRT_1bFnHu3nIfBk0PHJxOh2QvIAz_f3yibzxZKrdWMn4-eYwj8k4oPjRjnIuZ-QkPQU69TBzShut83l9nZSn3i9oyfIcJOPhnr3q9f8RhRUCZ8c=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "realpython.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6CmOCy2vI2IwTC-J8qZqf4GdOJQ1V3SWIt3YpydXt9ySXx1SVr6P8sv5Wf8vslXdnf0m_x9uC5tGcLCc3iMN29YXZnbU5ogUD6CWbqzQwXu-jvjcIYFf4Ge73WsqG_JXw",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "python.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF211v9U1RNfi3yHrZKgNwgHbHexhahDh1Qb5NhLp1f-dkbjHPPx1pPTmzn8INEMmeRL_fWxSRs725g7Hb8ePDLK2VkhHDcSPrGpEWNj0vvfcB1WYp2BUCqOBGak9by_ua6xb3KRLmsJxV5I1QW",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "dev.to",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHQm5VvuPm3wcb3vCgOLw1sZ_LeKanoIc56rRN1nElI-F7MDsUuKzCTAR5GH5i8jfY58EwApTLKpACaYWhiwDy8Q_fbQpLM-zT1GZkEyTPE_Les9N6Z0ElGrzrrKJvi0OY22iH7pbCSzduPKBimf-pkamz-axcPf2B78ofXQjU=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "stackoverflow.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHVBwi97dGWClg7ChhY5sWcf_adzmNokIcRWHpwv7hvrZPvr6rNgNkYnpbIS6hLTIzVqMzA_b_8LmlO5pG_9dl1_GNWHDMuz30l2rvDNpSR44pZiq9UQpbxySu5oCw53-MXqC5PpC3hNpQ9Pzk0ZEOmSkMwuxSBOb66zUxzkrIoxQC3AJTTtzhY1ud9OZ59F0Io9R0_cgIl1tBa",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "feishu.cn",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH4NTSLL3eBk_dN3j17SlNArDlqr2FNOcWJch91X-ws2BMNpWwyxYa9xjc1aXVhuarpWvt238hRMLOnNy9PFIhfIhMntyy00mkhwjrWaS9rmDoXYppZHWvnpp8MIMC7mWmC4V3TJzdzRs4o4fy--0a_94gYG-tY",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "geeksforgeeks.org",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGtaeCoaSVqINXTShfNF-NzKwN93El5ZpCdxNqkr_lzRmt96QFwKuIENgDbmaY6-l8DcYxQ33W6V59ASkr92D9M4B6z22TYOrNYM5lTZ8cfz8g5J6YojrfwyR5fZ52RyE7H2h0h_g9IAkrBWC69ohzJNQ6aHiKmGBvWLRll7hY=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "substack.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGYeShVqVmYZ1cMEvgdDNMbQN5FhA6CYPtFqjZgwKQuWowOW2Y7X-JpfqgtpoK7H3rtRVTnqk1kLpnndwsFpXczXO4v4NgXxtMwMkIUA4S2YVTlBuGzl4CeVk5UlXIFRqLgzwyxt-ZiQ4lXPXsuqG-ee-6lB91FPg==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "medium.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGL2UwGvssXUfuKvbRPOc4ZYrOIIr_CZWoN9tcNfKlkQ5sqDRBhqVkg-bdc8NwUScp_NN_tKzE4IyWPj7DTS00ustqdNk8ZJuEbrIZ5AEUBfBXM_ytwgrggPqGXv1eqwfOjd9ZMYviiw0cnuuP9GtZRLzhSOU96dBz5BDPExiirl45209YxZwxAOfwMuYdaKSXVVaL8Ro5dZ_Y5r9Q12VDK8d0LnQ==",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "buttondown.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF9DnJQmDagkMZoGww4gMDP4wEsHmdyQ2cUGRvDD1Fgs4DMNbGDGF1JwRrv-E2uKcwBm87N0ZwL55nn1cudXL8-In7LqqjhQKpSXHlw4BJvfXFWiUSGd0119af2eu7CewJ2jyzi0VPWIh0TwUIYd4qpXmW4QB78yBs7UhtjLbovdfpar1--Ltgwbzu__0oUZ9oR",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "reddit.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHLDpV3lZ9MeJKynDBNNgv6cds6T1_-psGZ1rTjwVB9ahfXBKxfcoowSAoItR9yb4pu5LcFEBcdHzJLWmYaBee7TYT3iaARYoJrZ_R0RngktNY3nXBHaqd7Aan6H8t3sO-_PBk2P4gy633p9luzjd58wygnFCDVLj-Sr-MnaLYbKp7pQCL0T0zeeA363r8IX3n2NJKTKSIFiOOJkrhaKQBvtWzsIpqRNsH0",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      },
+      {
+        "title": "github.com",
+        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQ5oFTdwp2m32xDlyeBpSFP4U4I_lyErC-NOeOv9U-e4cOp6ZW-cm1kcOT9z7f17iXBFGtZNv9IJ1yhdgbLzaeqp2cKEn2zZflxI5QON3ZCGuAi_MX7KaE7hlsbuPrCEjYR90rmKFeyhppbZk=",
+        "domain": "google.com",
+        "snippet": "",
+        "is_bytedance": false
+      }
+    ],
+    "answer": "`asyncio.TaskGroup` 和 `asyncio.gather` 都是用于并发执行多个异步任务的工具，但它们在设计理念、生命周期管理和异常处理方面存在显著差异。`TaskGroup` 是 Python 3.11 引入的，旨在提供更结构化的并发控制。\n\n以下是它们之间的主要区别：\n\n**1. 生命周期管理和结构化并发**\n\n*   **`asyncio.TaskGroup`**: `TaskGroup` 是一个异步上下文管理器 (`async with`)。这意味着它的生命周期是明确定义的。当你进入 `async with TaskGroup() as tg:` 块时，会创建一个新的任务组。在块内部通过 `tg.create_task()` 创建的所有任务都属于这个组。当 `async with` 块退出时，`TaskGroup` 会自动等待所有已启动的任务完成。这种结构化的方法确保了任务的创建、执行和清理都得到妥善管理，有助于避免“孤儿任务”。\n*   **`asyncio.gather`**: `gather` 函数直接接受一个或多个可等待对象（协程、任务等），并将它们并发执行。它返回一个 `Future` 对象，你需要显式地 `await` 这个 `Future` 来获取所有任务的结果。`gather` 本身不提供像 `TaskGroup` 那样的结构化生命周期管理。\n\n**2. 异常处理**\n\n*   **`asyncio.TaskGroup`**: `TaskGroup` 提供了更集中和明确的异常处理。如果组内的任何一个任务抛出异常，`TaskGroup` 会捕获该异常，并自动取消组内所有其他正在运行的任务。当 `async with` 块退出时，异常会被重新抛出（在较新版本的 Python 中，可能以 `ExceptionGroup` 的形式组合多个异常）。这有助于防止错误扩散和资源浪费。\n*   **`asyncio.gather`**: 默认情况下，如果 `gather` 中的任何一个任务抛出异常，`gather` 会立即取消其他正在运行的任务，并将第一个发生的异常向上抛出。然而，如果设置了 `return_exceptions=True`，`gather` 会等待所有任务完成（无论成功或失败），并将结果或异常对象放入返回的列表中，需要手动检查每个结果。\n\n**3. 取消机制**\n\n*   **`asyncio.TaskGroup`**: `TaskGroup` 提供了更强大的取消保证。如果父协程（包含 `TaskGroup` 的协程）被取消，`TaskGroup` 会确保其所有子任务也被取消。反之，如果 `TaskGroup` 内部的一个任务失败，它也会取消其他任务。\n*   **`asyncio.gather`**: 如果 `gather` 自身被取消，它会尝试取消其正在等待的子任务。但其异常传播和取消行为不如 `TaskGroup` 那样有明确的结构化保证。\n\n**4. 易用性和 API 设计**\n\n*   **`asyncio.TaskGroup`**: `TaskGroup` 的 API 设计更符合“结构化并发”的理念，使用 `async with` 使得代码结构更清晰，并且自动处理了许多并发管理的细节，如任务的等待和异常传播。\n*   **`asyncio.gather`**: `gather` 的 API 相对直接，适合于快速地并发执行一组已知任务并收集结果。但对于复杂的错误处理和生命周期管理，可能需要额外...",
+    "elapsed": 102.76
+  }
+}

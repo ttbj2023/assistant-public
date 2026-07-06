@@ -1,0 +1,135 @@
+{
+  "sample_id": "syn_mixed",
+  "sample_type": "change",
+  "description": "混合条目(事件+状态+建议), 难点: 部分提炼部分删",
+  "pinned_memory": {
+    "basic_info": "毕业于浙江大学计算机系\n上周体检，血压130/85，医生建议控制饮食\n昨天加班到很晚",
+    "preferences": "偏好异步沟通"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "学历",
+      "summary": "毕业于浙江大学计算机系, 提到校友资源"
+    },
+    {
+      "round": 42,
+      "topic": "体检",
+      "summary": "上周体检, 血压130/85, 医生建议控制饮食"
+    },
+    {
+      "round": 43,
+      "topic": "加班",
+      "summary": "昨天加班到很晚, 赶项目进度"
+    },
+    {
+      "round": 44,
+      "topic": "沟通",
+      "summary": "偏好异步沟通, 不喜欢被打断"
+    },
+    {
+      "round": 45,
+      "topic": "血压",
+      "summary": "开始注意饮食, 减少高盐高油"
+    },
+    {
+      "round": 46,
+      "topic": "工作",
+      "summary": "项目进度恢复正常, 不再加班"
+    },
+    {
+      "round": 47,
+      "topic": "学历",
+      "summary": "浙大背景在行业里有帮助"
+    },
+    {
+      "round": 48,
+      "topic": "健康",
+      "summary": "血压通过饮食控制有所改善"
+    },
+    {
+      "round": 49,
+      "topic": "沟通",
+      "summary": "团队采纳了异步沟通方式"
+    },
+    {
+      "round": 50,
+      "topic": "体检",
+      "summary": "上次体检后开始重视血压管理"
+    },
+    {
+      "round": 51,
+      "topic": "日常",
+      "summary": "聊了工作生活平衡"
+    },
+    {
+      "round": 52,
+      "topic": "饮食",
+      "summary": "坚持低盐饮食, 血压稳定"
+    },
+    {
+      "round": 53,
+      "topic": "沟通",
+      "summary": "异步沟通提升效率"
+    },
+    {
+      "round": 54,
+      "topic": "加班",
+      "summary": "近期没有再加班"
+    },
+    {
+      "round": 55,
+      "topic": "学历",
+      "summary": "校友圈提供了不少机会"
+    },
+    {
+      "round": 56,
+      "topic": "健康",
+      "summary": "血压维持在125/80"
+    },
+    {
+      "round": 57,
+      "topic": "工作",
+      "summary": "项目顺利推进"
+    },
+    {
+      "round": 58,
+      "topic": "饮食",
+      "summary": "健康饮食习惯养成"
+    },
+    {
+      "round": 59,
+      "topic": "沟通",
+      "summary": "异步方式成为团队规范"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "工作健康平衡改善"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天加班到很晚"
+    ],
+    "change": [
+      {
+        "old_content": "上周体检，血压130/85，医生建议控制饮食",
+        "reason": "剥离上周体检动作, 提炼血压状态+饮食要求"
+      }
+    ],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "最近状态",
+      "assistant": "血压通过饮食控制稳定在125/80, 近期没有再加班。异步沟通方式已成为团队规范。"
+    },
+    {
+      "round": 60,
+      "user": "工作健康",
+      "assistant": "浙大校友圈持续提供机会, 健康饮食和异步沟通的习惯都稳定了。"
+    }
+  ]
+}

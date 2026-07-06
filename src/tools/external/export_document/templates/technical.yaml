@@ -1,0 +1,85 @@
+# 技术文档模板
+# 适用于: API文档、技术手册、开发文档
+
+fonts:
+  default: "Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif"
+  heading: "Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif"
+  code: "Noto Sans Mono CJK SC, Consolas, Monaco, Courier New, monospace"
+  western: "Arial, sans-serif"
+
+font_sizes:
+  body: 11
+  h1: 20
+  h2: 16
+  h3: 14
+  h4: 12
+  h5: 11
+  h6: 11
+  caption: 10
+
+colors:
+  text: "#24292e"
+  heading: "#0366d6"
+  link: "#0366d6"
+  table_border: "#e1e4e8"
+  table_header_bg: "#f6f8fa"
+  table_zebra: "#fafbfc"
+  code_bg: "#f6f8fa"
+  blockquote_bg: "#f6f8fa"
+  blockquote_border: "#0366d6"
+  blockquote_text: "#586069"
+
+spacing:
+  line_height: 1.6
+  paragraph_before: 0
+  paragraph_after: 0.7
+
+margins:
+  top: "20mm"
+  bottom: "20mm"
+  left: "22mm"
+  right: "22mm"
+
+headings:
+  h1:
+    color: "#0366d6"
+    border_bottom: "2px solid #e1e4e8"
+    padding_bottom: "0.3em"
+  h2:
+    color: "#0366d6"
+    border_bottom: "1px solid #e1e4e8"
+    padding_bottom: "0.2em"
+  h3:
+    color: "#24292e"
+  h4:
+    color: "#24292e"
+
+tables:
+  border_collapse: true
+  border_color: "#e1e4e8"
+  cell_padding: "8px 10px"
+  header_bg: "#f6f8fa"
+  header_color: "#24292e"
+  zebra: true
+  font_size: 10.5
+
+code_blocks:
+  background: "#f6f8fa"
+  border: "1px solid #e1e4e8"
+  border_left: "3px solid #0366d6"
+  padding: "12px 14px"
+  font_size: 10.5
+  line_height: 1.5
+  border_radius: "4px"
+
+blockquotes:
+  border_left: "4px solid #0366d6"
+  background: "#f6f8fa"
+  padding: "10px 14px"
+  color: "#586069"
+
+page_break:
+  h1_break_after: avoid
+  h2_break_after: avoid
+  table_break_inside: avoid
+  pre_break_inside: avoid

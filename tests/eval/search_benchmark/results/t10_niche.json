@@ -1,0 +1,123 @@
+{
+  "query": "Rust 所有权 借用检查器 生命周期 lifetime",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Lifetimes",
+        "url": "https://doc.rust-lang.org/1.3.0/book/lifetimes.html",
+        "domain": "rust-lang.org",
+        "site": "Rust",
+        "snippet": "This guide is one of three presenting Rust’s ownership system. This is one of Rust’s most unique and compelling features, with which Rust developers should become quite acquainted. Ownership is how Rust achieves its largest goal, memory safety. There are a few distinct concepts, each with its own chapter: ownership , the key concept borrowing , and their associated feature ‘references’ lifetimes, which you’re reading now These three chapters are related, and in order. You’ll need all three to fully understand the ownership system. Meta Before we get to the details, two important notes about th...",
+        "publish_time": "2019-08-27T10:56:09+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Ownership",
+        "url": "https://doc.rust-lang.org/1.0.0-alpha.2/book/ownership.html",
+        "domain": "rust-lang.org",
+        "site": "Rust",
+        "snippet": "nd so the ownership is transferred back to y in main . We only have ownership for the duration of our function before giving it back. This pattern is very common, and so Rust introduces a concept to describe a handle which temporarily refers to something another handle owns. It's called borrowing , and it's done with references , designated by the & symbol. Borrowing Here's the current state of our add_one function: fn add_one ( mut num : Box < i32 > ) -> Box < i32 > { * num += 1 ; num } This function takes ownership, because it takes a Box , which owns its contents. But then we give ownership...",
+        "publish_time": "2019-07-21T04:37:33+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "Rust所有权与借用机制核心考点解析：移动语义、生命周期、RAII及内存安全实现原理",
+        "url": "https://wenku.csdn.net/doc/r8hf9evixe",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "rce Acquisition Is Initialization）原则的严格实现：资源获取与对象构造绑定，资源释放与析构函数（Drop trait）执行同步，且整个过程不依赖运行时调度，无任何性能损耗。借用（Borrowing）则是在不转移所有权的前提下临时访问数据的机制，分为不可变借用（&T）和可变借用（&mut T），二者受‘借用规则’三重铁律约束：（1）同一时间只能存在一个可变引用，或任意数量的不可变引用；（2）引用必须始终有效（即不能悬垂）；（3）引用的生命周期不得长于\n其所引用值的生命周期。这些规则由编译器在编译期通过借用检查器（Borrow Checker）进行图论级控制流与数据流分析，彻底杜绝空指针解引用、use-after-free、double-free、数据竞争（data race）等C/C++中高发的未定义行为（UB）。生命周期（Lifetime）作为类型系统的一部分，以标注（如'a, 'b）显式或隐式地描述引用的有效时间区间，是解决‘悬垂引用’问题的关键技术手段；静态生命周期（'static）特指贯穿整个程序运行期的引用，常见于字\n符串字面量、全局常量及泄漏的内存（如Box::leak返回的引用），但滥用会导致内存无法回收。Copy trait则为值语义类型（如i32、bool、元组内全为Copy类型的组合）提供按位复制能力，绕过移动语义，使变量赋值/传参...",
+        "publish_time": "2025-11-12T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9999017715454102,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Rust 核心机制：所有权、借用与生命周期",
+        "url": "https://blog.csdn.net/qq_39377889/article/details/160273184",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "Rust 核心机制：所有权、借用与生命周期\n标签\n#rust #开发语言\nRust 核心机制：所有权、借用与生命周期\n引言\nRust 通过所有权（ownership）、借用（borrowing）与生命周期（lifetime）机制，在编译时实现内存安全与线程安全，无需垃圾回收器（GC），同时保持与 C/C++ 相当的性能。该机制根治空悬指针、双重释放、数据竞争等传统内存管理缺陷。\n传统内存管理存在两类主要问题：\n手动管理（如 C/C++）：开发者负责分配与释放，易引发内存泄漏、空悬\n指针或使用后释放（use-after-free）。\n自动回收（如 Java、Python 的 GC）：消除手动错误，但引入运行时开销，且难以彻底防止数据竞争。\nRust 采用编译期静态检查，结合所有权转移、借用规则与生命周期约束，实现零开销抽象与安全保证。这是 Rust 区别于其他语言的核心设计。\n核心三要素相互支撑：\n所有权：定义资源归属与自动释放基础。\n借用：在不转移所有权的前提下实现数据访问，支持“共享不可变，可变不共享”原则。\n生命周期：约束引用有效范围，防止悬垂引用。\n\n三者协同，确保任意时刻数据访问均满足安全规则。\n所有权（Ownership）\n每个值在任意时刻仅有一个所有者。所有者离开作用域时，值自动释放（drop），无需显式释放操作。\n所有权转移（Move）\n赋值、函数传参或返回值默认发生...",
+        "publish_time": "2026-04-18T11:04:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9998618364334106,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Rust 的生命周期与借用检查：安全性深度保障的基石",
+        "url": "https://blog.csdn.net/GEO_YScsn/article/details/151229130",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "Rust 的生命周期与借用检查：安全性深度保障的基石\n文章标签：\n#算法 #网络\n在现代系统编程领域，内存安全是软件质量的生命线。从C++的野指针，到Java、Python等语言的垃圾回收（GC）所带来的非确定性暂停，开发者一直在寻求一种能够同时保证内存安全又兼顾高性能的解决方案。Rust，以其独特而创新的所有权系统（Ownership System），成功地在这一领域开辟了新的道路。\n而所有权系统中最具特色，也最常成为初学者 Confusion 的核心，便是生命周期（Lifetimes） 和 借用检查（Borrow Checker）。它们共同构成了 Rust 强大的内存安全“安全网”，在编译时就消除了大量潜在的运行时错误。\n本文将深入剖析 Rust 的生命周期和借用检查机制，阐述它们如何协同工作，为 Rust 程序提供坚不可摧的内存安全性保障。\n第一章：借用检查——Rust 内核的“严苛裁判”\nRust 的借用检查器是编译器的一个重要组成部分，它在编译时强制执行一系列严格的规则，以确保内存的访问是安全且无竞用的。借用检查器的核心目的是防止以下两类问题：\n悬垂引用（Dangling References）： 指针指向一块已经被释放的内存。\n数据竞争（Data Races）： 多个线程同时访问（至少一个为写）同一块内存，且没有同步机制。\n1.1 核心规则：“一个可变，或任意不",
+        "publish_time": "2025-09-05T18:42:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9998031258583069,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Rust 的生命周期与借用检查：安全性深度保障的基石-EW帮帮网",
+        "url": "https://www.ewbang.com/community/article/details/1000317905.html",
+        "domain": "ewbang.com",
+        "site": "ref_1",
+        "snippet": "在现代系统编程领域，内存安全是软件质量的生命线。从C++的野指针，到Java、Python等语言的垃圾回收（GC）所带来的非确定性暂停，开发者一直在寻求一种能够同时保证内存安全又兼顾高性能的解决方案。Rust，以其独特而创新的所有权系统（Ownership System），成功地在这一领域开辟了新的道路。\n而所有权系统中最具特色，也最常成为初学者 Confusion 的核心，便是生命周期（Lifetimes） 和 借用检查（Borrow Checker）。它们共同构成了 Rust 强大的内存安全“安全网”，在编译时就消除了大量潜在的运行时错误。\n本文将深入剖析 Rust 的生命周期和借用检查机制，阐述它们如何协同工作，为 Rust 程序提供坚不可摧的内存安全性保障。\n第一章：借用检查——Rust 内核的“严苛裁判”\nRust 的借用检查器是编译器的一个重要组成部分，它在编译时强制执行一系列严格的规则，以确保内存的访问是安全且无竞用的。借用检查器的核心目的是防止以下两类问题：\n悬垂引用（Dangling References）： 指针指向一块已经被释放的内存。\n数据竞争（Data Races）： 多个线程同时访问（至少一个为写）同一块内存，且没有同步机制。\n1.1 核心规则：“一个可变，或任意不可变”\n规则一： 在任何给定的时间点，你可以拥有要么一个可变引用（&mut T），要么任意...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "Rust实战系列-生命周期、所有权和借用-腾讯云开发者社区-腾讯云（发布时间：2023-03-21 20:30:52）",
+        "url": "https://cloud.tencent.cn/developer/article/2243477",
+        "domain": "tencent.cn",
+        "site": "ref_2",
+        "snippet": "本文是《Rust in action》学习总结系列的第四部分，更多内容请看已发布文章：\n一、Rust实战系列-Rust介绍\n二、Rust实战系列-基本语法\n三、Rust实战系列-复合数据类型\n“理解生命周期在 Rust 中的含义，适应 Rust 的借用检查器（borrow），采用多种方法处理可能遇到的问题，理解“所有者”的职责，理解如何借用其他所有者的值。\n本章解释让大多数 Rust 新手头疼的概念：借用检查器。借用检查器会检查对数据的访问是否合法，避免出现安全问题。\n学会借用检查器将会提升开发效率，避免和编译器产生冲突。更重要的是，理解借用检查器可以自信地构建大型软件系统，它是“无畏并发”的基础。\n本章主要解释借用检查器的工作原理，以及发现错误时如何修改。通过模拟卫星通信的例子来解释不同提供共享数据访问方式之间的权衡。\n借用检查器依赖于三个相互关联的概念：生命周期、所有权和借用。\n值的生命周期是指访问该值有效的时间段。函数的局部变量在函数返回前都有效，全局变量在程序的整个生命周期内都有效\n所有权是一个夸张的比喻。在 Rust 中，所有权与清理不再需要的值有关。例如，当函数返回时，存放局部变量的内存需要被释放。所有者并不能阻止程序其他部分访问他们拥有的值，也不能向 Rust 报告数据被盗用。\n借用意味着访问。这是一个令人困惑的术语，因为没有将值还给所有者。“借用”是为了强调虽然 R...",
+        "publish_time": "2023-03-21",
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "2024 Rust现代实用教程 Borrowing借用 && Lifetime生命周期-EW帮帮网",
+        "url": "https://www.ewbang.com/community/article/details/1000101787.html",
+        "domain": "ewbang.com",
+        "site": "ref_3",
+        "snippet": "文章目录\n一、Borrowing && Borrow Checker && Lifetime\n1.Borrowing\n一个玩意两种描述 引用（Reference）:\n3.引用允许在不传递所有权的情况下访问数据，它们是安全且低开销的。\n借用（Borrowing）\n1.借用是通过引l用（Reference）来借用（Borrow）数据，从而在一段时间内访问数据而不拥有它。\n2.借用分为可变借用和不可变借用。可变借用（&mut）允许修改数据，但在生命周期内只能有一个可变借用。不可变借用(&)允许多个同时存在。但不允许修改数据\n2. Borrow Checker\n·Borrow Checker的规则\n1.不可变引用规则： 在任何给定的时间，要么有一个可变引用，要么有多个不可变引用，但不能同时存在可变引用和不可变引用。这确保了在同一时间只有一个地方对数据进行修改，或者有多个地方同时读取数据。\n·2.可变引用规则： 在任何给定的时间，只能有一个可变引用来访问数据。这防止了并发修改相同数据的问题，从而防止数据竞争。生命周期规则：\n3．引用的生命周期必须在被引用的数据有效的时间范围内。这防止了悬垂引用，即引用的数据已经被销毁，但引用仍然存在。\n4.可变引用与不可变引用不互斥： 可以同时存在多个不可变引用，因为不可变引用不会修改数据，不会影响到其他引用。但不可变引用与可变引用之间是互斥的。\n3.手动指...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "rust lifetime（发布时间：2023-10-07 08:53:16）",
+        "url": "https://blog.csdn.net/weixin_38892398/article/details/133384377",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "rust 生命周期\n1.什么是生命周期\nRust 中的每一个引用都有其 生命周期（lifetime），也就是引用保持有效的作用域。大部分时候生命周期是隐含并可以推断的，正如大部分时候类型也是可以推断的一样。在函数或者方法签名中表示引用的生命周期，通过生命周期注解描述引用有效的作用域，从而避免悬垂引用和数据竞争等问题。 Rust 编译器有一个 借用检查器（borrow checker），用来确保所有的借用都是有效的。\n//悬垂引用\n{\nlet r;\n {\nlet x = 5;\n r = &x;\n }//x 已经离开作用域\n println(\"r = {}\", r);\n}\n//数据竞争\n2. 生命周期语法\n生命周期参数名称必须以撇号（'）开头，其名称通常全是小写，类似于泛型其名称非常短。'a 是大多数人默认使用的名称。生命周期参数标注位于引用的 & 之后，并有一个空格来将引用类型与生命周期标注分隔开\n@i32\n@'a i32 //带有显式生命周期的引用\n@'a mut i32 //带有显式生命周期的可变引用\n编译器采用三条规则来判断引用何时不需要明确的标注 第一条规则是 每一个是引用的参数都有它自己的生命周期参数 第二条规则是 如果只有一个输入生命周期参数，那么它被赋予所有输出生命周期参数 第三条规则是 如果方法有多个输入生命周期参数并且其中一个参数是 &self 或 &mut sel...",
+        "publish_time": "2023-10-07",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Rust所有权，借用，生命周期（发布时间：2024-01-19 18:08:30）",
+        "url": "https://blog.csdn.net/weixin_37841024/article/details/135704334",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "Rust的所有权系统和借用系统是其最重要的特性之一，用于管理内存安全和数据竞争。它们的设计目标是在编译时捕获内存错误，而不需要运行时的垃圾回收器或锁机制。下面对Rust的所有权系统和借用系统进行详细解释：\n1. 所有权系统（Ownership System）：\n- 所有权规则：在Rust中，每个值都有一个所有者（owner）。这个所有者负责在值超出范围时释放其占用的资源。只能有一个所有者，这确保了资源的安全管理。当所有者超出范围时，其值将被自动释放。\n- 移动语义：当将值分配给另一个变量时，它的所有权会被转移，原来的变量将无效。这种转移确保了资源的唯一性和避免了悬空引用。\n- clone和Copy：某些类型（如整数、布尔值等）具有Copy trait，它们的赋值操作会复制值，而不是转移所有权。其他类型可以通过clone方法进行复制。\n2. 借用系统（Borrowing System）：\n- 借用规则：Rust允许在不转移所有权的情况下，通过借用方式来访问值。借用可以是不可变的（immutable）或可变的（mutable）。借用的生命周期必须在借用者的生命周期内。\n- 不可变借用：多个不可变借用可以同时存在，因为它们只是读取值，不会造成数据竞争。\n- 可变借用：只能有一个可变借用者，并且在借用期间，原始所有者不能使用或借用该值。这种限制确保了在编译时避免了数据竞争。\n3. 生命周期...",
+        "publish_time": "2024-01-19",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

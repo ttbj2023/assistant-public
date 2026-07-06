@@ -1,0 +1,131 @@
+{
+  "sample_id": "syn_temporary",
+  "sample_type": "positive",
+  "description": "④过渡状态(当前项目/团队归属), 新scope下删除(换工作即失效); 姓名+口味保留",
+  "pinned_memory": {
+    "basic_info": "当前参与ProjectA开发\n所在团队是平台组\n姓名：孙七",
+    "preferences": "代码风格偏好函数式"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "项目",
+      "summary": "当前参与ProjectA开发, 负责后端模块"
+    },
+    {
+      "round": 42,
+      "topic": "团队",
+      "summary": "所在团队是平台组, 5个人"
+    },
+    {
+      "round": 43,
+      "topic": "代码风格",
+      "summary": "偏好函数式编程风格"
+    },
+    {
+      "round": 44,
+      "topic": "ProjectA",
+      "summary": "ProjectA进入测试阶段"
+    },
+    {
+      "round": 45,
+      "topic": "团队",
+      "summary": "平台组结构稳定"
+    },
+    {
+      "round": 46,
+      "topic": "代码",
+      "summary": "用函数式方式重构了几个模块"
+    },
+    {
+      "round": 47,
+      "topic": "项目",
+      "summary": "ProjectA预计下月上线"
+    },
+    {
+      "round": 48,
+      "topic": "工作",
+      "summary": "聊了团队协作"
+    },
+    {
+      "round": 49,
+      "topic": "代码风格",
+      "summary": "函数式偏好体现在代码评审中"
+    },
+    {
+      "round": 50,
+      "topic": "ProjectA",
+      "summary": "ProjectA上线后转入维护"
+    },
+    {
+      "round": 51,
+      "topic": "团队",
+      "summary": "平台组开始接手新项目"
+    },
+    {
+      "round": 52,
+      "topic": "代码",
+      "summary": "继续坚持函数式风格"
+    },
+    {
+      "round": 53,
+      "topic": "项目",
+      "summary": "ProjectA维护稳定, 不再主要投入"
+    },
+    {
+      "round": 54,
+      "topic": "新项目",
+      "summary": "开始参与ProjectB"
+    },
+    {
+      "round": 55,
+      "topic": "团队",
+      "summary": "平台组人员不变"
+    },
+    {
+      "round": 56,
+      "topic": "代码",
+      "summary": "函数式风格成为个人标志"
+    },
+    {
+      "round": 57,
+      "topic": "ProjectA",
+      "summary": "ProjectA已交接给运维"
+    },
+    {
+      "round": 58,
+      "topic": "工作",
+      "summary": "重心转到ProjectB"
+    },
+    {
+      "round": 59,
+      "topic": "风格",
+      "summary": "代码风格偏好稳定"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "项目切换, 风格不变"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "当前参与ProjectA开发",
+      "所在团队是平台组"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "项目近况",
+      "assistant": "ProjectA已交接给运维, 现在主要参与ProjectB。所在平台组结构不变。"
+    },
+    {
+      "round": 60,
+      "user": "代码风格",
+      "assistant": "继续坚持函数式编程风格, 这已成为个人标志。"
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "sample_id": "syn_expired",
+  "sample_type": "positive",
+  "description": "过时/一次性事件, 测召回",
+  "pinned_memory": {
+    "basic_info": "居住地：上海\n上个月完成了项目X的验收\n去年的体检报告已归档",
+    "preferences": "喜欢打网球\n上周采购了新服务器"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "居住",
+      "summary": "确认目前居住在上海, 短期不打算搬"
+    },
+    {
+      "round": 42,
+      "topic": "项目验收",
+      "summary": "上个月完成了项目X的验收, 已交付"
+    },
+    {
+      "round": 43,
+      "topic": "体检",
+      "summary": "去年的体检报告已归档存档"
+    },
+    {
+      "round": 44,
+      "topic": "网球",
+      "summary": "周末去打了网球, 状态不错"
+    },
+    {
+      "round": 45,
+      "topic": "采购",
+      "summary": "上周采购了新服务器, 已上架运行"
+    },
+    {
+      "round": 46,
+      "topic": "项目X",
+      "summary": "项目X验收后进入维护期, 无新增需求"
+    },
+    {
+      "round": 47,
+      "topic": "体检",
+      "summary": "计划今年体检重新做, 不参考去年的"
+    },
+    {
+      "round": 48,
+      "topic": "服务器",
+      "summary": "新服务器运行稳定, 替代了旧设备"
+    },
+    {
+      "round": 49,
+      "topic": "网球",
+      "summary": "每周固定打两次网球"
+    },
+    {
+      "round": 50,
+      "topic": "上海",
+      "summary": "聊了上海的居住体验"
+    },
+    {
+      "round": 51,
+      "topic": "项目",
+      "summary": "开始接手新的项目Y"
+    },
+    {
+      "round": 52,
+      "topic": "运动",
+      "summary": "网球水平有进步"
+    },
+    {
+      "round": 53,
+      "topic": "设备",
+      "summary": "旧服务器已下线处理"
+    },
+    {
+      "round": 54,
+      "topic": "健康",
+      "summary": "今年体检预约了下个月"
+    },
+    {
+      "round": 55,
+      "topic": "日常",
+      "summary": "聊了通勤和居住"
+    },
+    {
+      "round": 56,
+      "topic": "项目X",
+      "summary": "项目X已彻底结束, 不再讨论"
+    },
+    {
+      "round": 57,
+      "topic": "网球",
+      "summary": "参加了业余网球赛"
+    },
+    {
+      "round": 58,
+      "topic": "采购",
+      "summary": "近期不需要再采购设备"
+    },
+    {
+      "round": 59,
+      "topic": "上海",
+      "summary": "对上海生活满意"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "近期生活工作稳定"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "上个月完成了项目X的验收",
+      "去年的体检报告已归档",
+      "上周采购了新服务器"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "项目X怎样了",
+      "assistant": "项目X已彻底结束并交接, 不再投入。旧服务器已下线, 新服务器运行稳定。"
+    },
+    {
+      "round": 60,
+      "user": "近期",
+      "assistant": "今年体检预约了下个月重新做, 不参考去年已归档的报告。周末照常打网球。"
+    }
+  ]
+}

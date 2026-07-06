@@ -1,0 +1,249 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Legacy coverage reports (now in reports/)
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Note: reports/ directory is tracked, but specific patterns are ignored below
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.env.test
+.env.production
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Ruff
+.ruff_cache/
+
+# Project specific
+/data/
+test_data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+vector_store.db
+temp/
+/archive/
+/docs/archive/
+
+# Model files (自动下载的大模型文件)
+/models/
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+*.pt
+*.pth
+*.ckpt
+
+# Reports in root directory (should be in reports/ directory)
+# These patterns prevent reports from being generated in the root directory
+/coverage.xml
+/htmlcov/
+/.coverage
+/.coverage.*
+/test_report*.json
+/e2e_report*.json
+/static_analysis_report*.json
+/dependency_report*.json
+/dependency_conflict_report*.json
+/stub_validation_report*.json
+/bandit*.json
+/*_report.json
+/*_report.txt
+/*_analysis.json
+/*_analysis.txt
+/api_style_report.txt
+/style_report.txt
+/dependency_graph.txt
+/core_test_report*.json
+/current_analysis.json
+/detailed_report.json
+/core_mode_analysis.json
+/final_test.json
+
+# Note: The reports/ directory itself is tracked and contains organized reports
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Personal development scripts
+
+# Temporary development scripts in root directory
+# These patterns prevent temporary scripts from cluttering the root directory
+/temp_*.py
+/test_*.py
+/debug_*.py
+/performance_*.py
+/complete_*.py
+/corrected_*.py
+/enhanced_*.py
+/extend_*.py
+/extract_*.py
+/fix_*.py
+/format_*.py
+/verify_*.py
+/deepseek*.py
+/gptoss*.py
+/ollama*.py
+
+# Temporary analysis files in root directory
+/*_SUMMARY.md
+/*_ANALYSIS.md
+/*_COMPARISON.md
+
+# Temporary handoff documents (会话交接, 用后可删)
+
+# Note: Legitimate scripts should be placed in appropriate directories:
+# - Development tools: scripts/
+# - Examples: examples/
+# - Tests: tests/
+
+reports/archive/old_reports/comprehensive_test_report.json
+
+reports/
+
+# 自动清理归档目录
+.cleanup_archive/
+# Safety缓存目录
+# 用于存储依赖漏洞数据库，避免重复下载
+.cache/safety/
+
+# 静态用户配置 - 各环境独立维护, 不再版本追踪
+src/auth/static_users.yaml
+
+# 注意: 移除了workspace相关忽略规则，避免影响Git worktree功能
+# worktree是Git的官方功能，需要能够正常提交代码
+# 具体的文件忽略应该通过各个工具的配置来控制（如MyPy的exclude配置）
+
+# 置顶记忆评测框架(已脱敏改编, 数据入库)

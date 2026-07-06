@@ -1,0 +1,19 @@
+{
+  "sample_id": "neg_schedule",
+  "sample_type": "negative",
+  "description": "作息习惯/工作节奏: 新scope排除(归用户建模机制). 即便陈述也不记",
+  "user_message": "我习惯晚上11点后工作, 那时候效率最高",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "姓名：测试用户\n所在城市：杭州",
+    "preferences": "出行偏好选择地铁"
+  },
+  "ground_truth": {
+    "should_add": [],
+    "should_not_add": [
+      "晚上",
+      "11点",
+      "效率"
+    ]
+  }
+}

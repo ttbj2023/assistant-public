@@ -1,0 +1,132 @@
+{
+  "sample_id": "syn_demands",
+  "sample_type": "positive",
+  "description": "功能请求(一次性过期) + 对助手的要求(归requirement_memory工具), 新scope下均删",
+  "pinned_memory": {
+    "basic_info": "姓名：赵六",
+    "preferences": "希望助手回复更简洁\n建议增加PDF导出功能\n偏好简洁的沟通风格"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "回复风格",
+      "summary": "明确希望助手回复更简洁, 不要冗长解释"
+    },
+    {
+      "round": 42,
+      "topic": "功能建议",
+      "summary": "建议增加PDF导出功能, 团队有需求"
+    },
+    {
+      "round": 43,
+      "topic": "沟通",
+      "summary": "偏好简洁直接的沟通风格, 讨厌绕弯子"
+    },
+    {
+      "round": 44,
+      "topic": "PDF导出",
+      "summary": "讨论了PDF导出的技术方案"
+    },
+    {
+      "round": 45,
+      "topic": "回复",
+      "summary": "助手调整了回复风格, 用户表示满意"
+    },
+    {
+      "round": 46,
+      "topic": "简洁",
+      "summary": "再次确认喜欢简洁的交互"
+    },
+    {
+      "round": 47,
+      "topic": "PDF",
+      "summary": "PDF导出功能开发中, 预计下月上线"
+    },
+    {
+      "round": 48,
+      "topic": "工作",
+      "summary": "聊了团队的工作方式"
+    },
+    {
+      "round": 49,
+      "topic": "沟通",
+      "summary": "确认简洁沟通是长期偏好"
+    },
+    {
+      "round": 50,
+      "topic": "功能",
+      "summary": "PDF导出功能已开发完成, 进入测试"
+    },
+    {
+      "round": 51,
+      "topic": "回复",
+      "summary": "对助手当前的简洁回复很满意"
+    },
+    {
+      "round": 52,
+      "topic": "PDF",
+      "summary": "PDF导出已上线, 需求已满足"
+    },
+    {
+      "round": 53,
+      "topic": "日常",
+      "summary": "聊了项目管理"
+    },
+    {
+      "round": 54,
+      "topic": "简洁",
+      "summary": "坚持简洁沟通的偏好"
+    },
+    {
+      "round": 55,
+      "topic": "功能",
+      "summary": "PDF导出稳定运行, 不再提需求"
+    },
+    {
+      "round": 56,
+      "topic": "工作",
+      "summary": "讨论了新功能规划"
+    },
+    {
+      "round": 57,
+      "topic": "沟通",
+      "summary": "确认交互风格偏好不变"
+    },
+    {
+      "round": 58,
+      "topic": "PDF",
+      "summary": "PDF导出已成为常规功能"
+    },
+    {
+      "round": 59,
+      "topic": "简洁",
+      "summary": "助手回复保持简洁, 体验好"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "近期交互顺畅"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "建议增加PDF导出功能",
+      "希望助手回复更简洁",
+      "偏好简洁的沟通风格"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "PDF导出功能",
+      "assistant": "PDF导出功能已上线并稳定运行, 需求已满足, 不再提这个建议了。"
+    },
+    {
+      "round": 60,
+      "user": "交互体验",
+      "assistant": "对助手当前的简洁回复风格很满意, 这正是你一直希望的沟通方式。"
+    }
+  ]
+}

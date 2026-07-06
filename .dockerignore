@@ -1,0 +1,82 @@
+# === 版本控制 ===
+.git/
+.gitignore
+
+# === Python 环境 ===
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+
+# === 开发工具缓存 ===
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.opencode/
+.agents/
+.claude/
+.codex/
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === 测试和报告 ===
+tests/
+reports/
+htmlcov/
+.coverage
+coverage.xml
+
+# === 文档和脚本 ===
+docs/
+scripts/
+examples/
+
+# === 运行时产物 ===
+data/
+logs/
+archive/
+*.db
+*.sqlite
+*.sqlite3
+
+# === 模型文件 ===
+models/
+*.bin
+*.gguf
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# === Docker 自身 ===
+docker/
+!docker/entrypoint.sh
+!docker/tool-runtime/
+!docker/quote-service/
+
+# === 环境文件 ===
+.env
+.env.test
+.env.production
+
+# === 开发配置 ===
+config/mypy_full.toml
+config/ruff_full.toml
+config/simple_cleanup_config.yaml
+
+# === 其他 ===
+*.md
+!README.md
+!src/**/*.md
+uv.lock
+conftest.py

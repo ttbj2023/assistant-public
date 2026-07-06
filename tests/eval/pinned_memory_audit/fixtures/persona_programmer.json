@@ -1,0 +1,132 @@
+{
+  "sample_id": "persona_programmer",
+  "sample_type": "mixed",
+  "description": "后端工程师(技术画像)",
+  "pinned_memory": {
+    "basic_info": "职业：后端工程师\n主力语言Go和Python, 工作5年\n偏好微服务架构, 重视可观测性\n昨天的线上支付bug已修复",
+    "preferences": "编辑器用Vim, 装了LSP插件\n计划下周重构支付模块\n希望CI流水线更快"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "技术栈",
+      "summary": "确认Go和Python是主力语言, 微服务架构"
+    },
+    {
+      "round": 42,
+      "topic": "编辑器",
+      "summary": "Vim配置了LSP, 开发效率高"
+    },
+    {
+      "round": 43,
+      "topic": "bug",
+      "summary": "昨天的支付bug已修复上线"
+    },
+    {
+      "round": 44,
+      "topic": "重构",
+      "summary": "计划下周重构支付模块"
+    },
+    {
+      "round": 45,
+      "topic": "CI",
+      "summary": "希望CI流水线更快, 当前要等15分钟"
+    },
+    {
+      "round": 46,
+      "topic": "架构",
+      "summary": "微服务可观测性建设推进中"
+    },
+    {
+      "round": 47,
+      "topic": "bug",
+      "summary": "支付bug修复后运行稳定"
+    },
+    {
+      "round": 48,
+      "topic": "Vim",
+      "summary": "Vim工作流优化"
+    },
+    {
+      "round": 49,
+      "topic": "技术",
+      "summary": "讨论了Go的性能优势"
+    },
+    {
+      "round": 50,
+      "topic": "重构",
+      "summary": "支付重构方案确定, 开始动工"
+    },
+    {
+      "round": 51,
+      "topic": "CI",
+      "summary": "CI优化方案在评估"
+    },
+    {
+      "round": 52,
+      "topic": "工作",
+      "summary": "5年经验, 带新人"
+    },
+    {
+      "round": 53,
+      "topic": "架构",
+      "summary": "可观测性基本建成"
+    },
+    {
+      "round": 54,
+      "topic": "Go",
+      "summary": "Go服务运行良好"
+    },
+    {
+      "round": 55,
+      "topic": "重构",
+      "summary": "支付重构进行中"
+    },
+    {
+      "round": 56,
+      "topic": "Vim",
+      "summary": "Vim使用成肌肉记忆"
+    },
+    {
+      "round": 57,
+      "topic": "CI",
+      "summary": "CI提速方案待排期"
+    },
+    {
+      "round": 58,
+      "topic": "技术",
+      "summary": "讨论了Python脚本自动化"
+    },
+    {
+      "round": 59,
+      "topic": "bug",
+      "summary": "近期没有线上问题"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "技术工作推进顺利"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "昨天的线上支付bug已修复",
+      "计划下周重构支付模块",
+      "希望CI流水线更快"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "支付重构",
+      "assistant": "支付模块重构已完成上线, 之前的bug修复后运行稳定。"
+    },
+    {
+      "round": 60,
+      "user": "CI和架构",
+      "assistant": "CI提速方案待排期, 微服务可观测性基本建成。Go和Vim工作流不变。"
+    }
+  ]
+}

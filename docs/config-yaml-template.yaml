@@ -1,0 +1,289 @@
+# Personal Agent Assistant - config.yaml 结构模板
+#
+# ⚠️ 重要: 本文件是纯结构样例文档, 仅展示配置字段组织, 所有具体值都是占位符.
+#   不要 cp 此文件为 config.yaml 后照抄占位符, 否则服务无法启动.
+#   实际值来源 (按字段类型区分):
+#     - 密钥/token/password → .env (见 .env.example), 不进 config.yaml
+#     - 部署拓扑 (URL/端口/路径) → .env 的 runtime_env 白名单或 config.yaml
+#     - 业务配置 (模型/参数/工具) → config.yaml, 但只覆盖与默认不同的项
+#   字段是否必填、默认值、env 回退链 详见同目录 config-yaml-reference.md.
+#
+# 配置优先级: 环境变量 > config.yaml > Pydantic 默认值 / 内置 catalog.
+# 工具/skill/group 默认清单见 src/config/tool_catalog.py, config.yaml 仅写
+# 需要覆盖的项 (per-tool/per-group deep merge, 不是整体替换).
+# Agent 配置独立维护, 不在此文件中 (见 src/agent/agents_implementations/*/agent.yaml).
+#
+# 生产/开发共用同一份 config.yaml (已纳入 git 跟踪), 所有环境差异通过 .env 注入.
+
+# ===========================================
+# 核心系统配置
+# ===========================================
+core:
+  cache:
+    # 记忆系统专用缓存 (被 src/agent/memory/local_memory/cache.py 直接读取)
+    pinned_memory_cache_size: 50
+    conversation_cache_size: 100
+    todolist_cache_size: 50
+    enable_cache_stats: true
+
+# ===========================================
+# 日志配置
+# ===========================================
+logging:
+  level: info        # debug/info/warning/error, 可被 CLI --log-level 覆盖
+  file_max_bytes: 20971520  # 单个日志文件最大字节 (默认 20MB)
+  backup_count: 5
+
+# ===========================================
+# API 服务配置
+# ===========================================
+api:
+  host: 127.0.0.1
+  port: 8000        # 也可通过 API_PORT 环境变量覆盖
+
+  # 文件下载对外 URL (含完整路径前缀), 为空回退 host:port/v1/files/dl
+  # 也可通过 FILE_SERVER_BASE_URL 环境变量配置
+  # file_server_base_url: <your-public-url>/v1/files/dl
+  # 文件下载 URL HMAC 签名密钥 (走 .env FILE_SIGNING_SECRET, 不进 config.yaml)
+  # file_signing_secret: <走 .env, 严禁写在此处>
+  # 文件下载 URL 默认有效期天数 (0=永久)
+  file_url_ttl_days: 30
+
+  cors_origins: ["*"]
+  cors_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  cors_headers: ["*"]
+  cors_allow_credentials: true
+
+  docs:
+    enable_swagger_ui: true
+    enable_redoc: true
+    docs_url: /docs
+    redoc_url: /redoc
+    openapi_url: /openapi.json
+
+  # 工具调用展示 (也可通过 ENABLE_TOOL_CALL_DISPLAY 环境变量配置)
+  tool_call_display:
+    enable: true
+
+# ===========================================
+# 认证配置
+# ===========================================
+auth:
+  user_management:
+    # 静态用户管理开关 (也可通过 ENABLE_STATIC_USER_MANAGEMENT 环境变量配置)
+    enable_static_user_management: true
+
+# ===========================================
+# 存储配置
+# ===========================================
+storage:
+  file_store:
+    max_user_storage_mb: 500       # 用户最大文件存储 (MB)
+    cleanup_target_mb: 400         # 超限清理目标 (MB)
+    deduplication_enabled: true    # 内容哈希去重
+    quota_check_enabled: true      # 用户配额检查与自动清理
+
+# ===========================================
+# 重试策略 (分层独立; 主 Agent LLM 重试在 inference.retry)
+# ===========================================
+retry:
+  expert_agent:                    # 子 Agent LLM (web_research / geo_research 等)
+    max_retries: 1
+    initial_delay: 2.0
+    max_delay: 20.0
+  http_api:                        # 第三方 HTTP API
+    max_retries: 2
+    base_delay: 1.0
+    rate_limit_delay: 3.0          # 429 专用退避
+    retryable_status: [429, 500, 502, 503, 504]
+  mcp:                             # MCP 工具
+    max_retries: 1
+    base_delay: 1.0
+    rate_limit_delay: 3.0
+  grounding:                       # Gemini Grounding (默认 0, 失败由 fallback 兜底)
+    max_retries: 0
+
+# ===========================================
+# 推理模块配置
+# ===========================================
+inference:
+  embeddings:
+    enabled: true
+    model: local-embedding:bge-m3
+
+  content_analyzer:
+    # 模型 ID 示例; 实际可用 ID 详见 src/inference/llm/definitions/builtin_data.py
+    model: <your-model-id>
+    model_params:
+      max_tokens: 2048
+    pinned_memory_model: ""         # 空=跟随主 model
+    # pinned_memory_model_params:
+    #   temperature: 0.0
+    audit_model: ""                 # 置顶记忆周期审计模型 (空=使用主 model)
+    # arc_model: <your-model-id>    # 索引弧短语蒸馏
+    # arc_model_params: {}
+    dedup_enabled: true
+    dedup_threshold: 0.90
+
+  image_description:
+    model: <your-model-id>
+    # model_params: {}
+    read_image_model: ""            # 空=跟随 model
+    # read_image_model_params: {}
+
+  health_data_extraction:
+    model: <your-model-id>
+    timeout: 60
+    audit_model: ""                 # 空=使用主 model
+    # audit_model_params: {}
+
+  tool_filter:
+    model: local:qwen3:4b-instruct
+    model_params:
+      format: json
+      temperature: 0.0
+      num_predict: 256
+      num_ctx: 4096
+    timeout: 5.0
+    min_tools_for_filter: 2
+
+  experts:
+    default_model: <your-model-id>
+    # default_model_params: {}
+    web_research_model: ""          # 空=回退 default_model
+    # web_research_model_params: {}
+    web_research_synthesis_model: ""
+    # web_research_synthesis_model_params: {}
+    geo_research_model: ""
+    # geo_research_model_params: {}
+    professional_database_model: ""
+    # professional_database_model_params: {}
+    grounding_model: <your-gemini-model-id>
+    grounding_model_params:
+      temperature: 0.1
+      top_p: 1.0
+      max_output_tokens: 4096
+    grounding_timeout: 120
+    grounding_fallback_enabled: true  # Gemini 不可用时的等效工具 fallback
+    url_context_enabled: true
+    url_context_model: <your-gemini-model-id>
+    url_context_quick_timeout: 15
+    url_context_deep_timeout: 20
+    url_context_max_urls: 4
+    maps_grounding_model: <your-gemini-model-id>
+    maps_grounding_model_params:
+      temperature: 0.1
+      max_output_tokens: 4096
+    maps_grounding_timeout: 30
+
+  image_generation:
+    model_id: <your-model-id>
+
+  wechat_publish:
+    model: <your-model-id>
+    model_params:
+      max_tokens: 4096
+    refine_model: <your-model-id>
+    refine_model_params:
+      max_tokens: 32768
+
+  # 统一 fallback (主模型瞬时错误白名单失败时切换)
+  fallback:
+    text_model: <your-model-id>
+    # text_model_params: {}
+    vision_model: <your-model-id>
+    # vision_model_params: {}
+
+  retry:
+    max_retries: 1
+    total_timeout: 900
+    initial_delay: 2.0
+    max_delay: 30.0
+
+# ===========================================
+# 工具系统配置
+# ===========================================
+# 完整默认清单见 src/config/tool_catalog.py 的 _BUILTIN_TOOLS_CONFIG,
+# 此处仅展示结构. 实际 config.yaml 按 per-tool/per-group 合并, 只写自定义部分.
+# 常见反模式: 把整个 catalog 复制到 config.yaml (冗余 + 漂移风险), 务必避免.
+tools:
+  tool_groups:
+    <group_name>_group:
+      name: <group_name>_group       # 必须以 _group 结尾
+      summary: 一句话摘要 (拼接到 search_available_tools 描述)
+      description: 2-3 行能力描述
+      keywords: [关键词1, 关键词2]
+      members: [tool_a, tool_b]
+      # prompt_hint: 组级策略引导 (可选)
+
+  internal_tools:
+    <tool_name>:
+      name: <tool_name>
+      class_path: src.tools.internal.<module>.<Class>
+      enabled: true
+      timeout: 30.0
+      description: 工具描述
+      config: {}
+      # prompt_hint: 策略引导 (可选)
+      # skip_when_capabilities: [image_input]  # 主模型具备能力时跳过注入
+
+  external_tools:
+    <tool_name>:
+      name: <tool_name>
+      class_path: src.tools.external.<module>.<Class>
+      enabled: true
+      timeout: 60.0
+      description: 工具描述
+      config: {}
+
+  mcp_servers:
+    <server_name>:
+      name: <server_name>
+      transport: streamable_http      # 可选: streamable_http/sse/stdio
+      url: <your-mcp-url>
+      headers:
+        Authorization: Bearer ${YOUR_API_KEY_ENV}  # ${ENV_VAR} 占位符, 实际值走 .env
+      enabled: true
+      timeout: 60.0
+      tool_names:
+        <mcp原始工具名>: <项目工具名>
+      # response_formatters: {}
+      # tool_descriptions: {}
+      # local_args: {}
+
+  skills:
+    <skill_name>:
+      name: <skill_name>
+      source: ./skills/<skill_name>/   # SKILL.md 所在目录 (相对项目根)
+      backend: prompt_only             # 可选: prompt_only (纯知识) / executable (需 tool-runtime)
+      associated_tools: [<tool_name>]  # load_skill 激活时注入的关联工具
+      enabled: true
+
+# ===========================================
+# OpenClaw Gateway 配置 (主动发消息渠道)
+# ===========================================
+# gateway.url 默认 http://127.0.0.1:18789, Docker 由 env OPENCLAW_GATEWAY_URL 覆盖
+# gateway.token 走 .env OPENCLAW_GATEWAY_TOKEN, 不进 config.yaml
+openclaw:
+  gateway:
+    url: http://127.0.0.1:18789
+    # token: <走 .env, 严禁写在此处>
+  # 通知渠道系统级默认 (微信渠道补发/定时消息/价格监控派发依赖此配置, 缺失会静默失败)
+  notification_defaults:
+    weixin:
+      channel: <your-openclaw-channel-id>
+
+# ===========================================
+# SMTP 邮件配置 (系统级共享)
+# ===========================================
+# 发件凭据 (host/username/password/from_address) 推荐全部留空走 .env:
+#   SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_ADDRESS
+# host/username/from_address 也可在 config.yaml 显式填非敏感值;
+# password 严禁进 config.yaml, 必须走 .env.
+smtp:
+  host: ""          # 留空回退 .env SMTP_HOST
+  port: 465
+  use_tls: true
+  username: ""      # 留空回退 .env SMTP_USERNAME
+  password: ""      # 留空回退 .env SMTP_PASSWORD (密钥不进 config.yaml)
+  from_address: ""  # 留空回退 .env SMTP_FROM_ADDRESS, 再回退 username

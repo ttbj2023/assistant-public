@@ -1,0 +1,49 @@
+services:
+  tool-runtime:
+    build:
+      context: ../..
+      dockerfile: docker/tool-runtime/Dockerfile
+      args:
+        PIP_INDEX_URL: ${TOOL_RUNTIME_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        HTTP_PROXY: ${TOOL_RUNTIME_HTTP_PROXY:-}
+        HTTPS_PROXY: ${TOOL_RUNTIME_HTTPS_PROXY:-}
+        http_proxy: ${TOOL_RUNTIME_HTTP_PROXY:-}
+        https_proxy: ${TOOL_RUNTIME_HTTPS_PROXY:-}
+    image: assistant-tool-runtime:dev
+    container_name: assistant-tool-runtime
+    user: "10002:10002"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 384
+    mem_limit: 4g
+    cpus: 2.0
+    ports:
+      - "127.0.0.1:${TOOL_RUNTIME_PORT:-8766}:${TOOL_RUNTIME_PORT:-8766}"
+    volumes:
+      - tool-runtime-workspace:/workspace
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=512m
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:${TOOL_RUNTIME_PORT:-8766}/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  tool-runtime-workspace:

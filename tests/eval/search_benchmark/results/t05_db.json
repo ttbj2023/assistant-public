@@ -1,0 +1,123 @@
+{
+  "query": "PostgreSQL 索引优化 EXPLAIN ANALYZE 慢查询",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "Re: Slow performance with no apparent reason",
+        "url": "https://www.postgresql.org/message-id/20031026092948.GC15100@svana.org",
+        "domain": "postgresql.org",
+        "site": "PostgreSQL",
+        "snippet": "Re: Slow performance with no apparent reason\nFrom: Martijn van Oosterhout <kleptog(at)svana(dot)org>\nTo: Yonatan Goraly <ygoraly(at)sbcglobal(dot)net>\nCc: pgsql-general(at)postgresql(dot)org\nSubject: Re: Slow performance with no apparent reason\nDate: 2003-10-26 09:29:48\nMessage-ID: 20031026092948.GC15100@svana.org\nThread:\nLists: pgsql-general  pgsql-performance\nOk, those figures look like you've mever run ANALYZE on that database at\nall, given you keep getting the default values. EXPLAIN ANALYZE would have\ngiven the actual number of matching rows.\nGiven that, the plans are probably extremely s...",
+        "publish_time": "2003-10-26T09:29:48+08:00",
+        "auth_info": "非常权威",
+        "rank_score": 1,
+        "is_bytedance": false,
+        "source_type": "官方文档"
+      },
+      {
+        "title": "[PostgreSQL]算法服务查询慢？PostgreSQL执行计划深度拆解",
+        "url": "https://cloud.tencent.cn/developer/article/2600491",
+        "domain": "tencent.cn",
+        "site": "腾讯云",
+        "snippet": "[PostgreSQL]算法服务查询慢？PostgreSQL执行计划深度拆解\n二一年冬末\n发布于 2025-12-13 13:15:19\nI. 执行计划基础：EXPLAIN的隐藏语法\n1.1 EXPLAIN命令的\"四重境界\"\nPostgreSQL的EXPLAIN远非一个简单的查询分析工具，它支持多层次、多维度的执行计划展示：\n基础用法：\n代码语言：\nsql\n-- LEVEL 1: 基础计划树\nEXPLAIN \nSELECT user_id, AVG(score) FROM predictions GROUP BY user_id;\n进阶用法：\n代码语言：\nsql\n-- LEVEL 2: 实际执行 \nwidth=48)\n--      Filter: (created_at::date = '2024-01-15'::date)\n--      Rows Removed by Filter: 9876543  -- 删除了98%的行！\n-- 根本原因：created_at::date导致索引失效\n优化方案：\n代码语言：\nsql\nAI代码解释\n-- 方案I：改写为范围查询（推荐）\nSELECT ...\nWHERE created_at >= '2024-01-15'::timestamp \n  AND created_at < '2024-01-16'::timestamp;\n-- 执...",
+        "publish_time": "2025-12-13T13:15:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8685062527656555,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "PostgreSQL查询慢，如何通过执行计划（EXPLAIN）定位性能瓶颈？",
+        "url": "https://ask.csdn.net/questions/8424179",
+        "domain": "csdn.net",
+        "site": "CSDN问答",
+        "snippet": "code4f 2025-06-14 18:45   采纳率: 99.1%\nPostgreSQL查询慢，如何通过执行计划（EXPLAIN）定位性能瓶颈？\n在PostgreSQL中，查询性能慢是一个常见问题，如何通过执行计划（EXPLAIN）定位瓶颈是关键。当查询响应时间过长时，使用`EXPLAIN`或`EXPLAIN ANALYZE`可以查看查询的执行计划。例如，若执行计划中出现顺序扫描（Seq Scan），但预期应为索引扫描（Index Scan），可能表明缺少索引或统计信息不足。此外，高成本的操作如嵌套循环连接（Nested Loop）可能导致性能下降，需评估是否可通过调整连接方式或增加索引来优\n化。同时，注意`EXPLAIN ANALYZE`提供的实际执行时间和行数，与计划值对比，差异过大可能需要更新表统计信息（`ANALYZE`）。最后，检查I/O和内存使用情况，确保工作内存（work_mem）足够支持排序或哈希操作，避免磁盘交换带来的性能损失。\n1 条回答\n璐寶 2025-06-14 18:45\n1. 初步了解PostgreSQL查询性能问题\n在PostgreSQL中，查询性能慢是一个常见问题。为解决这一问题，首先需要明确查询执行的瓶颈所在。通过使用EXPLAIN或EXPLAIN ANALYZE 命令，可以查看查询的执行计划。\nEXPLAIN提供查询的计划信息，包括操作类型...",
+        "publish_time": "2025-06-14T18:45:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8463924527168274,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "PostgreSQL的索引优化策略？",
+        "url": "https://developer.aliyun.com/article/1596677",
+        "domain": "aliyun.com",
+        "site": "阿里云开发者社区",
+        "snippet": "m等内存相关参数，可以提高索引的效率和查询性能[^2^][^5^]。例如，将work_mem设置为1GB：\nSET work_mem TO '1GB';\n分析查询计划\n使用EXPLAIN命令：在创建索引后，使用EXPLAIN或EXPLAIN ANALYZE命令查看查询计划，确保索引被正确使用，并识别慢查询瓶颈[^3^][^4^]。例如，分析一个查询的执行计划：\nEXPLAIN ANALYZE SELECT * FROM orders WHERE order_date > '2022-01-01';\n综上所述，通过选择适当的索引类型、创建复合索引、避免过度索引、定期维护索引、调整参数设置以及分析查询计划，可以显著优化PostgreSQL的性能。同时，持续监控和适时调整索引策略是确保数据库性能稳定高效的关键。\n文章标签：\n云原生数据库 PolarDB\n索引\n关系型数据库\nPostgreSQL\n监控\n数据库\n关键词：\nPostgreSQL索引\nPostgreSQL策略\nPostgreSQL优化\n来 源：",
+        "publish_time": "2024-08-26T09:21:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8379154801368713,
+        "is_bytedance": false,
+        "source_type": "厂商云"
+      },
+      {
+        "title": "PostgreSQL 管理：使用与优化 PostgreSQL 的技巧",
+        "url": "https://cloud.tencent.cn/developer/article/2616281",
+        "domain": "tencent.cn",
+        "site": "腾讯云",
+        "snippet": "_stat_activity WHERE pid = xxx;\n```\n------\n![img] (https://developer.qcloudimg.com/http-save/yehe-1087118/594e61a940efa2d992ec3e09608af3ae.png)\n#** 2. PostgreSQL 性能优化技巧**\n##** 2.1 索引优化**\n- 常用索引类型\n| 类型 | 场景 |\n| ------ | ------------------ |\n| B-Tree | 精确匹配、范围查询 |\n| Hash | 等值查询 |\n| GIN | JSONB、全文搜索 |\n| \nGiST | 地理空间、模糊匹配 |\n| BRIN | 大表、顺序数据 |\n- 创建索引\n``` sql\nCREATE INDEX idx_user_name ON users(name);\n```\n- 避免过度索引：索引越多，写入越慢。\n##** 2.2 查询优化**\n- 使用\n```\nEXPLAIN ANALYZE\n```\n分析执行计划\n``` sql\nEXPLAIN ANALYZE SELECT * FROM users WHERE name='Tom';\n```\n- 避免 SELECT *，减少 I/O\n- 使用分页优化（避免 OFFSET 大量跳过）\n``` sql\nSELEC...",
+        "publish_time": "2026-01-13T11:47:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8374290466308594,
+        "is_bytedance": false,
+        "source_type": "其他"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "PostgreSQL · 最佳实践 · EXPLAIN 使用浅析（优化器，查询计划）（发布时间：2024-07-09 17:05:15）",
+        "url": "https://blog.csdn.net/weixin_41287260/article/details/124394206",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "PgSQL · 最佳实践 · EXPLAIN 使用浅析\n背景\n在使用数据库时，经常会有开发者有这样的疑问：“我的表对应字段已经创建了索引，为什么这个SQL 语句执行还是这么慢？” 虽然数据库SQL 执行慢有很多原因，但是对于PostgreSQL DBA 来说，好像有个共识，遇到用户慢SQL优化的问题，先拿EXPLAIN 命令查看下对应的查询计划，从而可以快速定位慢在哪里。这就引出了本文的主角—PostgreSQL 的EXPLAIN 命令。\nEXPLAIN 语法\n在PostgreSQL 中，EXPLAIN 命令可以输出SQL 语句的查询计划，具体语法如下：\nEXPLAIN [ ( option [, ...] ) ] statement\nEXPLAIN [ ANALYZE ] [ VERBOSE ] statement\nwhere option can be one of:\n ANALYZE [ boolean ]\n VERBOSE [ boolean ]\n COSTS [ boolean ]\n BUFFERS [ boolean ]\n TIMING [ boolean ]\n SUMMARY [ boolean ]\n FORMAT { TEXT | XML | JSON | YAML }\n其中：\nANALYZE 选项为TRUE 会实际执行SQL，并获得相应的查询计划，默认为FALSE...",
+        "publish_time": "2024-07-09",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "PostgreSQL EXPLAIN 使用浅析",
+        "url": "https://zhuanlan.zhihu.com/p/414089692",
+        "domain": "zhihu.com",
+        "site": "ref_2",
+        "snippet": "背景\n在使用数据库时，经常会有开发者有这样的疑问：“我的表对应字段已经创建了索引，为什么这个SQL 语句执行还是这么慢？” 虽然数据库SQL 执行慢有很多原因，但是对于PostgreSQL DBA 来说，好像有个共识，遇到用户慢SQL优化的问题，先拿EXPLAIN 命令查看下对应的查询计划，从而可以快速定位慢在哪里。这就引出了本文的主角—PostgreSQL 的EXPLAIN 命令。\nEXPLAIN 语法\n在PostgreSQL 中，EXPLAIN 命令可以输出SQL 语句的查询计划，具体语法如下：\nEXPLAIN [ ( option [, ...] ) ] statement EXPLAIN [ ANALYZE ] [ VERBOSE ] statement where option can be one of: ANALYZE [ boolean ] VERBOSE [ boolean ] COSTS [ boolean ] BUFFERS [ boolean ] TIMING [ boolean ] SUMMARY [ boolean ] FORMAT { TEXT | XML | JSON | YAML }\n其中：\nANALYZE 选项为TRUE 会实际执行SQL，并获得相应的查询计划，默认为FALSE。如果优化一些修改数据的SQL 需要真实的执行但是不能影响现有的数据，...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "postgresql通过索引优化查询速度操作（发布时间：2020-12-28 12:02:16）",
+        "url": "https://m.jb51.net/article/203010.htm",
+        "domain": "jb51.net",
+        "site": "ref_3",
+        "snippet": "当数据量比较大的时候，提升查询效率就是需要去考虑的事情了。一个百万级别的表格，如果不做任何优化的话，即使是最简单的查询语句执行起来也是慢的让人难以接受；当然“优化”本身是一个比较复杂的工程，从设计表、字段到查询语句的写法都有很多讲究，这里只考虑索引的方式，且是最普通的索引；\n下面的操作中对应数据库表w008_execrise_info（8000数据量）， w008_wf02_info（4000数据量）\n1 任务表数据\nSELECT w.* FROM w008_wf02_info w WHERE w.is_removed =0 AND w.wfno = 'WF02' AND EXISTS ( SELECT 1 FROM w008_execrise_info info JOIN w008_privilege_allocation P ON ( info.subjecttyp = P.subjecttyp AND info.gradetyp = P.gradetyp AND P.loginname = w.create_by AND P.verifyusers ='yixi_li' AND P.wftype = 20 ) WHERE info.is_removed =0 AND info.wfid = w.wfid ) ORDER BY create_date DESC\n执行结果：耗时在...",
+        "publish_time": "2020-12-28",
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "PostgreSQL CPU占用100%性能分析及慢查询优化 pg（发布时间：2021-05-26 14:39:44）",
+        "url": "https://blog.csdn.net/sunny_day_day/article/details/117291333",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "PostgreSQL CPU占用100%性能分析及慢查询优化 pg_stat_statements，查看连接数pg_stat_activity视图，（Table Scan）\n查看连接数变化\n追踪慢SQL\n1、第一种方法是使用pg_stat_statements插件定位慢SQL，步骤如下。\n1.1 如果没有创建这个插件，需要手动创建。我们要利用插件和数据库系统里面的计数信息（如SQL执行时间累积等），而这些信息是不断累积的，包含了历史信息。为了更方便的排查当前的CPU满问题，我们要先重置计数器。\n1.2 等待一段时间（例如1分钟），使计数器积累足够的信息\n1.3 查询最耗时的SQL（一般就是导致问题的直接原因）\n1.4 查询读取Buffer次数最多的SQL，这些SQL可能由于所查询的数据没有索引，而导致了过多的Buffer读，也同时大量消耗了CPU\n1.5 最耗IO的SQL\n1.6 响应时间抖动最严重的SQL\n1.7 最耗共享内存的SQL\n1.8 最耗临时空间的SQL\n1.9 通过查询pg_stat_statements视图，获取统计信息\n2、第二种方法是，直接通过pg_stat_activity视图，利用下面的查询，查看当前长时间执行，一直不结束的SQL。这些SQL对应造成CPU满，也有直接嫌疑。\n3、第3种方法，是从数据表上表扫描（Table Scan）的信息开始查起，查找缺失索...",
+        "publish_time": "2021-05-26",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "PostgreSQL之analyze监控-Bean",
+        "url": "http://blog.chinaunix.net/uid-24774106-id-3802225.html",
+        "domain": "chinaunix.net",
+        "site": "ref_5",
+        "snippet": "最近一段时间，自己比较懒惰，自己老婆快生了，自己各种压力，加上照顾老婆，PostgreSQL源码阅读工作陷于停滞阶段。但是自己PostgreSQL的功力还是有增长的。最近在监控线上系统的数据库操作，分析比较慢的查询，找到优化SQL或者提升PostgreSQL性能的途径。总体来说，真刀真枪的搞，stackoverflow，blog，官方文档看了不少，对DB的查询计划有了初步的理解，这也吸引我开始看查询计划，查询优化部分的代码。 analyze是获取统计信息。PostgreSQL中有张pg_statistics的系统表，记录着用户各个表的统计信息，输出不友好，不是给人看的，是给PostgreSQL另外提供pg_stats表，可以查看用户DB里面各个relation各个字段上的统计信息。一条SQL的执行，可能有多种方法，条条大路通罗马，是用串行扫描Seq Scan还是Index Scan还是Bitmap Heap Scan，对于SQL中的union是用Nested Loop还是使用Hash Join，这需要PostgreSQL决策。暂时看不懂这些术语也没关系，毕竟我也只是看了几篇博客，看了点官方文档，自己理解的也不深。总之了PostgreSQL需要评估代价，Rows Estimation是PostgreSQL很有学问的一个分支，这我不细说，这不是本文的主题，因为展开讲的话，这个可不是一篇...",
+        "publish_time": "",
+        "is_bytedance": false,
+        "source_type": "其他"
+      }
+    ]
+  }
+}

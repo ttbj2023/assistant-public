@@ -1,0 +1,18 @@
+{
+  "sample_id": "gifford_r43",
+  "sample_type": "positive",
+  "description": "真实: 体重(健康事实), 该记",
+  "user_message": "近期的体重已经从99kg来到了95.7, 可能要在这个上面维持一段时间了",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "",
+    "preferences": ""
+  },
+  "ground_truth": {
+    "should_add": [
+      "体重",
+      "95.7"
+    ],
+    "should_not_add": []
+  }
+}

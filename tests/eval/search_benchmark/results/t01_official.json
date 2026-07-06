@@ -1,0 +1,123 @@
+{
+  "query": "FastAPI Depends 依赖注入 用法 官方文档",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "FastAPI依赖注入",
+        "url": "https://blog.csdn.net/weixin_52185313/article/details/157947263",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "FastAPI依赖注入\n原创 于 2026-02-10 23:52:56 发布 · 651 阅读\n文章标签：\n#fastapi #python\nFastAPI依赖注入 – pd的FastAPI笔记\n文章目录\nFastAPI依赖注入 -- pd的FastAPI笔记\n依赖注入\nDepends() 基本语法\n路径级依赖注入\n路由级依赖注入\n全局级依赖注入\n嵌套依赖注入\n依赖注入（类注入）\n领域驱动设计（DDD）\nDDD分层架构\n项目结构示意\n依赖注入\n依赖注入（DI） 是一种设计模式，允许我们将“功能依赖”以声明式的方式注入到路由、中间件或其他组件中。FastAPI 内建了强大的依赖注入系统，它不仅支持函数依赖，还支持类依赖、嵌套依赖等高级用法。\nFastAPI 依赖注入依赖注入主要有三个级别,区别在于作用域不同：\n路 径(Path Operation) 级别：最常用，注入到 @app.get()、@router.post() 等装饰器下面的函数中\n路由(APIRouter) 级别- 共享依赖：将依赖注入到整个路由器下的所有路径操作\n全局(FastAPI) 级别-全局依赖：将依赖注入到整个应用的所有路径操作\nDepends() 基本语法\nfrom fastapi import FastAPI, Depends\n\napp = FastAPI()\ndef get_query_param(qu...",
+        "publish_time": "2026-02-10T23:52:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9772983193397522,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "【FastAPI】FastAPI依赖注入完全指南",
+        "url": "https://blog.csdn.net/weixin_63434398/article/details/156047280",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "ds，但它更轻量、更 Pythonic。本文将深入探讨 FastAPI 的依赖注入系统，从基础用法到底层原理，帮助你彻底掌握这个强大的工具。\n文章目录\nFastAPI依赖注入完全指南\n一、什么是依赖注入\n二、FastAPI的两种注入机制\n三、Depends核心用法详解\n四、依赖的生命周期管理\n五、高级用法与技巧\n六、实战案例完整的认证系统\n七、Depends底层原理剖析\n八、与Spring依赖注入对比\n九、最佳实践与常见问题\n十、总结\n一、什么是依赖注入\n1.1 核心思想\n依赖注入（Dependency Injection） 的核心思想是：\n“我需要什么，你给我什么，我不关心怎么创建的”\n没有依赖\n管怎么来的\n\n    return db.query(f\"SELECT * FROM orders WHERE user_id = {user.id}\")\npython\n好处：\n解耦：业务代码不关心依赖如何创建\n可测试：轻松传入 mock 对象\n可复用：同样的依赖可以在多处使用\n代码清晰：函数签名就是文档\n1.2 依赖注入的三种方式\n方式 说明 示例\n构造函数注入 通过构造函数传入依赖__init__(self, db)\n属性注入 通过属性设置依赖obj.db = db\n方法参数注入 通过方法参数传入依赖def func(db)\nFastAPI 主要使用方法参数注入，通过函数参数声明需要...",
+        "publish_time": "2025-12-18T10:54:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9331947565078735,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "如何正确使用依赖注入在FastAPI中?",
+        "url": "https://www.volcengine.com/theme/7478403-R-7-1",
+        "domain": "volcengine.com",
+        "site": "火山引擎",
+        "snippet": "如何正确使用依赖注入在FastAPI中？\n在F as t API中正确使用依赖注入的方法如下：\n首先，导入Depends和FastAPI模块：\nfrom fastapi import Depends, FastAPI\n创建一个F as t API实例：\napp = FastAPI()\n定义一个依赖（dependency），可以是一个函数、类或者其他可调用对象。例如，我们定义一个名为get_db()的依赖函数，该函数返回一个 数据库连接对象：\ndef get_db():\n    db = DBConnection()  # 假设DBConnection是一个数据库连接类\n    yield db\n    db.close()\n在路由处理函数中使用Depends装饰器，并将依赖函数作为参数传递给它。例如：\n@app.get(\"/users/\")\nasync def get_users(db: DBConnection = Depends(get_db)):\n    # 使用db对象进行数据库操作\n    users = db.query(\"SELECT * FROM users\")\n    return users\n在上述示例中，get_users路由处理函数依赖于get_db函数。F as t API会自动调用get_db函数，获取数据库连接对象，并将其作为参数传递给get_user...",
+        "publish_time": "2024-03-19T23:40:45+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9135141968727112,
+        "is_bytedance": false,
+        "source_type": "其他"
+      },
+      {
+        "title": "FastAPI 封神技巧：Depends 依赖注入，90% 的人用错了！",
+        "url": "https://tencentcloud.csdn.net/69ea87a20a2f6a37c5a488b6.html",
+        "domain": "csdn.net",
+        "site": "腾讯云开发者社区",
+        "snippet": "db = get_db()\n    # 每个接口都要写一遍：验证用户Token\n\n    current_user = get_current_user()\n    # ... 业务逻辑\nFastAPI 的Depends依赖注入机制，直接让你告别这种 \"体力活\"——一行代码自动注入所需资源，错误自动处理，代码复用率拉满！\n🎯核心认知：Depends 到底是什么？\nDepends是 FastAPI 的依赖注入神器：✅ 请求到达时，自动执行Depends()里的函数✅ 把函数返回值直接注入到接口参数中✅ 自动处理异常（比如 Token 无效直接返回 401）✅ 同一个依赖可复用在 N 个接口，彻底消灭重复代码\n🌰 最直观对比：不用 Depends vs 用 Depends\n❶ 不用 Depends（手动写，又笨又容易错）\npython\n运行\ndef query_user_detail(reques\nends（自动注入，简洁到离谱）\npython\n运行\ndef query_user_detail(\n    current_user: User = Depends(get_current_login_user),  # 自动验证用户\n    db: Session = Depends(get_db)                          # 自动获取数据库连接\n):\n    #...",
+        "publish_time": "2026-03-22T20:46:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8748056292533875,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "怎么利用Perplexity搜索并理解FastAPI的异步依赖注入机制_参考官方文档",
+        "url": "https://m.php.cn/faq/2411097.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "怎么利用Perplexity搜索并理解FastAPI的异步依赖注入机制_参考官方文档\n倫敦的微風\n2026-05-02\n987人浏览\nfastapi异步依赖需用async def定义、路径操作函数也须为async、用depends注入且避免同步调用；推荐annotated+depends提升类型安全；各层依赖须统一异步并显式await，否则返回协程对象导致异常。\n如果您尝试在 FastAPI 中实现异步逻辑并将其作为依赖项注入路径操作函数，但发现依赖函数未按预期等待或返回值异常，则可能是由于对异步依赖的声明方式、调用时机或类型注解使用不当。以下是理解与正确使用 FastAPI 异步依赖注入机制的具体步骤：\n一、确认依赖函数是否正确定义为 async\nFastAPI 要求异步依赖必须是真正的协程函数（即使用 async def 定义），否则无法被 await 调用，系统将抛出 RuntimeEr\nror 或静默降级为同步执行。该函数需返回可被路径操作函数直接消费的数据结构，如字典、Pydantic 模型或原始类型。\n1、定义一个异步依赖函数，例如用于异步获取用户配置：\n2、使用 async def get_user_config(user_id: str) -> dict: 声明函数签名。\n3、在函数体内使用 await 调用异步 I/O 操作，如数据库查询或 HTTP 请求。\n4、...",
+        "publish_time": "2026-05-02T00:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.871172308921814,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "依赖注入（Depends）、中间件（日志记录、错误处理、身份验证、压缩响应、添加响应头）（发布时间：2024-10-23 14:38:32）",
+        "url": "https://blog.csdn.net/qq_38120851/article/details/143116492",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "接：一文掌握异步web框架FastAPI（二）-CSDN博客\n目录\n六、依赖注入\n1、基本用法\n2、使用依赖注入传递配置参数\n3、使用依赖注入进行权限验证\n4、使用依赖注入管理资源\n5、使用依赖注入进行依赖项缓存\n6、使用依赖注入进行跨模块依赖管理\n7、使用依赖注入进行请求上下文管理\n七、中间件\n1、日志记录中间件\n2、错误处理中间件\n3、身份验证中间件（JWT认证）\n4、压缩响应中间件\n5、添加响应头中间件\n六、依赖注入\nFastAPI 提供了一个强大的依赖注入系统，使得管理和组织代码中的依赖关系变得更加简单和高效。依赖注入（Dependency Injection, DI）是一种设计模式，它允许将组件（如函数、类或服务）之间的依赖关系明确地表达出来，而不是硬编码在组件内部。这使得代码更加模块化、可测试和易于维护。\n在 FastAPI 中，依赖注入主要通过\nDepends\n类实现。\nDepends\n用于声明一个函数的依赖项，FastAPI 会自动处理这些依赖项的创建和传递。\n提高代码的可维护性：依赖关系明确，易于理解和修改。\n增强代码的可测试性：可以轻松地替换依赖项，进行单元测试。\n减少代码耦合：组件之间的耦合度降低，系统更加灵活。\n1、基本用法\n定义依赖项、使用依赖项以及在类中使用依赖项\nfrom fastapi import FastAPI, Depends, HTTPExc...",
+        "publish_time": "2024-10-23",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "FastAPI 中间件与依赖注入：打造灵活的 API 架构（发布时间：2024-09-03 17:15:12）",
+        "url": "https://blog.csdn.net/ylong52/article/details/141866905",
+        "domain": "csdn.net",
+        "site": "ref_2",
+        "snippet": "在 FastAPI 中，\nDepends\n是一个非常重要的概念，它用于依赖注入。依赖注入是一种设计模式，允许你将组件（如函数、类或服务）之间的依赖关系明确地表达出来，而不是硬编码在组件内部。这使得代码更加模块化、可测试和易于维护。\n什么是\nDepends\n？\nDepends\n通常用于以下场景：\n参数注入：将参数注入到路由处理函数中。\n服务注入：将服务或工具类的实例注入到路由处理函数中。\n前置验证：在路由处理函数执行之前执行验证逻辑。\n如何使用\nDepends\n？\nDepends\n通常与路由处理函数的参数一起使用，如下所示：\nfrom fastapi import Depends\ndef get_query(token: str = Depends(your_dependency_function)):\n return token\n@app.get(\"/items/\")\nasync def read_items(query: str = Depends(get_query)):\n return {\n\"query\": query}\n在这个例子中，\nyour_dependency_function\n是一个依赖项函数，它返回一个值，该值将被注入到\nget_query\n函数中，然后\nget_query\n函数的返回值又被注入到路由处理函数\nread_items\n中。\n依赖项函数\n依赖项函数可以...",
+        "publish_time": "2024-09-03",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "三周精通FastAPI：20 Dependencies 依赖项 和类作为依赖项（发布时间：2024-10-29 10:17:44）",
+        "url": "https://blog.csdn.net/skywalk8163/article/details/143314895",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "官方文档：依赖项 - FastAPI\n依赖项\n¶\nFastAPI 提供了简单易用，但功能强大的依赖注入系统。\n这个依赖系统设计的简单易用，可以让开发人员轻松地把组件集成至 FastAPI。\n什么是「依赖注入」\n¶\n编程中的「依赖注入」是声明代码（本文中为路径操作函数 ）运行所需的，或要使用的「依赖」的一种方式。\n然后，由系统（本文中为 FastAPI）负责执行任意需要的逻辑，为代码提供这些依赖（「注入」依赖项）。\n依赖注入常用于以下场景：\n共享业务逻辑（复用相同的代码逻辑）\n共享数据库连接\n实现安全、验证、角色权限\n等……\n上述场景均可以使用依赖注入，将代码重复最小化。\n第一步\n¶\n接下来，我们学习一个非常简单的例子，尽管它过于简单，不是很实用。\n但通过这个例子，您可以初步了解「依赖注入」的工作机制。\n创建依赖项\n¶\n首先，要关注的是依赖项。依赖项就是一个函数，且可以使用与路径操作函数相同的参数：\nfrom typing import Union\nfrom fastapi import Depends, FastAPI\napp = FastAPI()\nasync def common_parameters(\n q: Union[str, None] = None, skip: int = 0, limit: int = 100\n):\n return {\"q\": q, \"skip\":...",
+        "publish_time": "2024-10-29",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "fastapi  depend（发布时间：2025-01-20 15:06:24）",
+        "url": "https://wenku.csdn.net/answer/6fmpef9nnd",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "### FastAPI 中的依赖注入系统 FastAPI 提供了一套强大而灵活的依赖注入机制，允许开发者通过函数参数声明依赖关系。这不仅简化了代码结构，还增强了模块化和可测试性。 #### 基本概念 依赖注入是指将对象所需的外部资源作为参数传递给该对象的过程。在 FastAPI 中，可以通过定义路径操作函数的参数来实现这一点。这些参数可以来自查询字符串、请求体、头部或其他地方[^1]。 #### 定义依赖项 为了创建一个依赖项，在 Python 函数上应用 `Depends` 类即可： ```python from fastapi import Depends, FastAPI app = FastAPI() async def common_parameters(q: str | None = None, skip: int = 0, limit: int = 10): return {\"q\": q, \"skip\": skip, \"limit\": limit} @app.get(\"/items/\") async def read_items(commons: dict = Depends(common_parameters)): return commons ``` 在这个例子中，`common_parameters` 是一个普通的异步或同步函数，它接受一些标准的 HTTP 请求...",
+        "publish_time": "2025-01-20",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "FastAPI 高级特性：依赖注入与应用模式（发布时间：2024-12-05 08:58:31）",
+        "url": "https://blog.csdn.net/weixin_52392194/article/details/144255448",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "FastAPI 高级特性：依赖注入与应用模式\n目录\n📦 1. 依赖注入概念与基础\n🔑 2. 依赖注入的生命周期\n🛠 3. FastAPI 中依赖注入的应用实例\n🚀 4. 高级依赖注入技巧与最佳实践\n📦 1. 依赖注入概念与基础\n依赖注入定义与作用\n依赖注入（Dependency Injection，简称 DI）是一种常见的设计模式，它通过解耦代码中的依赖关系，从而使得系统更加灵活和易于测试。FastAPI 中的依赖注入功能在创建Web应用时尤其有用，能够有效地降低耦合度，提高代码的可维护性和可测试性。\n在 FastAPI 中，依赖注入的基本思路是：将一个函数、对象或者其他外部资源作为参数传递给处理请求的路径操作函数（即路由处理函数）。这些外部资源通常是应用中的共享状态或者服务，如数据库连接、外部 API 客户端等。FastAPI 将自动处理这些依赖的创建、销毁和传递，开发者无需手动管理这些资源。\nfrom fastapi import FastAPI, Depends\napp = FastAPI()\ndef get_query_param(q: str = \"default\"):\n return q\n@app.get(\"/items/\")\nasync def read_item(query_param: str = Depends(get_query_param)):\n retur...",
+        "publish_time": "2024-12-05",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

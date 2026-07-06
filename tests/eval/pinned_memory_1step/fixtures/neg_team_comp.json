@@ -1,0 +1,21 @@
+{
+  "sample_id": "neg_team_comp",
+  "sample_type": "negative",
+  "description": "④过渡状态-团队当前构成/流程: 团队会调整, 拒绝",
+  "user_message": "团队有6个后端, 2个前端, 1个SRE, 代码审查用GitHub PR, 合并前需要至少一个approve, SRE负责生产环境稳定性",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "姓名陈思远，在杭州做后端开发，使用Go开发微服务，使用Python进行脚本编写和数据分析，偏好使用PostgreSQL",
+    "preferences": "比较宅，喜欢科幻小说和单机游戏，最喜欢《三体》和塞尔达"
+  },
+  "ground_truth": {
+    "should_add": [],
+    "should_not_add": [
+      "6个后端",
+      "前端",
+      "SRE",
+      "approve",
+      "代码审查"
+    ]
+  }
+}

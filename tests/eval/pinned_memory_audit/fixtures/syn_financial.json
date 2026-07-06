@@ -1,0 +1,128 @@
+{
+  "sample_id": "syn_financial",
+  "sample_type": "negative",
+  "description": "财务事实(风险偏好/薪资/持仓), 争议项保留不评",
+  "pinned_memory": {
+    "basic_info": "风险偏好：稳健型投资\n持有某科技股约1000股\n月薪2万",
+    "preferences": "偏好低风险理财"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "投资",
+      "summary": "风险偏好稳健型, 不追求高收益"
+    },
+    {
+      "round": 42,
+      "topic": "持仓",
+      "summary": "持有某科技股约1000股, 长期看好"
+    },
+    {
+      "round": 43,
+      "topic": "收入",
+      "summary": "月薪2万, 收入稳定"
+    },
+    {
+      "round": 44,
+      "topic": "理财",
+      "summary": "偏好低风险理财, 配置了债券基金"
+    },
+    {
+      "round": 45,
+      "topic": "股票",
+      "summary": "科技股近期波动, 讨论是否减仓"
+    },
+    {
+      "round": 46,
+      "topic": "投资",
+      "summary": "稳健型策略 unchanged"
+    },
+    {
+      "round": 47,
+      "topic": "收入",
+      "summary": "聊了收入规划"
+    },
+    {
+      "round": 48,
+      "topic": "理财",
+      "summary": "低风险配置占比提升"
+    },
+    {
+      "round": 49,
+      "topic": "持仓",
+      "summary": "科技股减持到800股"
+    },
+    {
+      "round": 50,
+      "topic": "投资",
+      "summary": "继续稳健策略"
+    },
+    {
+      "round": 51,
+      "topic": "日常",
+      "summary": "聊了消费习惯"
+    },
+    {
+      "round": 52,
+      "topic": "股票",
+      "summary": "科技股又有些调整"
+    },
+    {
+      "round": 53,
+      "topic": "理财",
+      "summary": "低风险理财收益稳定"
+    },
+    {
+      "round": 54,
+      "topic": "持仓",
+      "summary": "持仓根据市场动态调整"
+    },
+    {
+      "round": 55,
+      "topic": "收入",
+      "summary": "薪资略有增长"
+    },
+    {
+      "round": 56,
+      "topic": "投资",
+      "summary": "风险偏好不变"
+    },
+    {
+      "round": 57,
+      "topic": "理财",
+      "summary": "坚持低风险"
+    },
+    {
+      "round": 58,
+      "topic": "股票",
+      "summary": "持仓会继续调整"
+    },
+    {
+      "round": 59,
+      "topic": "财务",
+      "summary": "整体配置稳健"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "财务状况稳定"
+    }
+  ],
+  "ground_truth": {
+    "delete": [],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "持仓调整",
+      "assistant": "科技股已减持到800股, 会根据市场继续动态调整。风险偏好仍是稳健型。"
+    },
+    {
+      "round": 60,
+      "user": "理财",
+      "assistant": "坚持低风险理财为主, 薪资稳定。"
+    }
+  ]
+}

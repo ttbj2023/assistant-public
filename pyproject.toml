@@ -1,0 +1,643 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personal-memory-enhance"
+description = "个人信息智能管理系统"
+authors = [
+    {name = "Claude Development Team", email = "dev@claude.ai"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dynamic = ["version"]
+
+dependencies = [
+    # === LangChain 核心生态 - Agent框架基础 ===
+    "langchain>=1.3.0,<2.0",      # ✅ 实际使用: Agent框架、create_agent函数、工具系统
+    "langchain-core>=1.1,<2.0",   # ✅ 实际使用: Document接口、向量存储抽象、嵌入接口
+    "langchain-deepseek>=1.0.1,<2.0",  # ✅ 启用: DeepSeek模型官方集成，处理reasoning_content回传
+    "langchain-anthropic>=1.1,<2.0",   # ✅ 启用: Anthropic兼容集成，MiniMax Anthropic端点
+    "langchain-ollama>=0.3,<2.0",      # ✅ 启用: Ollama本地模型原生集成，支持工具调用
+    "langchain-google-genai>=4.2,<5.0", # ✅ 启用: Gemini原生SDK集成（专家工具搜索Grounding）
+
+    # === Web框架和API服务 ===
+    "fastapi>=0.104.0",        # ✅ 实际使用: REST API框架、路由、中间件
+    "uvicorn[standard]>=0.24.0",  # ✅ 实际使用: ASGI服务器、生产部署
+    "pydantic>=2.5.0",         # ✅ 实际使用: 数据验证、序列化、配置模型
+    "pydantic-settings>=2.1.0", # ✅ 实际使用: 环境变量管理、配置加载
+    "httpx>=0.25.0",           # ✅ 实际使用: HTTP客户端、外部API调用
+
+    # === 数据存储和数据库 ===
+    "sqlmodel>=0.0.14",        # ✅ 实际使用: ORM、数据库模型、迁移管理
+    "sqlalchemy[asyncio]>=2.0.0",  # ✅ 新增: SQLAlchemy异步支持
+    "aiosqlite>=0.19.0",       # SQLite异步驱动, code直接import
+    "aiofiles>=24.0.0",        # ✅ 实际使用: 异步文件操作支持
+    "chromadb>=1.2.0",         # ✅ 实际使用: 向量数据库、语义搜索
+
+    # === AI/ML 核心依赖 ===
+    # "openai>=1.3.0",           # ⚠️ 暂未使用: OpenAI API客户端、GPT模型，通过langchain[openai]集成
+    "langchain[openai]>=1.3.0,<2.0", # ✅ 实际使用: OpenAI模型集成、嵌入服务
+    "langchain-chroma>=1.0.0",   # ✅ 实际使用: ChromaDB向量存储集成
+
+    # === 向量计算和重排序 ===
+    # "numpy>=1.24.0",           # ⚠️ 暂未直接使用: 数值计算、向量操作
+
+    # === 深度学习框架 ===
+    # "transformers>=4.35.0",    # ⚠️ 移至ai-extended: 高级ML功能使用
+    # "accelerate>=0.24.0",      # ⚠️ 移至ai-extended: 分布式训练，当前项目未使用
+
+    # === 多模态支持 ===
+
+    # === MCP工具协议 ===
+    "fastmcp-slim[client]>=3.0.0",  # ✅ 实际使用: MCP客户端(仅客户端, 不含服务端)
+    "trafilatura>=1.6",            # ✅ 实际使用: 专家工具网页内容抓取
+
+    # === 系统工具和实用库 ===
+    "python-dotenv>=1.0.0",    # ✅ 实际使用: .env文件加载、环境变量管理
+    "bleach[css]>=6.0.0",      # ✅ 实际使用: HTML清理、XSS防护、内容安全
+    # "playwright>=1.50.0",    # ⚠️ 已迁移至 tool-runtime 容器: PDF/图表渲染
+    "cachetools>=5.3.0",       # ✅ 实际使用: 内存缓存、TTL缓存、LRU缓存
+    # "psutil>=6.0.0",         # ⚠️ 已移除: src/中无实际import，health检查未使用
+    "aiosmtplib>=3.0.0",       # ✅ 实际使用: 定时消息邮件渠道, 异步SMTP客户端
+    "markdown>=3.4",           # ✅ 实际使用: 微信推送Markdown→HTML转换
+    "beautifulsoup4>=4.12",    # ✅ 实际使用: 微信推送HTML后处理
+    "lxml>=4.9",               # ✅ 实际使用: 微信推送HTML解析
+
+    # === 可选缓存系统 (当前项目未直接使用，为未来扩展预留) ===
+    # "redis>=5.0.0",            # ⚠️ 未使用: 分布式缓存，未来需求
+    # "diskcache>=5.6.0",        # ⚠️ 未使用: 磁盘持久化缓存，未来需求
+
+    ]
+
+[project.optional-dependencies]
+# === 核心开发工具 - 代码质量和测试 ===
+dev = [
+    # 测试框架 - 单元测试、集成测试、E2E测试
+    "pytest>=8.4.0",            # ✅ 实际使用: 主要测试框架
+    "pytest-asyncio>=0.21.0",   # ✅ 实际使用: 异步测试支持
+    "pytest-cov>=4.1.0",        # ✅ 实际使用: 测试覆盖率统计
+    "pytest-mock>=3.12.0",      # ✅ 实际使用: Mock和fixture支持
+    "pytest-timeout>=2.1.0",    # ✅ 实际使用: 测试超时控制
+    "pytest-xdist>=3.5.0",      # ✅ 实际使用: 并行测试执行
+    "pytest-dotenv>=0.5.2",     # ✅ 实际使用: 测试环境变量加载
+    "httpx>=0.25.0",            # ✅ 实际使用: HTTP客户端测试和脚本使用
+
+    # 静态分析工具 - 代码质量、类型安全、安全检查
+    "ruff>=0.15.0",             # ✅ 实际使用: 代码格式化和linting
+    "mypy>=2.0",             # ✅ 实际使用: 类型检查和渐进式类型化
+    "bandit>=1.7.0",            # ✅ 实际使用: 安全漏洞检查
+    "vulture>=2.0",             # ✅ 实际使用: 死代码检测和未使用代码清理
+
+    # 依赖安全和管理
+    "safety>=3.8.1",            # ✅ 实际使用: 依赖漏洞扫描
+
+    # 数据导入工具
+    "pandas>=2.0.0",            # ✅ 实际使用: Apple Health CSV数据导入
+
+    # 文档模板生成
+    "python-docx>=1.1.0",       # ✅ 实际使用: DOCX reference-doc 模板生成脚本
+
+    # 移除的依赖说明（已移除，保留注释作为参考）:
+    # - pip-audit: 功能重复（safety已覆盖）
+    # - rich/typer: CLI美化工具（脚本中未广泛使用）
+    # - ipython/ipdb: 交互式调试（开发环境自带）
+    # - jupyter*: Jupyter支持（移至jupyter分组）
+    # - profiler: 性能分析（当前阶段不需要）
+]
+
+# === AI/ML 扩展依赖 - 高级AI功能支持 ===
+ai-extended = [
+    # 高级ML功能和分布式训练（从主依赖移至此）
+    "transformers>=4.35.0",     # ⚠️ 从主依赖移入: HuggingFace transformers库
+    "accelerate>=0.24.0",       # ⚠️ 从主依赖移入: 分布式训练和多GPU支持
+
+    # 未来AI模型集成
+    "openai>=1.3.0",           # ⚠️ 从主依赖移入: OpenAI API客户端、GPT模型（langchain[openai]已包含）
+    "numpy>=1.24.0",           # ⚠️ 从主依赖移入: 数值计算、向量操作
+
+    # 注意: 这些依赖为未来的本地模型部署和高级ML功能预留
+    # DeepSeek通过ChatOpenAI + base_url兼容调用，无需独立库
+    # 当前项目通过langchain[openai]统一提供OpenAI兼容模型的AI功能
+]
+
+# === 分布式缓存系统 - 高并发场景支持 ===
+distributed-cache = [
+    # 分布式缓存支持（当前未使用，为高并发场景预留）
+    "redis>=5.0.0",             # ⚠️ 未使用: Redis分布式缓存
+    "diskcache>=5.6.0",         # ⚠️ 未使用: 磁盘持久化缓存
+
+    # 注意: 当前项目使用cachetools的内存缓存方案
+    # 这些依赖为未来的大规模部署和分布式架构预留
+]
+
+# === 文档生成工具 ===
+docs = [
+    "mkdocs>=1.5.0",            # ✅ 配置就绪: 文档生成框架
+    "mkdocs-material>=9.4.0",   # ✅ 配置就绪: Material主题
+    "mkdocstrings[python]>=0.24.0",  # ✅ 配置就绪: API文档自动生成
+]
+
+# === Jupyter开发环境 ===
+jupyter = [
+    "jupyter>=1.0.0",           # ✅ 配置就绪: Jupyter核心
+    "notebook>=7.0.0",          # ✅ 配置就绪: 经典Notebook界面
+    "ipywidgets>=8.1.0",        # ✅ 配置就绪: 交互式组件支持
+]
+
+# === 完整开发环境 - 包含所有开发和扩展功能 ===
+dev-full = [
+    "personal-memory-enhance[dev,ai-extended,distributed-cache,docs,jupyter]",
+]
+
+# === 生产环境部署 - 最小化依赖集合 ===
+production = [
+    # 注意: 生产环境依赖与主dependencies相同
+    # 此分组为未来的生产环境特殊需求预留
+    # 可能包含: 监控、日志、性能优化等专用依赖
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/personal-agent-assistant"
+Documentation = "https://personal-agent-assistant.readthedocs.io"
+Repository = "https://github.com/yourusername/personal-agent-assistant.git"
+"Bug Tracker" = "https://github.com/yourusername/personal-agent-assistant/issues"
+
+[project.scripts]
+assistant = "src.main:main"
+
+[tool.setuptools_scm]
+write_to = "src/_version.py"
+
+# ============================================================================
+# 版本管理策略和依赖选择说明
+# ============================================================================
+
+# 版本固定策略说明:
+# 1. 核心框架 (>=范围): LangChain生态>=1.3.0, 向后兼容
+#
+# 2. Web框架 (>=范围): 允许小版本更新获得安全修复
+#    - fastapi>=0.104.0: 成熟稳定，向后兼容性好
+#    - pydantic>=2.5.0: v2版本稳定，性能大幅提升
+#
+# 3. AI/ML依赖 (>=范围): 快速迭代领域，保持灵活性
+#
+# 4. 开发工具 (>=范围): 工具链持续改进，鼓励更新
+#    - ruff>=0.15.0: 代码检查工具，2026 style guide
+#    - pytest>=8.4.0: 测试框架，向后兼容性好
+
+# 依赖审计和升级计划:
+# - 每月检查依赖安全更新 (使用 safety check)
+# - 每季度评估核心框架版本升级
+# - 开发工具跟随最新稳定版本
+# - 重大版本升级需要完整测试验证
+
+# 静态分析工具配置
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+fix = false  # 静态分析只读, 修复由显式命令(ruff check --fix)承担
+preview = true  # 启用preview模式支持2025年新特性
+extend-exclude = ["skills"]  # skill bundle(docker内脚本, 非项目源码)
+
+[tool.ruff.lint]
+# 2025年核心模式精选规则集 - 平衡质量与效率
+select = [
+    # 基础错误检查 - 必须保留（捕获严重问题）
+    "E", "W", "F",      # 语法错误和逻辑问题
+    "I",               # 导入排序（代码组织）
+
+    # 代码现代化 - 2025年重点（提升可维护性）
+    "UP",              # pyupgrade - 现代化Python语法
+    "C4",              # 推导式优化
+    "SIM",             # 代码简化
+
+    # Ruff特定规则 - 2025年增强（高价值检查）
+    "RUF",             # Ruff特定高质量规则
+
+    # 并发安全 - async函数中阻塞调用检测 (FastAPI项目高价值, 2026年新增)
+    "ASYNC",           # async函数中同步阻塞操作 (230/240真隐患, 排除109设计建议)
+
+    # 核心模式保留 - 适配AI/ML项目特点
+    "ARG",             # 未使用参数检查（适度宽容）
+
+    # 类型注解检查 - 2025年新增（适度要求，不影响AI项目灵活性）
+    "ANN001",          # 缺少函数参数类型注解
+    "ANN002",          # 缺少*args类型注解
+    "ANN003",          # 缺少**kwargs类型注解
+    "ANN201",          # 缺少公共函数返回类型注解
+    "ANN202",          # 缺少私有函数返回类型注解
+]
+
+# 2025年新增的RUF规则 - 高价值检查（核心模式）
+extend-select = [
+    "RUF039",  # useless-else-if-return - 2025年新增（逻辑优化）
+    "RUF048",  # iterable-argument-dict - 2025年新增（API正确性）
+    "RUF022",  # unsorted-dupe-keys - 字典重复键（数据一致性）
+    "RUF023",  # unsorted-dict-items - 字典项排序（代码可读性）
+]
+
+# 核心模式精简忽略规则 - AI项目适配
+ignore = [
+    # 中文标点(注释和文档)保护; 字符串字面量用 # noqa: RUF001 精准保护
+    "RUF002",  # 中文标点符号支持（字符串字面量安全）
+    "RUF003",  # 中文标点符号支持（字符串字面量安全）
+    "RUF100",  # unused-noqa: core规则少, full规则的noqa会被误报unused, 仅full启用RUF100作清理信号
+    "ASYNC109",  # async函数带timeout参数 (设计建议非bug, httpx惯用法, 与230/240真隐患区分)
+
+    # AI/ML项目特点 - 合理容忍
+    "E501",             # 长行容忍（AI表达式和API调用常很长）
+
+    # 类型注解灵活性 - AI项目必要支持
+    "ANN401",           # 允许使用typing.Any（AI项目与LangChain等库交互必需）
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15  # 核心模式稍宽松，适应AI项目复杂性
+
+[tool.ruff.lint.per-file-ignores]
+# 测试文件: 宽松优先, 保留真实bug检测(F821未定义名/F401未用导入/F811重定义)
+"tests/**/*.py" = [
+    "ANN",      # 测试不强制类型注解
+    "E501",     # 长行容忍
+    "ARG",      # pytest fixture/parametrize 常有未使用参数
+    "F841",     # 未用变量(死代码偶尔集中排查, 不作辅助检查项)
+    "RUF029",   # async函数特性(测试框架签名要求)
+    "RUF059",   # unused-unpacked-variable(解构惯用)
+    "RUF067",   # non-empty-init-module(测试包__init__常见)
+    "RUF069",   # float-equality(assert 读配置值, 非计算浮点)
+    "SIM117",   # 多with语句(测试setup可读性优先)
+]
+
+# 评测脚本: 离线研究工具, 最宽松
+"tests/eval/**/*.py" = [
+    "ANN",      # 研究脚本不强制类型注解
+    "E501",     # 长行容忍
+    "ARG",      # 研究脚本参数宽松
+    "RUF005",   # collection concat 简化(可读性优先)
+    "RUF052",   # dummy variable(研究脚本惯用)
+    "RUF059",   # unused unpacked variable(解构惯用)
+    "RUF069",   # 研究脚本浮点比较
+]
+
+# 脚本文件: 实用优先
+"scripts/**/*.py" = [
+    "ANN",      # 脚本不强制类型注解
+    "E501",     # 长行常见
+    "E402",     # sys.path操作导致import不在顶部(脚本惯例)
+    "ARG",      # CLI入口函数常有未使用参数
+]
+
+# 工具文件: LangChain BaseTool pydantic 字段模式
+"src/tools/**/*.py" = [
+    "RUF012",    # BaseTool 子类 pydantic 字段覆盖模式
+]
+
+# wechat 转换器: 整文件 LaTeX->Unicode 映射表 (希腊字母/数学符号)
+"src/tools/internal/wechat_publish/converter.py" = ["RUF001"]
+
+# API文件: FastAPI特定要求
+"src/api/fastapi_app.py" = [
+    "RUF029",    # FastAPI lifespan要求async但可能不使用async特性
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# 2025年新增配置 - isort自动排序
+
+[tool.mypy]
+python_version = "3.12"
+# 明确指定检查模块，避免重复检测问题
+files = [
+    "src/agent",
+    "src/api",
+    "src/auth",
+    "src/config",
+    "src/core",
+    "src/inference",
+    "src/storage",
+    "src/tools",
+    "src/utils",
+    "src/__init__.py",
+    "src/main.py"
+]
+namespace_packages = false
+explicit_package_bases = false
+follow_imports = "normal"
+implicit_reexport = false
+# 排除规则
+exclude = [
+    "tests",
+    "docs",
+    "scripts",
+    "reports",
+    "skills",
+]
+# 移除全局ignore_errors=true，让MyPy能够发现真实问题
+
+# 核心模式：2025年AI项目渐进式类型检查 - 平衡严格性与效率
+strict = false
+
+# 核心安全检查 - 捕获严重的运行时类型错误
+warn_return_any = false  # AI项目适度宽松，避免过度限制
+warn_unused_configs = true
+disallow_untyped_defs = false  # 支持渐进式类型化策略
+disallow_incomplete_defs = true  # 部分类型注解必须完整
+check_untyped_defs = true  # 检查无类型注解函数的明显错误
+no_implicit_optional = true  # 禁止隐式 Optional，提高类型安全性
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+
+# 2025年MyPy新特性 - 提升类型检查质量（核心模式精简版）
+enable_error_code = [
+    "explicit-override",    # 要求显式@override装饰器
+    "redundant-expr",       # 冗余表达式检测
+    "ignore-without-code", # 要求type ignore提供错误码
+    # 注意：移除truthy-bool以减少AI项目的误报
+]
+
+# AI/ML项目适配配置 - 2025年优化
+disallow_any_generics = false  # 适配LangChain等动态库
+disallow_untyped_decorators = false  # 支持AI开发中的灵活装饰器
+
+# 显示友好错误信息 - 提升开发体验
+show_error_codes = true
+pretty = true
+show_column_numbers = true
+
+# 移除过度宽松的类型忽略配置 - 2025年优化
+# 要求type ignore注释必须提供具体错误码，提升代码质量
+# disable_error_code 已移除，改用enable_error_code严格要求
+
+# ============================================================================
+# 模块级类型检查策略
+#
+# 三层结构:
+# 1. 第三方库(langechain/openai/pydantic等): 完全忽略
+# 2. src.* 全局: 禁用上游stub不完整的错误码, 保留项目代码质量检查
+# 3. src.agent/api 核心模块: 启用严格模式(disallow_untyped_defs)
+#
+# 第三方库stub不完整的错误码(全局禁用):
+# - arg-type/call-arg/call-overload: 第三方库函数签名不完整
+# - attr-defined/union-attr: ORM动态属性、BaseTool动态属性
+# - import-not-found/import-untyped: 第三方库缺少类型存根
+# - index/operator/method-assign: 第三方库运算符/索引签名不完整
+#
+# 保留的项目代码质量检查:
+# - assignment/var-annotated: 真实类型不兼容
+# - redundant-expr/return-value: 死代码和返回值错误
+# - dict-item/misc/no-redef/has-type/override/return/list-item
+# ============================================================================
+
+# --- src.* 全局: 第三方库stub适配 + 适度严格 ---
+[[tool.mypy.overrides]]
+module = ["src.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = true
+warn_return_any = false
+enable_error_code = ["explicit-override", "redundant-expr", "ignore-without-code"]
+disable_error_code = [
+    "arg-type",        # 第三方库参数类型stub不完整
+    "call-arg",        # Pydantic模型构造函数缺少字段默认值
+    "call-overload",   # 第三方库重载签名不完整
+    "attr-defined",    # ORM动态属性/BaseTool动态属性
+    "union-attr",      # Optional未做None检查(框架内部保证)
+    "import-not-found", # 第三方库 stub 文件缺失
+    "import-untyped",  # 第三方库无类型信息
+    "index",           # 第三方库索引类型不完整
+    "operator",        # 第三方库运算符类型不完整
+    "method-assign",   # 框架要求的动态方法赋值
+    "misc",            # Starlette await类型/第三方SDK TypedDict歧义
+    "list-item",       # 第三方SDK TypedDict匹配歧义
+    "assignment",      # 第三方库类型赋值不兼容 (与完整模式一致)
+    "unused-ignore",   # type: ignore标注都是有意为之的,不需要MyPy校验是否多余
+]
+
+# --- src.agent/api 核心模块: 更严格, 要求类型注解 ---
+[[tool.mypy.overrides]]
+module = [
+    "src.agent.*",
+    "src.api.*",
+]
+disallow_untyped_defs = true
+
+# --- 第三方库: 完全忽略 ---
+[[tool.mypy.overrides]]
+module = [
+    "langchain.*",
+    "langchain_core.*",
+    "openai.*",
+    "tiktoken.*",
+    "transformers.*",
+    "pydantic.*",
+    "fastapi.*",
+    "uvicorn.*",
+    "chromadb.*",
+]
+ignore_missing_imports = true
+ignore_errors = true
+follow_imports = "silent"
+
+# --- 开发和测试: 完全忽略 ---
+[[tool.mypy.overrides]]
+module = [
+    "scripts.*",
+]
+ignore_errors = true
+
+[tool.bandit]
+skips = ["B101", "B104"]  # 忽略assert使用和开发环境bind_address
+exclude_dirs = ["tests", "docs"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# 忽略非测试类中的Test开头的类（避免误收集警告）
+filterwarnings = [
+    "ignore::pytest.PytestCollectionWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
+]
+
+# 环境变量配置 - 自动加载测试环境配置文件
+# 使用 pytest-dotenv 插件加载 .env.test 文件
+# 确保测试环境与开发环境隔离
+env_files = [".env.test"]
+
+# 修复关键问题：分离不同测试类型的配置，避免重复执行
+# 默认配置（不带特定参数时使用）
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--import-mode=importlib",
+    "--rootdir=.",
+    "--timeout=2",  # 单元测试2秒超时（优化后清理开销已解决，保留合理超时以识别性能问题）
+    "-W", "ignore::RuntimeWarning::0",
+    "-W", "ignore::DeprecationWarning",
+    "-W", "ignore::PendingDeprecationWarning",
+    "--ignore=tests/e2e",
+    # 默认使用6并发执行，可通过 -n 参数覆盖
+    "-n", "6",
+    # loadscope: 按模块/session分组分发测试, 复用 session-scoped fixture
+    # 实测单元测试 -27% (11.3s→8.2s), 综合测试 -15% (12.9s→11.0s)
+    # E2E 使用独立 pytest.ini (-n 0 串行), 不受此项影响
+    "--dist=loadscope",
+]
+
+# pytest-timeout配置：只计算测试函数本身的时间，不包括setup和teardown
+timeout_func_only = true  # pytest-xdist并行时teardown较慢，需要排除teardown时间
+
+# 注意：集成测试的5秒超时配置在 tests/conftest.py 的 pytest_collection_modifyitems hook中实现
+
+# 明确定义测试标记，统一在 pyproject.toml 维护
+# 单元/集成/E2E 通过目录 + -m 表达式分离；serial 用于必须串行的测试
+markers = [
+    "unit: 单元测试 - 快速、隔离、业务逻辑验证",
+    "integration: 集成测试 - 模块协作验证",
+    "e2e: 端到端测试 - 完整系统验证",
+    "serial: 串行测试 - 不与其他测试并行执行，避免状态干扰",
+]
+
+asyncio_mode = "auto"
+
+# 修复TestType枚举收集警告 - 排除枚举类文件
+# 这些文件导致PytestCollectionWarning：cannot collect class 'TestType'
+# 使用更兼容的忽略配置
+norecursedirs = [
+    "tests/utils",
+    "*/__pycache__",
+    "*/.*",
+]
+
+# 确保测试类型分离的配置
+# 注意：并发配置将在 scripts/run_test_suite.py 中根据测试类型单独设置
+# 这样可以避免不同测试类型之间的干扰
+
+[tool.coverage.run]
+source = ["src"]
+parallel = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/conftest.py",
+    "*/scripts/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/__pycache__/*",
+    "*/.*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    # 排除 pragma: no cover 标记的行
+    "pragma: no cover",
+    # 排除调试代码
+    "def __repr__",
+    "if self.debug:",
+    # 排除异常处理
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # 排除抽象方法
+    "@(abc\\.)?abstractmethod",
+    # 排除类型检查
+    "if TYPE_CHECKING:",
+    # 排除未使用的导入
+    "except ImportError:",
+    # 排除测试相关
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractproperty",
+    # 排除主程序入口
+    "if __name__ == .__main__.:",
+    # 排除典型的不需要测试的代码
+    "pass$",
+    "\\.\\.\\.$",
+    "# 排除错误处理的占位符代码",
+    "TODO:",
+    "FIXME:",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+sort = "Cover"
+
+[tool.coverage.html]
+directory = "reports/coverage_html"
+
+[tool.coverage.xml]
+output = "reports/coverage.xml"
+
+[tool.pyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+include = ["src"]
+exclude = []
+extraPaths = ["."]
+
+# 类型检查模式: basic 专注于运行时错误, 关闭严格推断避免第三方库噪音
+typeCheckingMode = "basic"
+
+# 第三方库适配: 关闭对缺失stub和unknown类型的报告
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
+
+# 运行时安全检查保留
+reportOptionalSubscript = "warning"
+reportOptionalMemberAccess = "warning"
+reportOptionalCall = "warning"
+reportOptionalIterable = "warning"
+reportOptionalContextManager = "warning"
+reportOptionalOperand = "warning"
+
+# 第三方库常见问题降级为warning
+reportAttributeAccessIssue = "warning"
+reportArgumentType = "warning"
+reportAssignmentType = "warning"
+reportCallIssue = "warning"
+reportOperatorIssue = "warning"
+reportIndexIssue = "warning"
+
+# 关闭对第三方库无意义的检查
+reportPrivateImportUsage = false
+reportInvalidTypeForm = "warning"
+
+# 覆盖率 CI 门禁 - 全项目唯一权威来源 (SSOT)
+# 所有文档/脚本必须引用此处数值, 禁止硬编码. 设计目标(软目标)见 docs/development/testing.md
+[tool.coverage.fail_under]
+min_cover_percentage = 80
+fail_under_branch = 75
+fail_under_line = 85
+
+# Vulture 死代码检测配置
+[tool.vulture]
+min_confidence = 80
+exclude = ["tests/", "scripts/"]
+ignore_names = ["exc_val_", "exc_tb_", "input"]  # 忽略标准接口参数
+paths = ["src/"]
+make_whitelist = false  # 不生成白名单文件

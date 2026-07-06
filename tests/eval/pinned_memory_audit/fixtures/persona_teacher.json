@@ -1,0 +1,131 @@
+{
+  "sample_id": "persona_teacher",
+  "sample_type": "mixed",
+  "description": "高中教师(教育画像)",
+  "pinned_memory": {
+    "basic_info": "高中数学老师, 带高二两个班\n偏好启发式教学, 反对照本宣科\n上周教研会讨论了新大纲",
+    "preferences": "板书为主, 较少用PPT\n打算下学期引入项目制学习"
+  },
+  "conversation_index": [
+    {
+      "round": 41,
+      "topic": "教学",
+      "summary": "高中数学, 启发式教学, 带高二两班"
+    },
+    {
+      "round": 42,
+      "topic": "板书",
+      "summary": "坚持以板书为主, 少用PPT"
+    },
+    {
+      "round": 43,
+      "topic": "教研",
+      "summary": "上周教研会讨论了新大纲"
+    },
+    {
+      "round": 44,
+      "topic": "项目制",
+      "summary": "打算下学期引入项目制学习"
+    },
+    {
+      "round": 45,
+      "topic": "教学法",
+      "summary": "反对照本宣科, 注重启发"
+    },
+    {
+      "round": 46,
+      "topic": "课堂",
+      "summary": "板书教学效果反馈好"
+    },
+    {
+      "round": 47,
+      "topic": "大纲",
+      "summary": "新大纲已研讨完毕"
+    },
+    {
+      "round": 48,
+      "topic": "数学",
+      "summary": "讨论了函数章节的教法"
+    },
+    {
+      "round": 49,
+      "topic": "项目制",
+      "summary": "项目制方案在设计中"
+    },
+    {
+      "round": 50,
+      "topic": "教学",
+      "summary": "启发式提问技巧分享"
+    },
+    {
+      "round": 51,
+      "topic": "板书",
+      "summary": "板书习惯不变"
+    },
+    {
+      "round": 52,
+      "topic": "教研",
+      "summary": "教研活动常态化"
+    },
+    {
+      "round": 53,
+      "topic": "项目制",
+      "summary": "项目制下学期试点"
+    },
+    {
+      "round": 54,
+      "topic": "工作",
+      "summary": "高二教学进度正常"
+    },
+    {
+      "round": 55,
+      "topic": "课堂",
+      "summary": "启发式教学成熟"
+    },
+    {
+      "round": 56,
+      "topic": "板书",
+      "summary": "坚持板书为主"
+    },
+    {
+      "round": 57,
+      "topic": "大纲",
+      "summary": "新大纲已落实"
+    },
+    {
+      "round": 58,
+      "topic": "数学",
+      "summary": "几何章节教学"
+    },
+    {
+      "round": 59,
+      "topic": "项目制",
+      "summary": "项目制准备就绪"
+    },
+    {
+      "round": 60,
+      "topic": "总结",
+      "summary": "教学工作稳定推进"
+    }
+  ],
+  "ground_truth": {
+    "delete": [
+      "上周教研会讨论了新大纲",
+      "打算下学期引入项目制学习"
+    ],
+    "change": [],
+    "merge_groups": []
+  },
+  "recent_turns": [
+    {
+      "round": 59,
+      "user": "项目制",
+      "assistant": "项目制学习方案已设计完成, 下学期试点。新大纲已落实。"
+    },
+    {
+      "round": 60,
+      "user": "教学",
+      "assistant": "坚持板书为主、启发式教学, 反对照本宣科的方式不变。"
+    }
+  ]
+}

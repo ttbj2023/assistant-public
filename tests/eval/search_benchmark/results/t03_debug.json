@@ -1,0 +1,123 @@
+{
+  "query": "Python ModuleNotFoundError No module named 解决方法",
+  "doubao": {
+    "count": 5,
+    "results": [
+      {
+        "title": "如何解决Python中的ModuleNotFoundError: No module named ‘xxx’_通过pip安装并检查sys.path",
+        "url": "https://m.php.cn/faq/2494236.html",
+        "domain": "php.cn",
+        "site": "php.cn",
+        "snippet": "如何解决Python中的ModuleNotFoundError: No module named ‘xxx’_通过pip安装并检查sys.path\nP粉602998670\n2026-05-19\n701人浏览\n根本原因是python运行时找不到模块，即模块未在sys.path中：常见于环境不匹配（如系统python与虚拟环境混用）、pip与python解释器路径不一致、包名与导入名不符（如pip install pillow但需from pil import image），解决关键是确保python -m pip install与当前解释器路径一致，并验证pip show和sys.path中的路径是否匹配。\n为什么 pip install 了还是报 ModuleNotFoundError\n根本原因不是没装，而是 Python 运行时找不到那个模块——它不在 sys.path 列表里。常见于：装到了系统 Python 却用 virtualenv 启动脚本、用 conda 环境却调了系统 pip、或装了但拼错了包名（比如 pip install requests 正确，但代码里写了 import requets）。\n先确认当前 Python 解释器路径和 pip 是否匹配：\nwhich python\nwhich pip\npython -m pip --version\n三者输出的路径必须一...",
+        "publish_time": "2026-05-19T08:58:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9988934397697449,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Python模块导入失败怎么办？（ModuleNotFoundError深度解析与实战修复）",
+        "url": "https://blog.csdn.net/LogicPlex/article/details/157210061",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "Python模块导入失败怎么办？（ModuleNotFoundError深度解析与实战修复）\n原创 于 2026-01-21 11:21:01 发布 · 782 阅读 ·\nLogicPlex\n第一章：Python模块导入失败怎么办？（ModuleNotFoundError深度解析与实战修复）\n当Python程序运行时提示 `ModuleNotFoundError: No module named 'xxx'`，说明解释器无法定位指定模块。该错误通常由路径配置不当、虚拟环境错乱或包未安装引起。解决此类问题需系统性排查模块搜索路径、项目结构与环境依赖。\n检查模块是否已正确安装\n使用 `pip` 确认目标模块存在于当前Python环境中：\n# 查看已安装的包列表\npip list\n# 安装缺失的模块（以requests为例）\npip install requests\n若使用虚拟环境，请确保已激活对应环境后再执行安装命令。\n验证Python模块搜索路径\nPython通过 `sys.path` 列表查找模块。可通过以下代码输出当前搜索路径：\nimport sys\nprint(sys.path)\n若项目根目录未包含在输出列表中，需手动添加：\nimport sys\nsys.path.insert(0, '/path/to/your/module')  # 替换为实际路径\n常见原因与解决方案对照表...",
+        "publish_time": "2026-01-21T11:21:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9910544753074646,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "ModuleNotFoundError: No module named",
+        "url": "https://wenku.csdn.net/answer/dfc9c3e0c0254c908353e1e311a2153f",
+        "domain": "csdn.net",
+        "site": "CSDN文库",
+        "snippet": "ModuleNotFoundError: No module named\n时间: 2026-03-15 19:20:00 AIGC 浏览: 1279\n该错误表明 Python 解释器找不到指定的模块，通常是因为模块尚未安装，或安装在了错误的 Python 环境中。解决方法是使用 pip 命令安装缺失模块，例如 'pip install requests'；同时需确认当前使用的 Python 和 pip 是否匹配目标环境（如虚拟环境），并检查 pip 是否已正确配置在系统环境变量中。若存在多版本 Python，建议使用 'python -m pip install' 以避免环境错位。\n1. 理解 ModuleNotFoundError 的真实含义与常见触发场景\n这个报错信息看起来简单，但背后藏着不少容易被忽略的细节。我第一次遇到 ModuleNotFoundError: No module named 'pandas'  时，明明在终端里敲了 pip install pandas，回车后显示“Successfully installed”，可一跑代码还是报错。后来才发现，我开的是 VS Code 的默认终端，而 Python 解释器实际指向的是系统自带的 Python 3.9，pip 却装到了自己用 pyenv 管理的 3.11 环境里——两个环境根本没对上。这种“装了却找不到”的情...",
+        "publish_time": "2026-03-15T19:20:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9145385026931763,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "【Python报错已解决】ModuleNotFoundError: No module named ‘module_name‘",
+        "url": "https://blog.csdn.net/qq_57761637/article/details/142805744",
+        "domain": "csdn.net",
+        "site": "CSDN博客",
+        "snippet": "【Python报错已解决】ModuleNotFoundError: No module named ‘module_name‘\n原创 已于 2024-10-11 13:47:25 修改 · 1.9k 阅读\n标签\n#python #开发语言 #bug\n文章目录\n专栏介绍\n引言\n一、问题描述\n1.1 报错示例\n1.2 报错分析\n1.3 解决思路\n二、解决方法\n2.1 方法一：确认模块是否安装\n2.2 方法二：检查模块名称拼写\n2.3 方法三：添加模块路径到搜索路径\n2.4 方法四：使用虚拟环境\n三、其他解决方法\n四、总结\n引言\n在 Python 编程中，当我们兴冲冲地运行代码，却突然遇到“ModuleNotFoundError: No module named ‘module_name’”这样的报错时，难免会感到困惑和沮丧。这个报错究竟是怎么产生的呢？又该如何快速有效地解决呢？让我们一起来探讨一下。\n一、问题描述\n假设我们有一个项目，其中的某个文件需要导入一个特定的模块，但这个模块却无法被找到。\n1.1 报错示例\n以下是一个可能会引发 ModuleNotFoundError 的代码场景：\nimport some_module\n\nprint(some_module.some_function())\npython\n1.2 报错分析\n这个报错的原因通常有以下几种情况：一是模块确实不存在；二是...",
+        "publish_time": "2024-10-10T07:52:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.9012244343757629,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Python脚本运行时提示“找不到模块”如何解决？",
+        "url": "https://ask.csdn.net/questions/8865132",
+        "domain": "csdn.net",
+        "site": "CSDN问答",
+        "snippet": "一土水丰色今口 2025-10-18 15:00   采纳率: 98.8%\nPython脚本运行时提示“找不到模块”如何解决？\n青少年编程\n在运行Python脚本时，常出现“ModuleNotFoundError: No module named 'xxx'”错误，提示找不到指定模块。该问题通常由以下原因导致：模块未安装、虚拟环境配置混乱、PYTHONPATH路径未包含模块所在目录，或当前工作目录结构不正确。例如，在项目根目录外运行脚本可能导致相对导入失败。解决方法包括使用pip安装缺失模块（如`pip install requests`），确认激活了正确的虚拟环境，检查模块安装路径是否在sys.path中，并合理配置项目根目录的包结构与__init__.py文件。此外，避免跨目录直接导入，推荐使用绝对导入或设置环境变量。排查时可先在Python交互环境中尝试`import xxx`验证模块可用性。\n1 条回答\n羽漾月辰 2025-10-18 15:00\n深入解析Python中的ModuleNotFoundError错误及系统化解决方案\n1. 问题现象与初步定位\n在运行Python脚本时，开发者常遇到如下错误：\nCode\n1\nModuleNotFoundError: No module named 'xxx'\n该异常表明Python解释器无法在当前环境中找到指定模块xxx。最直观的...",
+        "publish_time": "2025-10-18T15:00:00+08:00",
+        "auth_info": "正常权威",
+        "rank_score": 0.8965936303138733,
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  },
+  "zhipu": {
+    "count": 5,
+    "results": [
+      {
+        "title": "python中关于报错信息“ModuleNotFoundError: No module named 'numpy'”的处理方法（发布时间：2018-12-08 20:58:08）",
+        "url": "https://blog.csdn.net/LieberVater/article/details/84898821",
+        "domain": "csdn.net",
+        "site": "ref_1",
+        "snippet": "最近研究机器学习的时候涉及到了使用numpy这个库，但是使用的时候产生了“ModuleNotFoundError: No module named 'numpy'”这个报错信息，查了一下发现也没有什么好的解决方法，有的方法是通过cmd直接通过pip安装的，但是我试了一些也没成功，原因可能是电脑里装了两个版本的python，通过pip安装在了另一个版本的python目录下，而不是pycharm使用的python下。\n解决方法有的说卸载另一个版本的python，这样也比较麻烦，于是在这里使用一种通过pycharm直接安装库的方法\n首先打开pycharm，在file->settings下找到Project Interpreter，这个时候点击右上角的+，在图中这个位置\n然后可以在搜索框里查找自己需要的库名，进行安装（安装时间较慢，要耐心等）\n这样就把我们需要的库加入到pycharm使用的python目录下了，再运行也没错误了",
+        "publish_time": "2018-12-08",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "解决python import时ModuleNotFoundError异常（发布时间：2024-06-12 07:30:00）",
+        "url": "https://blog.csdn.net/qq_44690947/article/details/138056206",
+        "domain": "csdn.net",
+        "site": "ref_2",
+        "snippet": "文章目录\n前言\n一 import索引机制\n二 ModuleNotFoundError原因及其解决办法\n1. 模块，包名字错误\n2. 模块，包未导入或未安装\n3. 模块，包命名冲突\n4. 模块，包路径不在import索引范围内(常见且重点)\n前言\n在学习和使用python import xxx时，无论新手还是老手ModuleNotFoundError异常应该都是会遇到的，特别是在项目更换运行环境或者自建包的时候。本文来简单梳理下导致ModuleNotFoundError异常的一些原因以及解决办法，仅当个人笔记使用。\n一 import索引机制\n想要知道导致ModuleNotFoundError的原因及其解决办法，那就得了解import 是如何进行索引的，详情见该文章：python中import的索引机制\n二 ModuleNotFoundError原因及其解决办法\n导致ModuleNotFoundError的原因各种各样，下面拣一些常见的分析一下（Windows系统）。\n1. 模块，包名字错误\nimport xxx时xxx名字拼写错误导致ModuleNotFoundError的情况出现也比较多，当模块，包名字错误或者不存在时一般编辑器(pycharm)会以红色的下划线提示，如下\n解决办法：查找确认模块正确名字后重新import\n2. 模块，包未导入或未安装\n在copy别人的代码或者网上学...",
+        "publish_time": "2024-06-12",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "解决运行python脚本报错：ModuleNotFoundError: No module named ‘numpy‘（发布时间：2022-11-26 22:36:41）",
+        "url": "https://blog.csdn.net/qq_38114043/article/details/124872760",
+        "domain": "csdn.net",
+        "site": "ref_3",
+        "snippet": "报错：\nTraceback (most recent call last): File \"get_kpi.py\", line 2, in <module> import numpy as np ModuleNotFoundError: No module named 'numpy'\n环境： Ubuntu 18.04.6 LTS\nPython 3.6.9\narch x86_64\n解决：\n参见这个博客，\nModuleNotFoundError: No module named 'numpy' python报错解决记录 - 小鲨鱼2018 - 博客园\n在控制台键入\npip3 install numpy\n你可能会遇到error，\nCommand 'pip3' not found, but can be installed with:\nsudo apt install python3-pip\n按照提示来KO，键入\nsudo apt install python3-pip\n再键入\npython3 get_kpi.py\n过了！\n参考这个博客，也许你两分钟就可以KO。\n心路：\n之前试了很多方法，如绕路安装numpy-1.11.2（python setup.py install）结果报error \"No module named 'distutils.command'\"，为此又得解决这个半路怪物，参...",
+        "publish_time": "2022-11-26",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "modulenotfounderror traceback (most recent call la（发布时间：2023-12-02 13:00:00）",
+        "url": "https://blog.csdn.net/fengqianlang/article/details/134741386",
+        "domain": "csdn.net",
+        "site": "ref_4",
+        "snippet": "模块对于开发 Python 程序很重要。 使用模块，我们可以分离代码库的不同部分以便于管理。\n使用模块时，了解它们的工作方式以及如何将它们导入我们的代码非常重要。 如果没有这种理解或错误，我们可能会遇到不同的错误。\n此类错误的一个示例是 ModuleNotFoundError。 在本文中，我们将讨论在 Python 中解决 ModuleNotFoundError 的方法。\n使用正确的模块名称解决 Python 中的 ModuleNotFoundError\n让我们用两个文件创建一个简单的 Python 代码库，index.py 和 file.py，我们将 file.py 导入到 index.py 文件中。 这两个文件都在同一目录中。\nfile.py 文件包含以下代码。\nclass Student():\n def __init__(self, firstName, lastName):\n self.firstName = firstName\n self.lastName = lastName\nindex.py 文件包含以下代码。\nimport fiIe\nstudentOne = fiIe.Student(\"Isaac\", \"Asimov\")\nprint(studentOne.lastName)\n现在，让我们运行 index.py。 我们的代码执行的输出如下。\nTraceback (mo...",
+        "publish_time": "2023-12-02",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      },
+      {
+        "title": "Python开发 —— 错误ModuleNotFoundError: No module name（发布时间：2024-05-27 15:48:03）",
+        "url": "https://blog.csdn.net/weixin_65190179/article/details/139131713",
+        "domain": "csdn.net",
+        "site": "ref_5",
+        "snippet": "1. 主要错误代码\nimport sys\nsys.path.append(\"../Signal_Capture_Decoding\")\nimport spy\nsys.path.append(\"../SPI_converter\")\nimport command\n2. 错误\nTraceback (most recent call last):\n File \"C:\\Desktop\\WaveFormsSDK\\samples\\develop\\main.py\", line 10, in <module>\n import spy\nModuleNotFoundError: No module named 'spy'\n3. 问题分析\n遇到的问题 `ModuleNotFoundError: No module named 'spy'` 表明 Python 无法在指定的路径中找到名为 `spy` 的模块。这可能是由于在运行脚本时的当前工作目录与期望的目录不一致，或者添加的路径不正确导致的。\n4. 解决方法\n为了解决这个问题，请确保路径添加正确并且反映了项目的实际目录结构。这里有几个步骤可以帮助调试和解决问题：\n4.1 确认当前工作目录\n在 `main.py` 文件中添加以下代码来打印当前工作目录，这可以帮助您确认是否在预期的目录下执行脚本：\nimport os\nprint(\"当前工作目录:\", os.ge...",
+        "publish_time": "2024-05-27",
+        "is_bytedance": false,
+        "source_type": "中文社区"
+      }
+    ]
+  }
+}

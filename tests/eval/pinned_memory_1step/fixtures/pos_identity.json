@@ -1,0 +1,19 @@
+{
+  "sample_id": "pos_identity",
+  "sample_type": "positive",
+  "description": "身份事实, 该记",
+  "user_message": "我是张三, 在杭州做产品经理, 邮箱是 zhang@example.com",
+  "todo_list": "",
+  "current_memory": {
+    "basic_info": "",
+    "preferences": ""
+  },
+  "ground_truth": {
+    "should_add": [
+      "张三",
+      "产品经理",
+      "zhang"
+    ],
+    "should_not_add": []
+  }
+}
