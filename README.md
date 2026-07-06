@@ -1,5 +1,7 @@
 # Personal Agent Assistant
 
+[English](README_EN.md) | 中文
+
 一个生产级、真实运行的个人 AI 助手, 核心是**长期对话的记忆系统**与**渐进式工具编排**. 基于 LangChain v1.0 Agent 框架, v1.9.0.
 
 ---
