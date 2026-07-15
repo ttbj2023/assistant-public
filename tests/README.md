@@ -2,15 +2,15 @@
 
 Personal Agent Assistant v1.9.0 三层测试体系. 设计规范总览见 [docs/development/testing.md](../docs/development/testing.md).
 
-## 当前状态 (2026-07-02)
+## 当前状态 (2026-07-14)
 
 | 类型 | 测试数 | 文件数 | 通过率 | 性质 |
 |------|--------|--------|--------|------|
-| 单元 | 2933 | 189 | 100% | 白盒, Mock 外部依赖 |
-| 集成 | 107 | 27 | 100% | 灰盒, 真实组件协作 |
+| 单元 | 3011 | 189 | 100% | 白盒, Mock 外部依赖 |
+| 集成 | 103 | 27 | 100% | 灰盒, 真实组件协作 |
 | E2E | 13 | 6 | 100% | 灰盒, ASGI TestClient 进程内 |
 
-综合行覆盖率(unit+integration) 82.62%, CI 门禁 80% (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
+综合行覆盖率(unit+integration) 83.60%, CI 门禁 80% (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
 
 ## 目录结构
 

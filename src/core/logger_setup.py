@@ -37,11 +37,11 @@ def build_log_config(
     """构建 uvicorn dictConfig 配置.
 
     同时配置终端输出和轮转文件输出, 保证 app logger 与 uvicorn.* logger
-    的日志写入同一文件.
+    的日志写入同一文件. 此外单独输出 error 日志 (WARNING+), 便于快速定位问题.
 
     Args:
         log_level: 日志级别 (小写, 如 "info")
-        log_file: 日志文件路径
+        log_file: 主日志文件路径; error 日志文件名由其派生 (插入 .error)
         max_bytes: 单个日志文件最大字节数
         backup_count: 保留的轮转备份文件数量
 
@@ -90,6 +90,18 @@ def build_log_config(
                 "backupCount": backup_count,
                 "encoding": "utf-8",
             },
+            "file_error": {
+                "formatter": "standard",
+                "class": "logging.handlers.RotatingFileHandler",
+                # error 日志文件名派生自主日志: server_8000.log -> server_8000.error.log
+                "filename": str(
+                    log_file.with_name(f"{log_file.stem}.error{log_file.suffix}")
+                ),
+                "maxBytes": max_bytes,
+                "backupCount": backup_count,
+                "encoding": "utf-8",
+                "level": "WARNING",
+            },
         },
         "loggers": {
             "uvicorn": {
@@ -108,7 +120,7 @@ def build_log_config(
             },
         },
         "root": {
-            "handlers": ["console_app", "file_default"],
+            "handlers": ["console_app", "file_default", "file_error"],
             "level": level,
         },
     }

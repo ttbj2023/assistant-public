@@ -81,6 +81,7 @@ class RetrievalService(ABC):
         query: str,
         time_filter: str = "",
         max_results: int = 10,
+        round_range: tuple[int, int] | None = None,
     ) -> list[Document]:
         """使用格式化过滤器搜索对话.
 
@@ -189,6 +190,14 @@ class DualStageRetrievalService(RetrievalService):
 
         await self._ensure_initialized()
 
+        # time_range → round_range 转换 (修复 filter_parser 产出 time_range
+        # 而 SQL/向量路消费 round_range 的键名断裂)
+        filters, empty_time_window = await self._resolve_time_range_to_round_range(
+            filters,
+        )
+        if empty_time_window:
+            return []
+
         try:
             sql_limit = max_results * 10
             vector_limit = max_results * 10
@@ -242,6 +251,64 @@ class DualStageRetrievalService(RetrievalService):
             logger.error("❌ 对话检索失败: %s", e)
             logger.warning("⚠️ 降级到SQL搜索")
             return await self._fallback_sql_search(query, max_results)
+
+    async def _resolve_time_range_to_round_range(
+        self,
+        filters: dict[str, Any] | None,
+    ) -> tuple[dict[str, Any] | None, bool]:
+        """将 filters 中的 time_range 转换为 round_range.
+
+        修复 filter_parser 产出 time_range 而 SQL/向量路消费 round_range 的键名断裂:
+        time_range(口语时间) 经 conversation_service 映射为 round_range(轮次区间).
+        若 filters 同时已有 round_range, 取交集.
+
+        Args:
+            filters: 原始过滤器字典
+
+        Returns:
+            (更新后的 filters, should_return_empty):
+            - should_return_empty=True 表示时间窗口内无对话, 调用方应直接返回空
+              (不走 fallback, 否则无差别最近对话会让时间过滤失效)
+
+        """
+        if not filters or "time_range" not in filters:
+            return filters, False
+
+        time_range = filters.get("time_range")
+        if not isinstance(time_range, tuple) or len(time_range) != 2:
+            return filters, False
+
+        start_time, end_time = time_range
+        if start_time is None or end_time is None:
+            return filters, False
+
+        try:
+            time_round_range = (
+                await self.conversation_service.get_round_range_by_time_range(
+                    self.user_id,
+                    self.thread_id,
+                    start_time,
+                    end_time,
+                )
+            )
+        except Exception as e:
+            logger.warning("⚠️ time_range→round_range 转换失败, 跳过时间过滤: %s", e)
+            return filters, False
+
+        if time_round_range is None:
+            logger.info("time_filter 区间内无对话, 返回空结果 (不走 fallback)")
+            return filters, True
+
+        new_filters = {k: v for k, v in filters.items() if k != "time_range"}
+        existing = new_filters.get("round_range")
+        if existing is not None:
+            new_filters["round_range"] = (
+                max(existing[0], time_round_range[0]),
+                min(existing[1], time_round_range[1]),
+            )
+        else:
+            new_filters["round_range"] = time_round_range
+        return new_filters, False
 
     async def _async_sql_search_rounds(
         self,
@@ -339,15 +406,7 @@ class DualStageRetrievalService(RetrievalService):
 
             documents = []
             for conv in conversations:
-                content_parts = []
-                user_msg = getattr(conv, "user_message", "")
-                assistant_msg = getattr(conv, "assistant_response", "")
-                if user_msg:
-                    content_parts.append(f"用户: {user_msg}")
-                if assistant_msg:
-                    content_parts.append(f"助手: {assistant_msg}")
-
-                content = "\n\n".join(content_parts)
+                content = self._build_hook_content(conv)
 
                 timestamp_value = (
                     conv.created_at.isoformat()
@@ -375,12 +434,30 @@ class DualStageRetrievalService(RetrievalService):
             logger.error("❌ 异步获取最终文档失败: %s", e)
             return []
 
+    @staticmethod
+    def _build_hook_content(conv: Any) -> str:
+        """构造钩子格式 [轮X] topic: summary.
+
+        钩子化返回: search_memories 返回概览(轮次+主题+摘要), 完整原文由
+        get_round_detail 二次取, 避免搜一次拉全文导致上下文浪费.
+        summary 为 None 时 fallback 到 user_message 前50字符(沿用 core.py 模式).
+
+        """
+        round_num = getattr(conv, "round_number", 0)
+        topic = getattr(conv, "topic", None) or "对话"
+        summary = getattr(conv, "summary", None)
+        if summary:
+            return f"[轮{round_num}] {topic}: {summary}"
+        user_msg = getattr(conv, "user_message", "")
+        return f"[轮{round_num}] {topic}: 用户: {user_msg[:50]}..."
+
     @override
     async def search_with_filters(
         self,
         query: str,
         time_filter: str = "",
         max_results: int = 10,
+        round_range: tuple[int, int] | None = None,
     ) -> list[Document]:
         """使用格式化过滤器搜索对话.
 
@@ -388,6 +465,7 @@ class DualStageRetrievalService(RetrievalService):
             query: 查询字符串
             time_filter: 时间过滤器
             max_results: 最大结果数量
+            round_range: 轮次区间 (start, end), 与 time_filter 正交, 取交集
 
         Returns:
             相关Document列表
@@ -396,6 +474,8 @@ class DualStageRetrievalService(RetrievalService):
         from ..retrieval.filter_parser import FilterParser
 
         filters = FilterParser.parse_filters(time_filter=time_filter)
+        if round_range is not None:
+            filters["round_range"] = round_range
 
         return await self.search_conversations(query, max_results, filters)
 
@@ -473,15 +553,7 @@ class DualStageRetrievalService(RetrievalService):
                 assistant_msg = getattr(conv, "assistant_response", "").lower()
 
                 if query_lower in user_msg or query_lower in assistant_msg:
-                    content_parts = []
-                    raw_user = getattr(conv, "user_message", "")
-                    raw_assistant = getattr(conv, "assistant_response", "")
-                    if raw_user:
-                        content_parts.append(f"用户: {raw_user}")
-                    if raw_assistant:
-                        content_parts.append(f"助手: {raw_assistant}")
-
-                    content = "\n\n".join(content_parts)
+                    content = self._build_hook_content(conv)
 
                     metadata = {
                         "round_number": getattr(conv, "round_number", 0),

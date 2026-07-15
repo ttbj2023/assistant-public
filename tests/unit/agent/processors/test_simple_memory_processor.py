@@ -125,7 +125,7 @@ class TestSimpleMemoryProcessor:
         self, processor: SimpleMemoryProcessor
     ) -> None:
         hint = processor.get_prompt_hint()
-        assert "long_term_memory" in hint
+        assert "pinned_memory" in hint
         assert "user_input" in hint
 
     @pytest.mark.asyncio
@@ -148,13 +148,12 @@ class TestSimpleMemoryProcessor:
             ],
         }
 
-        mock_manager = AsyncMock()
-        mock_manager.get_memory_for_injection.return_value = (
-            "<long_term_memory>\n## 用户偏好\n回复简洁\n</long_term_memory>"
-        )
+        mock_block_service = AsyncMock()
+        mock_block_service.get_formatted.return_value = "测试记忆内容"
         with patch(
-            "src.agent.memory.simple_memory.manager.SimpleMemoryManager",
-            return_value=mock_manager,
+            "src.storage.service.create_pinned_memory_block_service",
+            new_callable=AsyncMock,
+            return_value=mock_block_service,
         ):
             ctx = await processor.build_messages_context(
                 user_input="当前输入",
@@ -167,8 +166,9 @@ class TestSimpleMemoryProcessor:
         assert len(ctx.history_messages) == 2
         assert isinstance(ctx.history_messages[0], HumanMessage)
         assert isinstance(ctx.history_messages[1], AIMessage)
-        # extension 注入
-        assert "long_term_memory" in ctx.system_prompt_extension
+        # extension 注入 (统一 <pinned_memory> 标签)
+        assert "pinned_memory" in ctx.system_prompt_extension
+        assert "测试记忆内容" in ctx.system_prompt_extension
         # current_content 含 user_input
         assert "当前输入" in ctx.current_content
         assert "<user_input>" in ctx.current_content
@@ -184,11 +184,12 @@ class TestSimpleMemoryProcessor:
         agent_config = type("C", (), {"agent_id": "ta", "id": "ta"})()
         processor_config = {"agent_config": agent_config, "chat_messages": None}
 
-        mock_manager = AsyncMock()
-        mock_manager.get_memory_for_injection.return_value = ""
+        mock_block_service = AsyncMock()
+        mock_block_service.get_formatted.return_value = ""
         with patch(
-            "src.agent.memory.simple_memory.manager.SimpleMemoryManager",
-            return_value=mock_manager,
+            "src.storage.service.create_pinned_memory_block_service",
+            new_callable=AsyncMock,
+            return_value=mock_block_service,
         ):
             ctx = await processor.build_messages_context(
                 user_input="第一条",

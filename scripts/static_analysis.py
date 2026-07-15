@@ -68,7 +68,7 @@ class TaskResult:
     task_type: str  # "static_analysis" or "format"
     success: bool
     duration: float
-    output: str
+    output: str = ""  # 异常分支构造时不传, 给默认值避免 TypeError
     error_message: str | None = None
     report_path: str | None = None
     structured_data: dict[str, Any] | None = None
@@ -118,14 +118,14 @@ class StaticAnalysisRunner:
         enable_cache: bool = True,
         target_path: str = "src/",
         codex_mode: bool = False,
-        args=None,
+        args: argparse.Namespace | None = None,
     ):
         self.core_mode = core_mode
         self.verbose = verbose
         self.enable_cache = enable_cache
         self.target_path = target_path
         self.codex_mode = codex_mode
-        self.args = args or {}
+        self.args = args if args is not None else argparse.Namespace()
         self.console = Console()
         self.results: list[TaskResult] = []
         self.cache: dict[str, CacheEntry] = {}
@@ -1496,7 +1496,7 @@ class StaticAnalysisRunner:
         # 收集结果
         self.results = []
         for i, task_result in enumerate(completed_tasks):
-            if isinstance(task_result, Exception):
+            if isinstance(task_result, BaseException):
                 self.console.print(
                     f"[red]❌ {tasks[i].get_name()} 执行异常: {task_result}[/red]"
                 )
@@ -1579,7 +1579,7 @@ class StaticAnalysisRunner:
         all_success = True
 
         for i, task_result in enumerate(completed_tasks):
-            if isinstance(task_result, Exception):
+            if isinstance(task_result, BaseException):
                 self.console.print(
                     f"[red]❌ {format_tasks[i].get_name()} 执行异常: {task_result}[/red]"
                 )
@@ -1605,7 +1605,7 @@ class StaticAnalysisRunner:
 
     async def _save_static_analysis_report(
         self, tool_name: str, report_data: dict[str, Any]
-    ) -> str:
+    ) -> str | None:
         """保存静态分析报告"""
         report_path = self.reports_dir / f"{tool_name}_analysis_report.json"
 
@@ -1624,7 +1624,7 @@ class StaticAnalysisRunner:
             self.console.print(f"[red]保存 {tool_name} 报告失败: {e}[/red]")
             return None
 
-    async def _save_summary_report(self, summary: dict[str, Any]) -> str:
+    async def _save_summary_report(self, summary: dict[str, Any]) -> str | None:
         """保存执行摘要报告"""
         report_path = self.reports_dir / "static_analysis_summary.json"
 

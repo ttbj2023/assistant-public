@@ -1,6 +1,6 @@
 # config.yaml 参考
 
-**版本**: v2 | **更新**: 2026-07-02
+**版本**: v2 | **更新**: 2026-07-14
 
 `config.yaml` 只保存非敏感应用配置。未知字段会被 `config_doctor --strict` 拒绝。密钥不要写入本文件。
 
@@ -20,7 +20,6 @@ core:
   cache:
     pinned_memory_cache_size: 50
     conversation_cache_size: 100
-    todolist_cache_size: 50
     enable_cache_stats: true
 ```
 
@@ -103,10 +102,6 @@ inference:
     model: "ark-agent-plan:doubao-seed-2.0-mini"
     model_params:
       max_tokens: 2048
-    pinned_memory_model: ""
-    pinned_memory_model_params: {}
-    audit_model: "ark-agent-plan:doubao-seed-2.0-pro"
-    audit_model_params: {}
     arc_model: "ark-agent-plan:doubao-seed-2.0-mini"
     arc_model_params: {}
     fallback_model_params: null

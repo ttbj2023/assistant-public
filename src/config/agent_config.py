@@ -44,7 +44,7 @@ class AgentMemoryConfig(BaseModel):
     )
 
     index_run_similarity_threshold: float = Field(
-        default=0.5,
+        default=0.45,
         ge=0.0,
         le=1.0,
         description="索引 run 检测: 相邻轮 summary embedding 余弦相似度阈值"
@@ -55,11 +55,6 @@ class AgentMemoryConfig(BaseModel):
         default=60,
         ge=8,
         description="冻结弧短语最大字符数(信号密度旋钮; 实测 40 截断半句, 60 为叙事完整起步值)",
-    )
-
-    include_todo_in_context: bool = Field(
-        default=False,
-        description="是否在记忆上下文中包含TODO列表(Personal Assistant设为True)",
     )
 
     @field_validator("type")
@@ -108,7 +103,7 @@ class AgentConfig(BaseModel):
     tools: list[str] = Field(
         default_factory=lambda: [
             "todo_manager_group",
-            "search_memories",
+            "memory_recall_group",
             "search_available_tools",
         ],
         description="核心工具列表(必定注入)",

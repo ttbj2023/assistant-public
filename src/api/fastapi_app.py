@@ -26,6 +26,7 @@ from src.api.routes.usage import router as usage_router
 from src.auth import get_auth_manager
 from src.config import runtime_env
 from src.config.api_config import get_config
+from src.core.logger_setup import configure_logging
 from src.inference.llm.model_loader import get_llm_factory
 from src.utils.debug_config import is_debug_enabled
 
@@ -82,10 +83,23 @@ async def _periodic_semantic_cache_cleanup() -> None:
             logger.warning("🧹 语义缓存周期清理异常(非致命): %s", e)
 
 
+def _configure_file_logging() -> None:
+    """生产环境启用文件日志.
+
+    uvicorn CLI 启动时使用默认日志配置, 这里覆盖启用文件双写 (含 error 分离).
+    开发环境由 dev_server.py 程序化启动时已配置 log_config, 不重复.
+    """
+    if runtime_env.get_environment() != "production":
+        return
+    port = runtime_env.get_api_port_override() or 8000
+    configure_logging("info", port=port)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理 - 使用新的工厂模式架构"""
     global _semantic_cache_cleanup_task
+    _configure_file_logging()
     # 启动时的初始化逻辑
     try:
         logger.info("🚀 开始初始化Agent系统...")

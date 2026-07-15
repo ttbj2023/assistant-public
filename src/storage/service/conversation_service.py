@@ -448,6 +448,68 @@ class ConversationService(ServiceHealthCheckMixin):
             limit=limit,
         )
 
+    async def get_round_range_by_time_range(
+        self,
+        user_id: str,
+        thread_id: str,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> tuple[int, int] | None:
+        """时间区间转轮次区间 (查 created_at 落 [start, end) 的 MIN/MAX round).
+
+        用于 time_filter → round_range 转换, 桥接 filter_parser 产出的
+        time_range 与检索路消费的 round_range.
+
+        Args:
+            user_id: 用户ID
+            thread_id: 线程ID
+            start_time: 区间起始 (包含)
+            end_time: 区间结束 (不包含)
+
+        Returns:
+            (min_round, max_round) 或 None (区间内无对话)
+
+        """
+        return await self.conversation_dao.get_round_range_by_time_range(
+            user_id,
+            thread_id,
+            start_time,
+            end_time,
+        )
+
+    async def update_conversation_index(
+        self,
+        user_id: str,
+        thread_id: str,
+        round_number: int,
+        *,
+        topic: str,
+        summary: str,
+    ) -> bool:
+        """更新对话索引元数据(topic/summary), 不碰基础内容字段.
+
+        LLM 索引生成后独立写入 topic/summary, 与基础内容存储(create_conversation)
+        解耦, 避免全量 UPSERT 覆盖导致的 data race.
+
+        Args:
+            user_id: 用户ID
+            thread_id: 线程ID
+            round_number: 轮次号
+            topic: 对话主题
+            summary: 对话摘要
+
+        Returns:
+            True=行存在并更新, False=行不存在
+
+        """
+        return await self.conversation_dao.update_conversation_index(
+            user_id,
+            thread_id,
+            round_number,
+            topic=topic,
+            summary=summary,
+        )
+
     async def search_rounds_by_keywords(
         self,
         user_id: str,

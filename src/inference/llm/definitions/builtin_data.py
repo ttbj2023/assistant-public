@@ -231,6 +231,84 @@ def create_builtin_models() -> list[ModelMetadata]:
     )
 
     # ═══════════════════════════════════════════════════════════════════
+    # GPT-5.6 (OpenAI, 2026-07-09 GA, 1.05M上下文, 128K最大输出)
+    # 三档家族: Sol(旗舰) / Terra(中间档, 未纳入) / Luna(低成本高吞吐)
+    # SDK: langchain_openai.ChatOpenAI
+    # ═══════════════════════════════════════════════════════════════════
+
+    # GPT-5.6 Sol (旗舰, 与GPT-5.5同价)
+    models.append(
+        ModelMetadata(
+            id="openai:gpt-5.6-sol",
+            name="GPT-5.6 Sol",
+            provider="openai",
+            model_type=ModelType.CHAT,
+            description="OpenAI GPT-5.6 Sol旗舰模型(2026-07-09发布, 通过第三方转发节点)."
+            "GPT-5.6家族三档中的旗舰档, 面向复杂推理, 编码和长程Agent任务."
+            "官方规格: 1.05M上下文窗口, 128K最大输出, reasoning_effort支持none/low/medium/high/xhigh/max."
+            "推理模型不支持temperature/top_p等采样参数, 使用reasoning_effort控制推理强度."
+            "已验证能力: 1)工具调用 2)图片识别 3)流式输出 4)JSON模式."
+            "注意: 需要配置OPENAI_API_KEY和OPENAI_BASE_URL.",
+            model_params={
+                "max_tokens": {"default": 32768},
+                "reasoning_effort": {
+                    "default": "medium",
+                    "options": ["none", "low", "medium", "high", "xhigh", "max"],
+                },
+                "stop": {"default": None},
+            },
+            capabilities=[
+                ModelCapability.TEXT_INPUT,
+                ModelCapability.IMAGE_INPUT,
+                ModelCapability.REASONING,
+                ModelCapability.STREAMING,
+                ModelCapability.JSON_MODE,
+                ModelCapability.TOOL_CALLING,
+            ],
+            # 来源: OpenAI API Pricing, Standard 短上下文档位. 缓存读取90%折扣.
+            pricing=ModelPricing(
+                input=5.0, output=30.0, cached_input=0.5, currency="USD"
+            ),
+        ),
+    )
+
+    # GPT-5.6 Luna (低成本高吞吐, 分类/路由/高并发场景)
+    models.append(
+        ModelMetadata(
+            id="openai:gpt-5.6-luna",
+            name="GPT-5.6 Luna",
+            provider="openai",
+            model_type=ModelType.CHAT,
+            description="OpenAI GPT-5.6 Luna低成本模型(2026-07-09发布, 通过第三方转发节点)."
+            "GPT-5.6家族三档中的轻量档, 适合分类, 意图路由, 内容审核等高吞吐任务."
+            "官方规格: 1.05M上下文窗口, 128K最大输出, reasoning_effort支持none/low/medium/high/xhigh/max."
+            "推理模型不支持temperature/top_p等采样参数, 使用reasoning_effort控制推理强度."
+            "已验证能力: 1)工具调用 2)图片识别 3)流式输出 4)JSON模式."
+            "注意: 需要配置OPENAI_API_KEY和OPENAI_BASE_URL.",
+            model_params={
+                "max_tokens": {"default": 32768},
+                "reasoning_effort": {
+                    "default": "medium",
+                    "options": ["none", "low", "medium", "high", "xhigh", "max"],
+                },
+                "stop": {"default": None},
+            },
+            capabilities=[
+                ModelCapability.TEXT_INPUT,
+                ModelCapability.IMAGE_INPUT,
+                ModelCapability.REASONING,
+                ModelCapability.STREAMING,
+                ModelCapability.JSON_MODE,
+                ModelCapability.TOOL_CALLING,
+            ],
+            # 来源: OpenAI API Pricing, Standard 短上下文档位. 缓存读取90%折扣.
+            pricing=ModelPricing(
+                input=1.0, output=6.0, cached_input=0.1, currency="USD"
+            ),
+        ),
+    )
+
+    # ═══════════════════════════════════════════════════════════════════
     # Qwen3.7-Max (阿里云百炼DashScope, 1M上下文, 2026-05-20发布)
     # SDK: langchain_openai.ChatOpenAI (OpenAI兼容端点)
     # 在 dashscope 与 aliyun-token-plan 均有提供, 引用共享定义.

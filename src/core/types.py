@@ -31,40 +31,9 @@ class ConversationIndexResult(BaseModel):
     topic: str = Field(description="主要话题,3-5个词")
 
 
-class MemoryOperation(BaseModel):
-    """置顶记忆单条操作."""
-
-    action: str = Field(description="操作类型: add | delete | change")
-    field: str = Field(description="目标字段: basic_info | preferences")
-    content: str = Field(
-        default="",
-        description="add: 新条目内容; delete: 待删除的原文(精确匹配)",
-    )
-    old_content: str = Field(
-        default="",
-        description="change: 待替换的原文(精确匹配)",
-    )
-    new_content: str = Field(
-        default="",
-        description="change: 替换后的完整内容",
-    )
-
-
-class PinnedMemoryUpdateResult(BaseModel):
-    """置顶记忆更新分析结果."""
-
-    has_operations: bool = Field(default=False, description="是否有操作")
-    operations: list[MemoryOperation] = Field(
-        default_factory=list,
-        description="操作列表",
-    )
-
-
 __all__ = [
     "ContentBlock",
     "ConversationIndexResult",
     "ImageUrl",
-    "MemoryOperation",
     "MessageContent",
-    "PinnedMemoryUpdateResult",
 ]

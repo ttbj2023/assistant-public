@@ -19,6 +19,7 @@ import pytest
 from src.agent.memory.local_memory import index_run_service
 from src.agent.memory.local_memory.index_run_service import (
     IndexRunService,
+    clean_summary_for_embedding,
     detect_runs,
 )
 
@@ -92,6 +93,34 @@ async def _round(svc: IndexRunService, n: int) -> None:
     data = MagicMock()
     data.round_number = n
     await svc._process_round(data)
+
+
+class TestCleanSummaryForEmbedding:
+    """clean_summary_for_embedding: 剥离角色标签词, 保留内容."""
+
+    def test_strip_user_prefix(self) -> None:
+        assert clean_summary_for_embedding("用户询问天气") == "询问天气"
+
+    def test_preserve_assistant_content(self) -> None:
+        assert (
+            clean_summary_for_embedding("用户询问天气，助手告知晴天")  # noqa: RUF001
+            == "询问天气，告知晴天"  # noqa: RUF001
+        )
+
+    def test_no_role_label_unchanged(self) -> None:
+        assert clean_summary_for_embedding("天气查询") == "天气查询"
+
+    def test_assistant_prefix(self) -> None:
+        assert clean_summary_for_embedding("助手致歉系统故障") == "致歉系统故障"
+
+    def test_empty_string(self) -> None:
+        assert clean_summary_for_embedding("") == ""
+
+    def test_preserve_assistant_with_period(self) -> None:
+        assert (
+            clean_summary_for_embedding("用户记录待办，助手已完成并提供下载。")  # noqa: RUF001
+            == "记录待办，已完成并提供下载。"  # noqa: RUF001
+        )
 
 
 class TestDetectRunsBatch:
@@ -323,3 +352,31 @@ class TestLazyCompensation:
         call = conv_svc.create_index_group.await_args
         assert call.kwargs["round_start"] == 7
         assert call.kwargs["round_end"] == 7
+
+
+class TestEmbeddingCleaning:
+    """验证 summary 清洗在 embedding 调用路径生效."""
+
+    @pytest.mark.asyncio
+    async def test_role_prefix_cleaned_before_embedding(self) -> None:
+        """summary 含 "用户" 前缀时, embedding 查找用清洗后的文本作 key."""
+        # stub key 用清洗后的文本(无"用户"前缀)
+        emb = _StubEmbeddings({"A": [1.0, 0.0]})
+        conv_svc = MagicMock()
+        # DB 存的 summary 带 "用户" 前缀
+        conv_svc.conversation_dao.get_by_round_number = AsyncMock(
+            side_effect=lambda r, *a, **k: _conv(r, "用户A"),
+        )
+        conv_svc.create_index_group = AsyncMock()
+        conv_svc.get_index_groups_up_to = AsyncMock(return_value=[])
+
+        svc = _build_service(embeddings=emb)
+        with _detection_env(conv_svc):
+            await _round(svc, 1)
+
+        # 如果清洗生效, "用户A" 被清洗为 "A", stub 返回 [1.0, 0.0]
+        # 如果未清洗, stub 找不到 "用户A", 返回默认 [0.0, 0.0]
+        # 验证: open_run 的 emb 应是 [1.0, 0.0] 而非 [0.0, 0.0]
+        key = index_run_service._run_key("u", "t", "a")
+        assert key in index_run_service._open_runs
+        assert index_run_service._open_runs[key]["emb"] == [1.0, 0.0]

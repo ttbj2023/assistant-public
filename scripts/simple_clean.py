@@ -390,6 +390,61 @@ class SimpleCleaner:
 
         return result
 
+    def cleanup_test_logs(self, days: int | None = None) -> dict[str, Any]:
+        """清理过期的测试日志 (test_*.log, 含 .error.log 变体).
+
+        按 mtime 删除过期文件, 保留 server_*.log / *.pid / prompts 等运行时产物.
+        专门治理开发环境 test_{pid}.log 堆积 (cleanup_old_archives 不覆盖 logs).
+
+        Args:
+            days: 保留天数, None 表示复用 old_archives_days 配置
+
+        Returns:
+            清理结果统计
+        """
+        retention_days = (
+            days if days is not None else self.config["cleanup_rules"]["old_archives_days"]
+        )
+        if retention_days <= 0:
+            return {"cleaned_count": 0, "reason": "保留天数必须大于0"}
+
+        logs_dir = self.project_root / "logs"
+        if not logs_dir.exists():
+            return {"cleaned_count": 0, "reason": "logs 目录不存在"}
+
+        cutoff_time = time.time() - retention_days * 86400
+        cleaned_count = 0
+        cleaned_size = 0
+
+        # test_*.log 通配同时匹配 test_xxx.error.log (均以 .log 结尾),
+        # 不触碰 server_*/*.pid/prompts
+        for item in logs_dir.glob("test_*.log"):
+            if not item.is_file() or item.stat().st_mtime >= cutoff_time:
+                continue
+            try:
+                file_size = item.stat().st_size
+                item.unlink()
+                cleaned_count += 1
+                cleaned_size += file_size
+                self.stats["files_deleted"] += 1
+                self.stats["total_size"] += file_size
+            except Exception as e:
+                console.print(
+                    f"[red]    ❌ 删除测试日志失败 {item.name}: {e}[/red]"
+                )
+
+        if cleaned_count > 0:
+            console.print(
+                f"[green]🧹 清理 {retention_days} 天前的测试日志: "
+                f"{cleaned_count} 个, 释放 {cleaned_size:,} bytes[/green]"
+            )
+
+        return {
+            "cleaned_count": cleaned_count,
+            "cleaned_size": cleaned_size,
+            "retention_days": retention_days,
+        }
+
     def run_full_cleanup(self) -> dict[str, Any]:
         """执行完整清理流程
 

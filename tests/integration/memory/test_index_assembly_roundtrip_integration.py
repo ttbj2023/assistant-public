@@ -52,7 +52,7 @@ def _make_assembler(user_id: str, thread_id: str) -> MemoryAssembler:
         agent_id=_AGENT_ID,
         agent_config=AgentConfig(
             agent_id=_AGENT_ID,
-            memory=AgentMemoryConfig(include_todo_in_context=False),
+            memory=AgentMemoryConfig(),
         ),
         user_id=user_id,
         thread_id=thread_id,

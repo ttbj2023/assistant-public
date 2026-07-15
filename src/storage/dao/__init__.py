@@ -22,6 +22,7 @@ from .async_database_manager import (
     create_async_todo_db_manager,
     create_async_usage_db_manager,
 )
+from .async_pinned_memory_block_dao import AsyncPinnedMemoryBlockDAO
 from .async_simple_pinned_memory_dao import AsyncSimplePinnedMemoryDAO
 from .async_todo_dao import AsyncTodoDAO
 from .async_usage_dao import AsyncUsageDAO
@@ -32,6 +33,7 @@ __all__ = [
     "AsyncConversationIndexDAO",
     "AsyncDatabaseManager",
     "AsyncDatabaseOperations",
+    "AsyncPinnedMemoryBlockDAO",
     "AsyncSimplePinnedMemoryDAO",
     "AsyncTodoDAO",
     "AsyncUsageDAO",

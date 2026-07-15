@@ -3,8 +3,7 @@
 轻量记忆架构, 适配"前端管历史"的对接方式(如 Open WebUI):
 - 对话历史: 前端透传(processor_config["chat_messages"]), 本处理器过滤 system
   消息后转为 history_messages, 直接交给 LLM, 不从后端 DB 重组
-- 长期记忆: preferences/insights 两字段, 注入 system_prompt_extension 的
-  <long_term_memory> 标签
+- 置顶记忆: 统一单一块, 注入 system_prompt_extension 的 <pinned_memory> 标签
 - 轮次记录: 由 SimpleMemoryCore 在对话完成后存储(不进 prompt)
 
 与 LocalMemoryProcessor 的区别:
@@ -100,7 +99,7 @@ class SimpleMemoryProcessor(BaseProcessor):
     def get_prompt_hint(self, agent_config: Any = None) -> str:
         """返回 simple 记忆系统的格式描述, 注入系统提示词."""
         return (
-            "系统提示词中可能包含 <long_term_memory> 标签, 是跨会话积累的用户偏好"
+            "系统提示词中可能包含 <pinned_memory> 标签, 是跨会话积累的用户偏好"
             "与经验洞察, 在相关时遵循其中的稳定偏好.\n"
             "本轮指令在最后一条 <user_input> 标签中."
         )
@@ -115,11 +114,11 @@ class SimpleMemoryProcessor(BaseProcessor):
         processor_config: dict | None = None,
         timezone: str = "Asia/Shanghai",
     ) -> MessageContext:
-        """构建消息上下文: 前端历史透传 + 长期记忆 extension.
+        """构建消息上下文: 前端历史透传 + 置顶记忆 extension.
 
         流程:
         1. 从 processor_config["chat_messages"] 取前端透传历史, 过滤 system, 转 BaseMessage
-        2. 读长期记忆, 格式化为 <long_term_memory> extension
+        2. 读置顶记忆单一块, 格式化为 <pinned_memory> extension
         3. current_content = 时间 + user_input
 
         Args:
@@ -160,13 +159,22 @@ class SimpleMemoryProcessor(BaseProcessor):
             chat_messages = processor_config.get("chat_messages")
         history_messages = _convert_chat_messages(chat_messages)
 
-        # 2. 长期记忆 extension
+        # 2. 长期记忆 extension (统一单一块, 标签 <pinned_memory>)
         system_prompt_extension = ""
         try:
-            from src.agent.memory.simple_memory.manager import SimpleMemoryManager
+            from src.storage.service import create_pinned_memory_block_service
 
-            manager = SimpleMemoryManager(user_id, thread_id, agent_id=agent_id)
-            system_prompt_extension = await manager.get_memory_for_injection()
+            block_service = await create_pinned_memory_block_service(
+                user_id,
+                thread_id,
+                agent_id=agent_id,
+            )
+            content = await block_service.get_formatted(user_id, thread_id)
+            if content and content.strip():
+                system_prompt_extension = (
+                    "以下是你需要长期记住的关键信息:\n"
+                    f"<pinned_memory>\n{content}\n</pinned_memory>"
+                )
         except Exception as e:
             logger.warning("读取长期记忆失败(非致命): %s", e)
 

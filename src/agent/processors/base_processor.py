@@ -102,7 +102,7 @@ class BaseProcessor(ABC):
         默认空字符串(不注入), 子类按记忆类型重写.
 
         Args:
-            agent_config: Agent配置, 用于条件判断(如 include_todo_in_context)
+            agent_config: Agent配置, 用于条件判断
 
         Returns:
             格式描述文本, 空字符串表示不注入

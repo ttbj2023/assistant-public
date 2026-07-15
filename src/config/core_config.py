@@ -33,12 +33,6 @@ class CacheConfig(BaseModel):
         le=1000,
         description="对话历史缓存大小",
     )
-    todolist_cache_size: int = Field(
-        default=50,
-        ge=1,
-        le=500,
-        description="TODO列表缓存大小",
-    )
 
     # 全局缓存统计
     enable_cache_stats: bool = Field(default=True, description="启用缓存统计功能")

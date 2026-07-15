@@ -54,10 +54,7 @@ python scripts/static_analysis.py --help
 ## 常用工作流
 
 ```bash
-# 日常开发: 快速检查
-python scripts/static_analysis.py analyze --quick
-
-# 提交前: 核心模式门禁检查
+# 日常开发 / 提交前: 核心模式门禁检查
 python scripts/static_analysis.py analyze
 
 # 格式修复

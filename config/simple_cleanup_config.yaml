@@ -7,6 +7,7 @@ protected_files:
   markdown_files:
     - "CLAUDE.md"
     - "README.md"
+    - "README_EN.md"
     - "AGENTS.md"
 
   # 核心配置文件

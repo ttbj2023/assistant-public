@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.tools.internal.wechat_publish.converter import md_to_wechat_html
 from src.tools.internal.wechat_publish.service import (
     _replace_attachment_markers,
     _resolve_attachment_markers,
@@ -80,10 +81,10 @@ class TestResolveAttachmentMarkers:
                 content, client, "user", "thread", attachment_map
             )
 
-        assert "__WXATT_a1b2c3d4__" in result
+        assert "{WXATT:a1b2c3d4}" in result
         assert "[file: a1b2c3d4]" not in result
         assert "**饼图展示**" in result
-        assert attachment_map["__WXATT_a1b2c3d4__"] == "http://cdn/a1.png"
+        assert attachment_map["{WXATT:a1b2c3d4}"] == "http://cdn/a1.png"
 
     @pytest.mark.asyncio
     async def test_marker_followed_by_inline_code_replaced(
@@ -105,7 +106,7 @@ class TestResolveAttachmentMarkers:
                 content, client, "user", "thread", attachment_map
             )
 
-        assert "__WXATT_b2c3d4e5__" in result
+        assert "{WXATT:b2c3d4e5}" in result
         assert "[file: b2c3d4e5]" not in result
         assert "`MAU 数据`" in result
 
@@ -154,8 +155,8 @@ class TestResolveAttachmentMarkers:
                 content, client, "user", "thread", attachment_map
             )
 
-        assert "__WXATT_a1b2c3d4__" in result
-        assert "__WXATT_e5f6a7b8__" in result
+        assert "{WXATT:a1b2c3d4}" in result
+        assert "{WXATT:e5f6a7b8}" in result
         assert "[file:" not in result
         assert len(attachment_map) == 2
 
@@ -177,7 +178,7 @@ class TestResolveAttachmentMarkers:
                 content, client, "user", "thread", attachment_map
             )
 
-        assert result.count("__WXATT_a1b2c3d4__") == 2
+        assert result.count("{WXATT:a1b2c3d4}") == 2
         assert "[file: a1b2c3d4]" not in result
         assert len(attachment_map) == 1
 
@@ -199,7 +200,7 @@ class TestResolveAttachmentMarkers:
                 content, client, "user", "thread", attachment_map
             )
 
-        assert "__WXATT_a1b2c3d4__" in result
+        assert "{WXATT:a1b2c3d4}" in result
         assert "[file:" not in result
 
     @pytest.mark.asyncio
@@ -299,14 +300,14 @@ class TestReplaceAttachmentMarkers:
 
     def test_placeholder_replaced_with_img(self) -> None:
         """占位符应被替换为含 CDN url 的 <img> 标签."""
-        html = "<p>前文 __WXATT_a1b2c3d4__ 后文</p>"
-        attachment_map = {"__WXATT_a1b2c3d4__": "http://cdn/a1.png"}
+        html = "<p>前文 {WXATT:a1b2c3d4} 后文</p>"
+        attachment_map = {"{WXATT:a1b2c3d4}": "http://cdn/a1.png"}
 
         result = _replace_attachment_markers(html, attachment_map)
 
         assert "<img" in result
         assert "http://cdn/a1.png" in result
-        assert "__WXATT_a1b2c3d4__" not in result
+        assert "{WXATT:a1b2c3d4}" not in result
         assert "前文" in result
         assert "后文" in result
 
@@ -327,26 +328,37 @@ class TestReplaceAttachmentMarkers:
 
         assert any("残留未替换的附件标记" in r.message for r in caplog.records)
 
+    def test_residual_placeholder_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """html 中残留 {WXATT:id} 占位符 (attachment_map 缺失对应key) 应触发 warning."""
+        html = "<p>{WXATT:deadbeef} 未替换</p>"
+
+        with caplog.at_level("WARNING"):
+            _replace_attachment_markers(html, {})
+
+        assert any("附件占位符" in r.message for r in caplog.records)
+
     def test_no_warning_when_clean(self, caplog: pytest.LogCaptureFixture) -> None:
         """无残留标记时不应触发 warning."""
-        html = "<p>正常内容 __WXATT_a1b2c3d4__</p>"
+        html = "<p>正常内容 {WXATT:a1b2c3d4}</p>"
 
         with caplog.at_level("WARNING"):
             _replace_attachment_markers(
-                html, {"__WXATT_a1b2c3d4__": "http://cdn/a1.png"}
+                html, {"{WXATT:a1b2c3d4}": "http://cdn/a1.png"}
             )
 
         assert not any("残留" in r.message for r in caplog.records)
 
 
 class TestEndToEndIsolation:
-    """端到端验证: resolve -> 模拟 md 转换 -> replace."""
+    """端到端验证: resolve -> 真实 md 转换 -> replace."""
 
     @pytest.mark.asyncio
     async def test_bold_marker_survives_markdown_transform(
         self, tmp_path: Path
     ) -> None:
-        """标记后跟 **加粗**, 经 md 强调转换后占位符仍可精确替换."""
+        """标记后跟 **加粗**, 经真实 md 转换后占位符仍可精确替换为 <img>."""
         img = tmp_path / "a1b2c3d4.png"
         img.write_bytes(b"fake")
         client = MagicMock()
@@ -362,11 +374,46 @@ class TestEndToEndIsolation:
                 raw_markdown, client, "user", "thread", attachment_map
             )
 
-        html = f"<p>{resolved.replace('**加粗说明**', '<strong>加粗说明</strong>')}</p>"
+        final = _replace_attachment_markers(
+            md_to_wechat_html(resolved), attachment_map
+        )
 
+        assert "<img" in final
+        assert "http://cdn/a1.png" in final
+        assert "加粗说明" in final
+        assert "{WXATT:" not in final
+        assert "[file:" not in final
+
+    @pytest.mark.asyncio
+    async def test_placeholder_survives_real_markdown_conversion(
+        self, tmp_path: Path
+    ) -> None:
+        """占位符经真实 md_to_wechat_html 转换后仍可被精确替换为 <img>.
+
+        回归: 旧占位符 __WXATT_{id}__ 的双下划线被 python-markdown 当作
+        加粗语法, 转成 <strong>WXATT_{id}</strong>, 导致 replace 失配,
+        图片 CDN URL 永不替换, 草稿箱显示蓝色加粗的 WXATT_xxx 而非图片.
+        """
+        img = tmp_path / "a1b2c3d4.png"
+        img.write_bytes(b"fake")
+        client = MagicMock()
+        client.upload_media = AsyncMock(
+            return_value={"media_id": "m1", "url": "http://cdn/a1.png"}
+        )
+
+        raw_markdown = "[file: a1b2c3d4] **加粗说明**"
+        attachment_map: dict[str, str] = {}
+
+        with _patch_deps({"a1b2c3d4": _make_db_entry("a1b2c3d4")}, img):
+            resolved = await _resolve_attachment_markers(
+                raw_markdown, client, "user", "thread", attachment_map
+            )
+
+        html = md_to_wechat_html(resolved)
         final = _replace_attachment_markers(html, attachment_map)
 
         assert "<img" in final
         assert "http://cdn/a1.png" in final
-        assert "__WXATT_" not in final
+        assert "<strong>WXATT" not in final
+        assert "WXATT_a1b2c3d4" not in final
         assert "[file:" not in final

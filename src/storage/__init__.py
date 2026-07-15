@@ -30,7 +30,6 @@ from .models import (
     TodoStatus,
 )
 from .service import (
-    create_conversation_data_service,
     create_conversation_service,
     create_memory_service,
     create_todo_service,
@@ -52,7 +51,6 @@ __all__ = [
     "create_async_conversation_history_db_manager",
     "create_async_pinned_memory_db_manager",
     "create_async_todo_db_manager",
-    "create_conversation_data_service",
     "create_conversation_service",
     "create_langchain_vector_store",
     "create_memory_service",

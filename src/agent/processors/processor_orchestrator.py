@@ -13,7 +13,6 @@ from src.core.context import get_user_context_or_none
 from src.core.streaming import StreamContent
 from src.storage.models.conversation import ConversationData
 from src.storage.service import (
-    create_conversation_data_service,
     create_conversation_service,
 )
 from src.utils.message_formatting import format_user_message_with_attachments
@@ -70,7 +69,25 @@ class ProcessorOrchestrator:
         # 创建推理协调器
         self.inference_coordinator = InferenceCoordinator(config)
 
+        # 流式路径快照缓存: process_stream 存, finalize 取 (按 user:thread 隔离)
+        self._stream_snapshots: dict[str, list[Any]] = {}
+
         logger.info("🚀 处理器总协调器初始化完成,记忆类型: %s", memory_type)
+
+    @staticmethod
+    def _build_messages_snapshot(ctx: Any) -> list[Any]:
+        """从 request context 构造 messages 快照.
+
+        供记忆覆写组件复用主请求前缀缓存. 快照 = [SystemMessage, *history,
+        HumanMessage(user_content)], 与主请求发给 LLM 的 messages 前缀一致.
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        return [
+            SystemMessage(content=ctx.system_prompt),
+            *(ctx.history_messages or []),
+            HumanMessage(content=ctx.user_content),
+        ]
 
     def _create_memory_processor(self, memory_type: str) -> BaseProcessor:
         """根据类型创建记忆处理器.
@@ -256,6 +273,10 @@ class ProcessorOrchestrator:
                             attachment_infos=attachment_infos,
                             timezone=timezone,
                             round_number=round_number,
+                        )
+
+                        conversation_data.metadata["_messages_snapshot"] = (
+                            self._build_messages_snapshot(ctx)
                         )
 
                         await conversation_memory.add_conversation_round(
@@ -618,6 +639,11 @@ class ProcessorOrchestrator:
 
             logger.info("✅ 推理协调器流式调用成功: %s:%s", user_id, thread_id)
 
+            # 缓存 messages 快照供 finalize_conversation 使用 (ctx 此处可达, finalize 不可达)
+            self._stream_snapshots[f"{user_id}:{thread_id}"] = (
+                self._build_messages_snapshot(ctx)
+            )
+
             # 注意:记忆存储在流结束后由 finalize_conversation() 处理
 
         except Exception as e:
@@ -707,6 +733,11 @@ class ProcessorOrchestrator:
                 attachment_infos=attachment_infos,
                 timezone=timezone,
             )
+
+            # 从实例缓存取 messages 快照 (process_stream 时存入)
+            snapshot = self._stream_snapshots.pop(f"{user_id}:{thread_id}", None)
+            if snapshot:
+                conversation_data.metadata["_messages_snapshot"] = snapshot
 
             # 4. 存储对话轮次
             await conversation_memory.add_conversation_round(conversation_data)
@@ -800,17 +831,23 @@ class ProcessorOrchestrator:
     ) -> None:
         """确认轮次号使用并清理预留记录; 失败仅告警, 不阻断主流程."""
         try:
-            conv_data_service = await create_conversation_data_service(
+            conv_service = await create_conversation_service(
                 user_id,
                 thread_id,
                 agent_id=conversation_data.agent_id,
             )
-            await conv_data_service.confirm_round_number_usage(
-                conversation_data.round_number,
+            conversation = await conv_service.get_conversation_by_round(
                 user_id,
                 thread_id,
+                conversation_data.round_number,
             )
-            logger.debug("已确认轮次号使用: %s", conversation_data.round_number)
+            if not conversation:
+                logger.warning(
+                    "轮次号确认失败: 对话不存在 round=%s",
+                    conversation_data.round_number,
+                )
+            else:
+                logger.debug("已确认轮次号使用: %s", conversation_data.round_number)
         except Exception as confirm_error:
             logger.warning("轮次号确认失败,但不影响主流程: %s", confirm_error)
 

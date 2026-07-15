@@ -29,7 +29,7 @@ class MemorySearchRequest(BaseModel):
 
     query: str = Field(
         ...,
-        description="搜索关键词或问题, 建议使用中英文组合提高检索效果",
+        description="搜索关键词或问题, 向量检索跨语言, 专有名词建议保留原文",
     )
     time_filter: str = Field(
         default="",
@@ -41,19 +41,29 @@ class MemorySearchRequest(BaseModel):
         le=50,
         description="返回结果数量, 默认3条, 最多50条",
     )
+    round_start: int | None = Field(
+        default=None,
+        ge=1,
+        description="轮次区间起始(包含), 与 round_end 配合限定搜索范围, 用于索引区下钻",
+    )
+    round_end: int | None = Field(
+        default=None,
+        ge=1,
+        description="轮次区间结束(包含), 与 round_start 配合限定搜索范围",
+    )
 
 
 class AsyncMemoryRetrievalTool(BaseInternalTool):
     """异步对话历史检索工具."""
 
     name: str = "search_memories"
-    summary: str = "搜索历史对话记录和记忆内容"
-    description: str = """搜索历史对话记录和记忆内容.
+    description: str = """搜索历史对话记录和记忆内容, 返回概览钩子 [轮X] topic: summary.
 
-支持中英文双语检索, 建议使用中英文关键词组合提高效果:
-"职业 occupation" "项目 project" "装饰器 decorator"
+向量语义检索支持跨语言, 单一语言通常即可命中.
+对于专有名词/技术术语(如 decorator/Kubernetes), 建议保留原文以提升精确匹配.
+需要完整原文时, 用返回的轮次号调用 get_round_detail.
 
-示例: {"query": "项目进度 project", "time_filter": "last_week", "max_results": 5}
+示例: {"query": "项目进度", "time_filter": "last_week", "max_results": 5}
 """
     args_schema: type[MemorySearchRequest] = MemorySearchRequest
 
@@ -91,7 +101,14 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
         return service
 
     @override
-    def _run(self, query: str, time_filter: str = "", max_results: int = 3) -> str:  # type: ignore[override]
+    def _run(
+        self,
+        query: str,
+        time_filter: str = "",
+        max_results: int = 3,
+        round_start: int | None = None,
+        round_end: int | None = None,
+    ) -> str:  # type: ignore[override]
         """同步执行方法 - 在同步环境中安全运行异步操作."""
         try:
             from src.utils.async_utils import run_async_in_sync_context
@@ -101,6 +118,8 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
                 query,
                 time_filter,
                 max_results,
+                round_start,
+                round_end,
             )
 
         except Exception as e:
@@ -114,6 +133,8 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
         query: str,
         time_filter: str = "",
         max_results: int = 3,
+        round_start: int | None = None,
+        round_end: int | None = None,
     ) -> str:
         """异步执行记忆检索 - 基于双路检索架构."""
         try:
@@ -139,12 +160,21 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
                     max_results,
                 )
                 try:
-                    # 有时间过滤时走 search_with_filters, 否则走标准接口
-                    if time_filter and time_filter.strip():
+                    # 组装 round_range (round_start/round_end 均提供时生效)
+                    round_range = None
+                    if round_start is not None and round_end is not None:
+                        round_range = (round_start, round_end)
+
+                    # 有任何过滤条件(time_filter 或 round_range)时走 search_with_filters
+                    has_filters = bool(time_filter and time_filter.strip()) or (
+                        round_range is not None
+                    )
+                    if has_filters:
                         documents = await self._retrieval_service.search_with_filters(
                             query=query,
                             time_filter=time_filter,
                             max_results=max_results,
+                            round_range=round_range,
                         )
                     else:
                         documents = await self._retrieval_service.search_conversations(
@@ -202,7 +232,7 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
                 "content": content,
                 "timestamp": doc.metadata.get("timestamp", "unknown"),
                 "round_number": doc.metadata.get("round_number", i + 1),
-                "relevance": doc.metadata.get("relevance_score", 0.9 - i * 0.1),
+                "relevance": doc.metadata.get("relevance_score"),
                 "metadata": doc.metadata,
             })
         return results

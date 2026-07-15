@@ -34,7 +34,7 @@ system_prompt: |
 # nutrition_calculator 已移除，主对话模型已具备营养计算知识
 tools:
   - "health_data_manager"
-  - "search_memories"
+  - "memory_recall_group"
   - "search_available_tools"
 
 # 可选工具: 休眠状态, Agent通过search_available_tools按需发现后由中间件动态注入

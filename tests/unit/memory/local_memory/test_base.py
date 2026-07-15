@@ -93,7 +93,7 @@ class BaseLocalMemoryTest:
             else:
                 combined_content += str(pinned)
 
-        for part_name in ["index_area", "conversation_history", "todo_list"]:
+        for part_name in ["index_area", "conversation_history"]:
             if part_name in memory_parts:
                 part = memory_parts[part_name]
                 if isinstance(part, dict):

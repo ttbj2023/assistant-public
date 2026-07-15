@@ -75,8 +75,8 @@ class TestFormatDocumentsToResults:
         assert results[0]["content"] == "content1"
         assert results[0]["relevance"] == 0.95
         assert results[0]["round_number"] == 5
-        # doc2没有relevance_score, 源码使用 0.9 - i*0.1 = 0.8 作为默认值
-        assert results[1]["relevance"] == pytest.approx(0.8)
+        # doc2 无 relevance_score, 打假后不再按位置伪造(0.9-i*0.1), 返回 None
+        assert results[1]["relevance"] is None
 
     def test_empty_documents_returns_empty(self, tool):
         results = tool._format_documents_to_results([])
@@ -155,6 +155,53 @@ class TestArun:
 
         parsed = json.loads(result)
         assert parsed["success"] is False
+
+
+class TestRoundRangeFilter:
+    """round_start/round_end 轮次区间过滤透传测试."""
+
+    @pytest.mark.asyncio
+    async def test_round_range_should_pass_to_search_with_filters(
+        self, tool, mock_service
+    ):
+        """提供 round_start/round_end 时应组装 round_range 传给 search_with_filters."""
+        mock_service.search_with_filters = AsyncMock(return_value=[])
+
+        with _inject_service(tool, mock_service):
+            await tool._arun(
+                query="test", round_start=10, round_end=20, max_results=5
+            )
+
+        mock_service.search_with_filters.assert_awaited_once()
+        call = mock_service.search_with_filters.await_args
+        assert call.kwargs.get("round_range") == (10, 20)
+
+    @pytest.mark.asyncio
+    async def test_round_range_without_time_filter_should_use_filtered_path(
+        self, tool, mock_service
+    ):
+        """仅有 round_range(无 time_filter) 时也应走带过滤的检索路径."""
+        mock_service.search_with_filters = AsyncMock(return_value=[])
+        mock_service.search_conversations = AsyncMock(return_value=[])
+
+        with _inject_service(tool, mock_service):
+            await tool._arun(query="test", round_start=5, round_end=15, max_results=5)
+
+        mock_service.search_with_filters.assert_awaited_once()
+        mock_service.search_conversations.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_no_round_range_and_no_time_filter_should_use_standard_path(
+        self, tool, mock_service
+    ):
+        """无 round_range 且无 time_filter 时走标准接口(不带过滤)."""
+        mock_service.search_conversations = AsyncMock(return_value=[])
+
+        with _inject_service(tool, mock_service):
+            await tool._arun(query="test", max_results=5)
+
+        mock_service.search_conversations.assert_awaited_once()
+        mock_service.search_with_filters.assert_not_awaited()
 
 
 class TestGetRelevantDocuments:

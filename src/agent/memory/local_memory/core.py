@@ -19,7 +19,6 @@ import traceback
 from typing import TYPE_CHECKING, override
 
 from src.storage.service import (
-    create_conversation_data_service,
     create_conversation_service,
     create_vector_service,
 )
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_index_run_threshold(agent_config: AgentConfig | None) -> float:
-    """解析 run 检测相似度阈值(回退 0.5)."""
+    """解析 run 检测相似度阈值(回退 0.45)."""
     if agent_config is not None:
         try:
             val = getattr(agent_config.memory, "index_run_similarity_threshold", None)
@@ -46,7 +45,7 @@ def _resolve_index_run_threshold(agent_config: AgentConfig | None) -> float:
                 return float(val)
         except Exception as e:
             logger.debug("run 阈值配置获取失败, 使用默认值: %s", e)
-    return 0.5
+    return 0.45
 
 
 def _resolve_index_arc_max_chars(agent_config: AgentConfig | None) -> int:
@@ -91,11 +90,12 @@ class ConversationMemoryCore:
             )
         self.agent_id: str = agent_config.agent_id
 
-        # 置顶记忆子系统: 增量更新 + 周期审计 (fire-and-forget)
+        # 置顶记忆子系统: 主模型覆写 (fire-and-forget)
         self._pinned_svc = PinnedMemoryService(
             self.user_id,
             self.thread_id,
             self.agent_id,
+            agent_config=agent_config,
         )
 
         # 索引 run 检测子系统: 语义连续性判定 + 弧短语冻结 (fire-and-forget)
@@ -140,8 +140,7 @@ class ConversationMemoryCore:
         4. 缓存更新与溢出处理
 
         后台路径(fire-and-forget, 不阻塞主流程, 读写缓存解耦):
-        - 置顶记忆更新(每轮): 与周期审计共用 _pinned_lock 串行
-        - 周期置顶审计(每 _AUDIT_INTERVAL 轮): 读全局整理(delete/change, 无add)
+        - 置顶记忆覆写(每轮): 主模型全文覆写单一块, _pinned_lock 串行化
 
         使用统一ConversationData数据源确保所有操作的数据一致性.
         提供容错机制,单个操作失败不影响整体流程.
@@ -155,18 +154,21 @@ class ConversationMemoryCore:
         )
 
         try:
-            # 置顶记忆处理 (fire-and-forget 更新 + 条件审计)
-            self._pinned_svc.on_conversation_round(conversation_data)
+            # 置顶记忆处理 (fire-and-forget 覆写)
+            messages_snapshot = conversation_data.metadata.get("_messages_snapshot")
+            self._pinned_svc.on_conversation_round(
+                conversation_data,
+                messages_snapshot=messages_snapshot,
+            )
 
             logger.debug(
                 f"🔄 开始并行存储操作: {self.user_id}:{self.thread_id}, 轮次: {conversation_data.round_number}",
             )
 
-            # 3. 四个并行操作(都使用相同 conversation_data), 需在下一轮前落库
+            # 3. 三个无依赖并行操作(都使用相同 conversation_data), 需在下一轮前落库
             additional_tasks = [
                 self._store_conversation_content(conversation_data),  # SQL对话内容存储
                 self._store_vector_conversation(conversation_data),  # 向量存储
-                self._generate_conversation_index(conversation_data),  # 索引生成
                 self._update_conversation_cache(
                     conversation_data,
                 ),  # 缓存更新
@@ -179,7 +181,6 @@ class ConversationMemoryCore:
             task_names = [
                 "对话内容存储",
                 "向量存储",
-                "索引生成",
                 "缓存更新",
             ]
             for i, result in enumerate(results):
@@ -190,7 +191,15 @@ class ConversationMemoryCore:
                         f"{task_names[i]}完成: {self.user_id}:{self.thread_id}",
                     )
 
-            # 索引 run 检测(fire-and-forget): 在并行存储完成后触发, 此时本轮
+            # 索引生成: 依赖基础内容行已落库(任务1), 必须在并行存储完成后串行执行.
+            # update_conversation_index 只 UPDATE 不 INSERT, 若并行竞态下行不存在
+            # 则 topic/summary 丢失. 串行化消除竞态.
+            try:
+                await self._generate_conversation_index(conversation_data)
+            except Exception as e:
+                logger.warning(f"索引生成失败(不影响主流程): {e}")
+
+            # 索引 run 检测(fire-and-forget): 在索引生成完成后触发, 此时本轮
             # topic+summary 已落库, run 检测可读本轮 summary 做 embedding 判连续性
             self._index_run_svc.on_conversation_round(conversation_data)
 
@@ -243,18 +252,24 @@ class ConversationMemoryCore:
         )
 
         try:
-            # 使用Service层接口进行统一对话数据存储
-            conv_data_service = await create_conversation_data_service(
+            conv_service = await create_conversation_service(
                 conversation_data.user_id,
                 conversation_data.thread_id,
                 agent_id=self.agent_id,
             )
 
-            # ConversationDataService的store_conversation_data方法执行四个并行存储操作
-            result = await conv_data_service.store_conversation_data(conversation_data)
+            await conv_service.create_conversation(
+                user_message=conversation_data.user_message,
+                assistant_response=conversation_data.assistant_response,
+                user_id=conversation_data.user_id,
+                thread_id=conversation_data.thread_id,
+                agent_id=conversation_data.agent_id,
+                metadata=conversation_data.metadata,
+                round_number=conversation_data.round_number,
+            )
 
             logger.debug(
-                f"✅ 对话内容存储完成: {conversation_data.user_id}:{conversation_data.thread_id}:{conversation_data.round_number}, 结果: {result}",
+                f"✅ 对话内容存储完成: {conversation_data.user_id}:{conversation_data.thread_id}:{conversation_data.round_number}",
             )
 
         except Exception as e:
@@ -359,37 +374,32 @@ class ConversationMemoryCore:
             )
             logger.debug("索引结果完整信息: %s", index_result)
 
-            # 2. 使用Service层接口存储对话索引
+            # 2. 索引元数据独立写入(只 UPDATE topic/summary, 不碰基础内容)
             conv_service = await create_conversation_service(
                 conversation_data.user_id,
                 conversation_data.thread_id,
                 agent_id=self.agent_id,
             )
 
-            # 将分析结果作为元数据存储 (使用统一时间戳)
-            metadata = {
-                "topic": index_result.topic or "对话",
-                "summary": (
-                    index_result.summary
-                    or f"用户: {conversation_data.user_message[:50]}..."
-                ),
-                "analyzer_model": used_model,
-                "timestamp": conversation_data.timestamp.isoformat()
-                if conversation_data.timestamp
-                else None,
-            }
-
-            # 使用ConversationService的create_conversation方法存储索引
-            # 注意:传递预分配的round_number,避免创建新的轮次
-            await conv_service.create_conversation(
-                user_message=conversation_data.user_message,
-                assistant_response=conversation_data.assistant_response,
-                user_id=conversation_data.user_id,
-                thread_id=conversation_data.thread_id,
-                agent_id=conversation_data.agent_id,
-                metadata=metadata,
-                round_number=conversation_data.round_number,  # 传递预分配的轮次号,确保UPSERT同一轮
+            topic = index_result.topic or "对话"
+            summary = (
+                index_result.summary
+                or f"用户: {conversation_data.user_message[:50]}..."
             )
+
+            updated = await conv_service.update_conversation_index(
+                conversation_data.user_id,
+                conversation_data.thread_id,
+                conversation_data.round_number,
+                topic=topic,
+                summary=summary,
+            )
+            if not updated:
+                logger.warning(
+                    "索引元数据未写入: 基础内容行不存在(round=%s), "
+                    "可能对话内容存储失败",
+                    conversation_data.round_number,
+                )
 
             logger.debug(
                 f"索引生成完成: {conversation_data.user_id}:{conversation_data.thread_id}:{conversation_data.round_number}, 主题: {index_result.topic}",

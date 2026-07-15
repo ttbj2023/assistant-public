@@ -1,4 +1,4 @@
-"""异步用户要求记事本数据访问对象.
+"""异步统一置顶记忆单一块数据访问对象.
 
 组合 AsyncDatabaseOperations, 提供 get/upsert/delete (每 user/thread 单行).
 """
@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import and_, delete, select
 
-from ..models.user_requirement import UserRequirement
+from ..models.pinned_memory_block import PinnedMemoryBlock
 from .database_operations import AsyncDatabaseOperations
 
 if TYPE_CHECKING:
@@ -20,28 +20,28 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AsyncUserRequirementDAO:
-    """异步用户要求记事本 DAO (每 user/thread 单行)."""
+class AsyncPinnedMemoryBlockDAO:
+    """异步统一置顶记忆单一块 DAO (每 user/thread 单行)."""
 
     def __init__(self, session_factory: async_sessionmaker) -> None:
-        self.db_ops = AsyncDatabaseOperations(session_factory, UserRequirement)
+        self.db_ops = AsyncDatabaseOperations(session_factory, PinnedMemoryBlock)
         self.session_factory = session_factory
-        logger.debug("AsyncUserRequirementDAO初始化完成")
+        logger.debug("AsyncPinnedMemoryBlockDAO初始化完成")
 
-    async def get(self, user_id: str, thread_id: str) -> UserRequirement | None:
-        """获取单条记事本记录."""
+    async def get(self, user_id: str, thread_id: str) -> PinnedMemoryBlock | None:
+        """获取单条记忆块记录."""
         try:
             async with self.session_factory() as session:
-                statement = select(UserRequirement).where(
+                statement = select(PinnedMemoryBlock).where(
                     and_(
-                        UserRequirement.user_id == user_id,
-                        UserRequirement.thread_id == thread_id,
+                        PinnedMemoryBlock.user_id == user_id,
+                        PinnedMemoryBlock.thread_id == thread_id,
                     ),
                 )
                 result = await session.execute(statement)
                 return result.scalar_one_or_none()
         except Exception as e:
-            logger.error("获取用户要求记事本失败: %s", e)
+            logger.error("获取统一置顶记忆块失败: %s", e)
             raise
 
     async def upsert(
@@ -49,16 +49,16 @@ class AsyncUserRequirementDAO:
         user_id: str,
         thread_id: str,
         content: str,
-    ) -> UserRequirement:
-        """更新或插入记事本 (全文覆盖)."""
+    ) -> PinnedMemoryBlock:
+        """更新或插入记忆块 (全文覆盖)."""
         try:
             async with self.db_ops.transaction_scope() as session:
                 statement = (
-                    select(UserRequirement)
+                    select(PinnedMemoryBlock)
                     .where(
                         and_(
-                            UserRequirement.user_id == user_id,
-                            UserRequirement.thread_id == thread_id,
+                            PinnedMemoryBlock.user_id == user_id,
+                            PinnedMemoryBlock.thread_id == thread_id,
                         ),
                     )
                     .execution_options(synchronize_session="fetch")
@@ -80,27 +80,27 @@ class AsyncUserRequirementDAO:
                     content=content,
                 )
         except Exception as e:
-            logger.error("更新或插入用户要求记事本失败: %s", e)
+            logger.error("更新或插入统一置顶记忆块失败: %s", e)
             raise
 
     async def delete(self, user_id: str, thread_id: str) -> bool:
-        """清空记事本."""
+        """清空记忆块."""
         try:
             async with self.db_ops.transaction_scope() as session:
-                statement = delete(UserRequirement).where(
+                statement = delete(PinnedMemoryBlock).where(
                     and_(
-                        UserRequirement.user_id == user_id,
-                        UserRequirement.thread_id == thread_id,
+                        PinnedMemoryBlock.user_id == user_id,
+                        PinnedMemoryBlock.thread_id == thread_id,
                     ),
                 )
                 result = await session.execute(statement)
                 return result.rowcount > 0
         except Exception as e:
-            logger.error("清空用户要求记事本失败: %s", e)
+            logger.error("清空统一置顶记忆块失败: %s", e)
             raise
 
     async def health_check(self) -> bool:
         return await self.db_ops.health_check()
 
 
-__all__ = ["AsyncUserRequirementDAO"]
+__all__ = ["AsyncPinnedMemoryBlockDAO"]

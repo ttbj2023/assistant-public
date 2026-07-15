@@ -9,6 +9,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
+from datetime import UTC, datetime
 
 from src.storage.dao.async_conversation_dao import AsyncConversationIndexDAO
 from src.storage.models.conversation import ConversationIndex
@@ -49,6 +50,8 @@ def mock_session(mock_db_ops):
     """配置 db_ops.session_factory 返回的 Mock session, 用于 session 查询方法."""
     session = AsyncMock()
     session.execute = AsyncMock()
+    # session.begin() 返回 AsyncMock (支持 async with), 模拟事务上下文
+    session.begin = MagicMock(return_value=AsyncMock())
     factory = MagicMock()
     factory.return_value.__aenter__ = AsyncMock(return_value=session)
     # __aexit__ 返回 False(不抑制异常), 与真实 session 行为一致
@@ -746,3 +749,77 @@ class TestStoreIndexDataEdgeCases:
                 thread_id="test_thread_id",
                 agent_id="personal-assistant",
             )
+
+
+class TestGetRoundRangeByTimeRange:
+    """时间区间转轮次区间 (time_filter → round_range 转换的 DAO 层)."""
+
+    @pytest.mark.asyncio
+    async def test_should_return_min_max_round_when_data_exists(
+        self, conversation_dao, mock_session
+    ):
+        """区间内有对话时返回 (min_round, max_round)."""
+        result = Mock()
+        result.one.return_value = (5, 10)
+        mock_session.execute = AsyncMock(return_value=result)
+
+        rr = await conversation_dao.get_round_range_by_time_range(
+            "test_user",
+            "test_thread",
+            datetime(2024, 1, 1, tzinfo=UTC),
+            datetime(2024, 1, 8, tzinfo=UTC),
+        )
+
+        assert rr == (5, 10)
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_when_no_data_in_range(
+        self, conversation_dao, mock_session
+    ):
+        """区间内无对话(min 聚合为 None)时返回 None."""
+        result = Mock()
+        result.one.return_value = (None, None)
+        mock_session.execute = AsyncMock(return_value=result)
+
+        rr = await conversation_dao.get_round_range_by_time_range(
+            "test_user",
+            "test_thread",
+            datetime(2024, 1, 1, tzinfo=UTC),
+            datetime(2024, 1, 8, tzinfo=UTC),
+        )
+
+        assert rr is None
+
+
+class TestUpdateConversationIndex:
+    """update_conversation_index 只更新索引元数据(topic/summary), 不碰基础内容."""
+
+    @pytest.mark.asyncio
+    async def test_should_return_true_when_row_updated(
+        self, conversation_dao, mock_session
+    ):
+        """行存在时更新 topic/summary, 返回 True."""
+        result = Mock()
+        result.rowcount = 1
+        mock_session.execute = AsyncMock(return_value=result)
+
+        updated = await conversation_dao.update_conversation_index(
+            "test_user", "test_thread", 5, topic="主题", summary="摘要"
+        )
+
+        assert updated is True
+
+    @pytest.mark.asyncio
+    async def test_should_return_false_when_row_not_found(
+        self, conversation_dao, mock_session
+    ):
+        """行不存在时返回 False(不创建新行)."""
+        result = Mock()
+        result.rowcount = 0
+        mock_session.execute = AsyncMock(return_value=result)
+
+        updated = await conversation_dao.update_conversation_index(
+            "test_user", "test_thread", 999, topic="主题", summary="摘要"
+        )
+
+        assert updated is False

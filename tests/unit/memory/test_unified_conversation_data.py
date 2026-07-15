@@ -71,7 +71,7 @@ class TestConversationMemoryCoreUnifiedData:
             # 验证所有四个方法都被调用，且使用相同的ConversationData
             mock_sql.assert_called_once_with(sample_conversation_data)
             mock_vector.assert_called_once_with(sample_conversation_data)
-            mock_pinned.assert_called_once_with(sample_conversation_data)
+            mock_pinned.assert_called_once_with(sample_conversation_data, None)
             mock_index.assert_called_once_with(sample_conversation_data)
 
             # 验证 ConversationData 内容正确传递
@@ -86,26 +86,25 @@ class TestConversationMemoryCoreUnifiedData:
     ) -> None:
         """测试对话内容存储方法使用ConversationData."""
         with patch(
-            "src.agent.memory.local_memory.core.create_conversation_data_service"
+            "src.agent.memory.local_memory.core.create_conversation_service"
         ) as mock_create:
-            mock_manager = AsyncMock()
-            mock_create.return_value = mock_manager
+            mock_service = AsyncMock()
+            mock_create.return_value = mock_service
 
             await memory_core._store_conversation_content(sample_conversation_data)
 
-            # 验证数据管理器被正确调用
+            # 验证 conversation_service 被创建
             mock_create.assert_called_once_with(
                 "test_user", "test_thread", agent_id="personal-assistant"
             )
-            mock_manager.store_conversation_data.assert_called_once()
+            # 验证 create_conversation 被调用(基础内容存储)
+            mock_service.create_conversation.assert_called_once()
 
             # 获取调用参数
-            call_args = mock_manager.store_conversation_data.call_args[0][
-                0
-            ]  # 第一个位置参数是ConversationData
-            assert call_args.round_number == 1
-            assert call_args.user_message == "测试用户消息"
-            assert call_args.assistant_response == "测试助手回复"
+            call_kwargs = mock_service.create_conversation.call_args.kwargs
+            assert call_kwargs["round_number"] == 1
+            assert call_kwargs["user_message"] == "测试用户消息"
+            assert call_kwargs["assistant_response"] == "测试助手回复"
 
     @pytest.mark.asyncio
     async def test_index_generation_method(
@@ -144,13 +143,13 @@ class TestConversationMemoryCoreUnifiedData:
                 "测试用户消息", "测试助手回复"
             )
 
-            # 验证数据管理器被调用
-            mock_manager.create_conversation.assert_called_once()
-
-            # 获取调用参数
-            call_args = mock_manager.create_conversation.call_args[1]
-            assert call_args["user_message"] == "测试用户消息"
-            assert call_args["assistant_response"] == "测试助手回复"
+            # 验证 update_conversation_index 被调用(索引元数据独立写入, 不再全量 UPSERT)
+            mock_manager.update_conversation_index.assert_called_once()
+            call_kwargs = (
+                mock_manager.update_conversation_index.call_args.kwargs
+            )
+            assert call_kwargs["topic"] == "测试主题"
+            assert call_kwargs["summary"] == "测试摘要"
 
     @pytest.mark.asyncio
     async def test_index_generation_error_handling(
@@ -197,7 +196,9 @@ class TestConversationMemoryCoreUnifiedData:
         async def capture_vector(data: ConversationData) -> None:
             received_data["vector"] = data
 
-        async def capture_pinned(data: ConversationData) -> None:
+        async def capture_pinned(
+            data: ConversationData, messages_snapshot=None
+        ) -> None:
             received_data["pinned"] = data
 
         async def capture_index(data: ConversationData) -> None:

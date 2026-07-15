@@ -39,6 +39,7 @@ _AUTO_PREFIX = "auto:"
 _ILLUSTRATION_MARKER_RE = re.compile(r"\[ILLUSTRATION_(\d+)\]")
 
 _ATTACHMENT_MARKER_RE = re.compile(r"\[file:\s*(\w{8})\]")
+_ATTACHMENT_PLACEHOLDER_RE = re.compile(r"\{WXATT:\w+\}")
 
 _ANALYZE_PROMPT = """\
 请分析以下文章, 生成摘要和封面图提示词.
@@ -219,6 +220,8 @@ async def run_publish(
         "thumb_media_id": cover_media_info["media_id"],
         "show_cover_pic": 0,
         "content_source_url": "",
+        "need_open_comment": 1,
+        "only_fans_can_comment": 0,
     }
 
     draft_id = await client.upload_news_draft([article])
@@ -348,6 +351,7 @@ async def _generate_image(
             model_id=model_id,
             prompt=prompt,
             size="2560x1440",
+            watermark=False,
             timeout=120.0,
         )
         tmp_dir = tempfile.mkdtemp()
@@ -392,9 +396,9 @@ async def _resolve_attachment_markers(
 ) -> str:
     """解析 [file: id] 标记, 图片上传微信CDN后用 ASCII 占位符替换.
 
-    占位符 __WXATT_{file_id}__ 在 markdown->html 转换中保持稳定, 避免
-    full_marker 含行尾文本被 markdown 语法重组导致 html 阶段失配.
-    非图片附件或上传失败时移除标记.
+    占位符 {WXATT:{file_id}} 不含 markdown 强调定界符 (双下划线/星号),
+    经 markdown->html 转换后保持字面量不变, 避免被转成 <strong> 导致
+    html 阶段字符串失配. 非图片附件或上传失败时移除标记.
     """
     from src.core.path_resolver import resolve_attachment_internal_path
     from src.storage.service.file_registry_service import (
@@ -437,7 +441,7 @@ async def _resolve_attachment_markers(
 
             media_info = await client.upload_media(str(full_path))
             if media_info and media_info.get("url"):
-                placeholder = f"__WXATT_{file_id}__"
+                placeholder = f"{{WXATT:{file_id}}}"
                 content = marker_re.sub(placeholder, content)
                 attachment_map[placeholder] = media_info["url"]
             else:
@@ -648,5 +652,12 @@ def _replace_attachment_markers(
     residual = _ATTACHMENT_MARKER_RE.search(html)
     if residual:
         logger.warning("微信HTML中残留未替换的附件标记: %s", residual.group(0))
+
+    leftover_placeholder = _ATTACHMENT_PLACEHOLDER_RE.search(html)
+    if leftover_placeholder:
+        logger.warning(
+            "微信HTML中残留未替换的附件占位符 (attachment_map 缺失对应key): %s",
+            leftover_placeholder.group(0),
+        )
 
     return html

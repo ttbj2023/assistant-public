@@ -91,6 +91,21 @@ class TaskResult:
     execution_details: dict[str, Any] | None = None  # 详细执行信息
 
 
+# 任务元数据: asyncio task name -> (中文显示名, task_type)
+# 异常兜底使用此映射归类, 避免 task_type="unknown" 被门禁逻辑跳过(门禁绕过风险)
+TASK_METADATA: dict[str, tuple[str, str]] = {
+    "ruff": ("Ruff代码分析", "static_analysis"),
+    "mypy": ("MyPy类型分析", "static_analysis"),
+    "bandit": ("Bandit安全分析", "static_analysis"),
+    "safety": ("Safety依赖分析", "static_analysis"),
+    "config": ("配置治理检查", "static_analysis"),
+    "unit": ("单元测试", "test"),
+    "integration": ("集成测试", "test"),
+    "combined": ("综合测试", "test"),
+    "e2e": ("E2E测试", "test"),
+}
+
+
 class E2ETestResult:
     """E2E测试结果（内部使用）"""
 
@@ -907,10 +922,14 @@ class CIParallelRunner:
                 task_result = await task_func()
             except Exception as e:
                 self.console.print(f"[red]❌ {task_name.title()} 执行异常: {e}[/red]")
+                # 用映射归类 task_type, 确保崩溃任务仍被门禁逻辑检测到
+                display_name, task_type = TASK_METADATA.get(
+                    task_name, (task_name.title(), "unknown")
+                )
                 self.results.append(
                     TaskResult(
-                        task_name=task_name.title(),
-                        task_type="unknown",
+                        task_name=display_name,
+                        task_type=task_type,
                         success=False,
                         duration=0,
                         output="执行异常",
@@ -1035,10 +1054,15 @@ class CIParallelRunner:
                 self.console.print(
                     f"[red]❌ {tasks[i].get_name()} 执行异常: {task_result}[/red]"
                 )
+                # 用映射归类 task_type, 确保崩溃任务仍被门禁逻辑检测到
+                display_name, task_type = TASK_METADATA.get(
+                    tasks[i].get_name(),
+                    (tasks[i].get_name().title(), "unknown"),
+                )
                 self.results.append(
                     TaskResult(
-                        task_name=tasks[i].get_name().title(),
-                        task_type="unknown",
+                        task_name=display_name,
+                        task_type=task_type,
                         success=False,
                         duration=0,
                         output="执行异常",
@@ -1337,8 +1361,9 @@ class CIParallelRunner:
         test_total = len(test_results)
 
         # 提取通过率用于展示（从各测试任务的execution_details获取）
-        unit_pass_rate = 100.0
-        integration_pass_rate = 100.0
+        # None 表示未获取到数据(任务崩溃或未执行), 展示层显示 N/A 而非误导性的 100%
+        unit_pass_rate: float | None = None
+        integration_pass_rate: float | None = None
 
         for r in test_results:
             stats = r.execution_details or {}
@@ -1441,11 +1466,19 @@ class CIParallelRunner:
 
         # 显示通过标准
         criteria = summary["ci_pass_criteria"]
-        self.console.print(
-            f"🧪 单元测试通过率: {criteria['unit_test_pass_rate']:.1f}% (要求: {criteria['unit_test_required']}%)"
+        unit_rate = criteria["unit_test_pass_rate"]
+        integration_rate = criteria["integration_test_pass_rate"]
+        unit_str = f"{unit_rate:.1f}%" if unit_rate is not None else "N/A(未执行)"
+        integration_str = (
+            f"{integration_rate:.1f}%"
+            if integration_rate is not None
+            else "N/A(未执行)"
         )
         self.console.print(
-            f"🔗 集成测试通过率: {criteria['integration_test_pass_rate']:.1f}% (要求: {criteria['integration_test_required']}%)"
+            f"🧪 单元测试通过率: {unit_str} (要求: {criteria['unit_test_required']}%)"
+        )
+        self.console.print(
+            f"🔗 集成测试通过率: {integration_str} (要求: {criteria['integration_test_required']}%)"
         )
         self.console.print("[dim]ℹ️  静态分析仅提示, 配置治理检查为硬门禁[/dim]")
 
@@ -1535,10 +1568,13 @@ class CIParallelRunner:
             cleaner = SimpleCleaner()
 
             # 并行执行清理任务
-            htmlcov_result, archives_result = await asyncio.gather(
+            htmlcov_result, archives_result, test_logs_result = await asyncio.gather(
                 asyncio.get_event_loop().run_in_executor(None, cleaner.cleanup_htmlcov),
                 asyncio.get_event_loop().run_in_executor(
                     None, cleaner.cleanup_old_archives
+                ),
+                asyncio.get_event_loop().run_in_executor(
+                    None, cleaner.cleanup_test_logs
                 ),
                 return_exceptions=True,
             )
@@ -1578,6 +1614,22 @@ class CIParallelRunner:
                 )
             else:
                 self.console.print("[dim]✓ 没有过期文件需要清理[/dim]")
+
+            # 测试日志清理结果 (test_*.log, 含 .error.log)
+            if isinstance(test_logs_result, Exception):
+                self.console.print(
+                    f"[yellow]⚠️ 测试日志清理异常: {test_logs_result}[/yellow]"
+                )
+            elif test_logs_result.get("cleaned_count", 0) > 0:
+                count = test_logs_result["cleaned_count"]
+                size = test_logs_result.get("cleaned_size", 0)
+                files_cleaned += count
+                size_freed += size
+                self.console.print(
+                    f"[green]✅ 清理了 {count} 个过期测试日志[/green]"
+                )
+            else:
+                self.console.print("[dim]✓ 没有过期测试日志需要清理[/dim]")
 
             # 总计清理结果
             if files_cleaned > 0:

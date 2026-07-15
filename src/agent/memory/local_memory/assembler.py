@@ -4,7 +4,6 @@
   [HumanMessage("[过往对话回顾]"), AIMessage("<conversation_index>...")]  # 伪对话轮 (索引区)
   [HumanMessage(轮N原文), AIMessage(轮N回复), ...]                       # 真实历史
   + system_prompt_extension (置顶记忆, 含引导语前缀)
-  + todo_list (单独返回, 由 processor 注入 current_content)
 
 预算机制 (字符级, 主历史/索引区独立预算):
 - 主历史: total_char_budget (默认 20000), 内存二分查找, 判定 sum(len(user_message) + len(assistant_response))
@@ -26,9 +25,6 @@ from src.storage.formatters.conversation_formatter import (
 )
 from src.storage.service import (
     create_conversation_service,
-    create_memory_service,
-    create_todo_service,
-    create_user_requirement_service,
 )
 from src.storage.service.conversation_messages_builder import (
     build_messages_from_conversations,
@@ -37,10 +33,8 @@ from src.storage.service.conversation_messages_builder import (
 from .cache import (
     get_conversation,
     get_pinned_memory,
-    get_todolist,
     set_conversation,
     set_pinned_memory,
-    set_todolist,
 )
 from .history_budget import (
     resolve_total_char_budget,
@@ -67,20 +61,17 @@ class MemoryContext:
         history_messages: 索引区伪对话轮 + 主历史真实轮次, 顺序为时间正序.
         system_prompt_extension: 置顶记忆(含引导语前缀), 由 orchestrator 拼到
             system_prompt 尾部. 空字符串表示无置顶记忆.
-        todo_list: 格式化 TODO markdown, 由 processor 注入 current_content
-            (与时间/missed_messages 同区). 空字符串表示无 TODO 或未启用.
 
     """
 
     history_messages: list[BaseMessage] = field(default_factory=list)
     system_prompt_extension: str = ""
-    todo_list: str = ""
 
 
 class MemoryAssembler:
     """原生 messages 数组形式的记忆组装器.
 
-    内置 pinned/TODO 缓存获取逻辑 (cache + DB 回退),
+    内置 pinned 缓存获取逻辑 (cache + DB 回退),
     历史 + 索引区组装产出 BaseMessage 列表.
     """
 
@@ -136,24 +127,6 @@ class MemoryAssembler:
                 await self._get_pinned_memory_with_cache(user_id, thread_id)
             ).strip()
 
-            todo_str = ""
-            if self._resolve_include_todo():
-                todo_str = (
-                    await self._get_todo_list_with_cache(user_id, thread_id)
-                ).strip()
-
-            # 用户要求记事本 (独立分库, 主模型工具维护); 失败不阻塞记忆组装
-            req_str = ""
-            try:
-                req_service = await create_user_requirement_service(
-                    user_id,
-                    thread_id,
-                    agent_id=effective_agent_id,
-                )
-                req_str = (await req_service.get_formatted(user_id, thread_id)).strip()
-            except Exception as e:
-                logger.warning("读取用户要求记事本失败(非致命): %s", e)
-
             history_messages = await self._build_history_messages(
                 user_id,
                 thread_id,
@@ -164,30 +137,20 @@ class MemoryAssembler:
             extension = ""
             if pinned_str:
                 extension = (
-                    "以下是你需要长期记住的关键事实:\n"
+                    "以下是你需要长期记住的关键信息:\n"
                     f"<pinned_memory>\n{pinned_str}\n</pinned_memory>"
                 )
-            if req_str:
-                req_block = (
-                    "以下是用户对你的长期要求, 除非用户明确要求修改否则不要主动更改, "
-                    "并在回复中遵守:\n"
-                    f"<user_requirements>\n{req_str}\n</user_requirements>"
-                )
-                extension = f"{extension}\n\n{req_block}" if extension else req_block
 
             logger.debug(
-                "MemoryAssembler 组装完成 for %s:%s, messages=%d, "
-                "extension=%d, todo=%d",
+                "MemoryAssembler 组装完成 for %s:%s, messages=%d, extension=%d",
                 user_id,
                 thread_id,
                 len(history_messages),
                 len(extension),
-                len(todo_str),
             )
             return MemoryContext(
                 history_messages=history_messages,
                 system_prompt_extension=extension,
-                todo_list=todo_str,
             )
 
         except Exception as e:
@@ -390,122 +353,36 @@ class MemoryAssembler:
     # ==================== 缓存集成的数据获取方法 ====================
 
     async def _get_pinned_memory_with_cache(self, user_id: str, thread_id: str) -> str:
-        """获取置顶记忆 - 缓存优先, DB 回退."""
+        """获取置顶记忆单一块 - 缓存优先, DB 回退."""
         try:
             cached_pinned = get_pinned_memory(
                 user_id,
                 thread_id,
                 agent_id=self.agent_id,
             )
-            if cached_pinned is not None:
-                if isinstance(cached_pinned, str):
-                    return cached_pinned
-                if isinstance(cached_pinned, dict):
-                    from src.storage.formatters.pinned_memory_formatter import (
-                        create_pinned_memory_formatter,
-                    )
+            if isinstance(cached_pinned, str) and cached_pinned:
+                return cached_pinned
 
-                    formatter = create_pinned_memory_formatter()
-                    sanitized = formatter.sanitize_pinned_memory_data(cached_pinned)
-                    formatted = await formatter.format_pinned_memory(
-                        sanitized,
-                        "markdown",
-                    )
-                    set_pinned_memory(
-                        user_id,
-                        thread_id,
-                        formatted,
-                        agent_id=self.agent_id,
-                    )
-                    return formatted
-                logger.warning("缓存数据类型错误: %s, 重新获取", type(cached_pinned))  # type: ignore[unreachable]
+            from src.storage.service import create_pinned_memory_block_service
 
-            memory_service = await create_memory_service(
+            block_service = await create_pinned_memory_block_service(
                 user_id,
                 thread_id,
                 agent_id=self.agent_id,
             )
-            pinned_memory_dict = await memory_service.get_pinned_memory_as_dict(
-                user_id,
-                thread_id,
-            )
-            pinned_memory_str = await memory_service.format_pinned_memory_dict(
-                pinned_memory_dict,
-                "markdown",
-            )
+            pinned_str = await block_service.get_formatted(user_id, thread_id)
 
-            if not isinstance(pinned_memory_dict, dict):
-                logger.error("置顶记忆数据类型错误: %s", type(pinned_memory_dict))
-                pinned_memory_dict = {
-                    "basic_info": "",
-                    "preferences": "",
-                }
-
-            set_pinned_memory(
-                user_id,
-                thread_id,
-                pinned_memory_str,
-                agent_id=self.agent_id,
-            )
-            return pinned_memory_str
+            if pinned_str:
+                set_pinned_memory(
+                    user_id,
+                    thread_id,
+                    pinned_str,
+                    agent_id=self.agent_id,
+                )
+            return pinned_str
 
         except Exception as e:
             logger.error("获取置顶记忆失败 for %s:%s: %s", user_id, thread_id, e)
-            return ""
-
-    async def _get_todo_list_with_cache(self, user_id: str, thread_id: str) -> str:
-        """获取TODO列表 - 缓存优先, DB 回退."""
-        try:
-            cached_todolist = get_todolist(user_id, thread_id, agent_id=self.agent_id)
-            if cached_todolist is not None:
-                if isinstance(cached_todolist, str):
-                    return cached_todolist
-                if isinstance(cached_todolist, list):
-                    from src.storage.formatters.todo_formatter import (
-                        create_todo_formatter,
-                    )
-
-                    formatter = create_todo_formatter()
-                    todo_dicts: list[dict[str, Any]] = []
-                    for todo in cached_todolist:
-                        if isinstance(todo, dict):
-                            todo_dicts.append(todo)
-                        elif hasattr(todo, "to_dict"):
-                            todo_dicts.append(todo.to_dict())
-                    formatted = await formatter.format_todolist(
-                        todo_dicts,
-                        include_section_title=False,
-                        format_template="markdown",
-                    )
-                    set_todolist(user_id, thread_id, formatted, agent_id=self.agent_id)
-                    return formatted
-                logger.warning("TODO缓存类型错误: %s, 重新获取", type(cached_todolist))  # type: ignore[unreachable]
-
-            try:
-                from src.storage.models.todo import TodoStatus
-
-                todo_service = await create_todo_service(
-                    user_id,
-                    thread_id,
-                    agent_id=self.agent_id,
-                )
-                todo_list_str = await todo_service.get_formatted_todolist(
-                    user_id,
-                    thread_id,
-                    statuses=[TodoStatus.PENDING, TodoStatus.IN_PROGRESS],
-                    limit=50,
-                    include_section_title=False,
-                    format_template="markdown",
-                )
-            except Exception as e:
-                logger.error("获取TODO列表失败: %s", e)
-                todo_list_str = ""
-
-            set_todolist(user_id, thread_id, todo_list_str, agent_id=self.agent_id)
-            return todo_list_str
-
-        except Exception as e:
-            logger.error("获取TODO列表失败: %s", e)
             return ""
 
     # ==================== 配置解析 ====================
@@ -528,14 +405,6 @@ class MemoryAssembler:
             except Exception as e:
                 logger.debug("索引区预算配置获取失败, 使用默认值: %s", e)
         return 10000
-
-    def _resolve_include_todo(self) -> bool:
-        """解析是否在上下文中包含 TODO 列表."""
-        if self.agent_config is None or self.agent_config.memory is None:
-            return False
-        return bool(
-            getattr(self.agent_config.memory, "include_todo_in_context", False),
-        )
 
 
 __all__ = ["MemoryAssembler", "MemoryContext"]

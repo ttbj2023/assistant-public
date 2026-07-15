@@ -122,32 +122,24 @@ class TodoManagerBase(BaseInternalTool):
             "updated_at": todo.updated_at.isoformat() if todo.updated_at else None,
         }
 
-    def _invalidate_todo_cache(self) -> None:
-        """写操作后清除TODO缓存, 确保下次记忆组装时重新从数据库加载."""
-        from src.tools.shared.todo_cache_invalidator import invalidate_todo_cache
-
-        invalidate_todo_cache(self.user_id, self.thread_id, agent_id=self.agent_id)
-        logger.debug(f"已清除TODO缓存: {self.user_id}:{self.thread_id}")
-
-    async def _get_fresh_todolist(self) -> str:
+    async def _get_fresh_todolist(self) -> list[dict[str, Any]]:
         """写操作后获取最新TODO列表快照(硬保证: 在工具返回中附上数据库真实状态).
 
-        口径与记忆组装的 <current_todos> 一致, 只取 PENDING + IN_PROGRESS 活跃任务,
-        避免模型凭轮初快照或猜测描述任务. 失败时降级返回空串, 不影响写操作的成功返回.
+        只取 PENDING + IN_PROGRESS 活跃任务,
+        避免模型凭猜测描述任务. 失败时降级返回空列表, 不影响写操作的成功返回.
         """
         try:
             service = await self._get_todo_service()
-            return await service.get_formatted_todolist(
+            todos = await service.list_todos(
                 self.user_id,
                 self.thread_id,
                 statuses=[TodoStatus.PENDING, TodoStatus.IN_PROGRESS],
                 limit=50,
-                include_section_title=True,
-                format_template="markdown",
             )
+            return [self._todo_to_dict(t) for t in todos]
         except Exception as e:
             logger.warning("获取最新TODO列表失败(硬保证降级): %s", e)
-            return ""
+            return []
 
     @staticmethod
     def _json_result(success: bool, message: str, **extra: Any) -> str:

@@ -101,15 +101,15 @@ class TestInternalToolsIntegration:
         todo_id = create_data["todo"]["id"]
         assert todo_id is not None
 
-        # Act & Assert - 测试任务列表查询(返回格式化的 markdown 字符串)
+        # Act & Assert - 测试任务列表查询(返回结构化任务列表)
         list_result = list_tool._run(limit=10)
 
         # 验证列表结果
         assert list_result is not None
         list_data = json.loads(list_result)
         assert list_data["success"] is True
-        # 刚创建的任务标题应出现在格式化列表中
-        assert "集成测试任务" in list_data["message"]
+        # 刚创建的任务标题应出现在列表中
+        assert any(t["title"] == "集成测试任务" for t in list_data["todos"])
 
         # Act & Assert - 测试任务更新
         update_result = update_tool._run(
@@ -183,7 +183,7 @@ class TestInternalToolsIntegration:
         assert task1_data["success"] is True
         assert task2_data["success"] is True
 
-        # Act - 检查线程1/线程2的任务列表(返回格式化的 markdown 字符串)
+        # Act - 检查线程1/线程2的任务列表(返回结构化任务列表)
         list1_result = list_tool_thread1._run()
         list1_data = json.loads(list1_result)
 
@@ -192,12 +192,12 @@ class TestInternalToolsIntegration:
 
         # Assert - 验证数据隔离
         # 线程1应该只看到线程1的任务, 看不到线程2的任务
-        assert "线程1任务" in list1_data["message"]
-        assert "线程2任务" not in list1_data["message"]
+        assert any(t["title"] == "线程1任务" for t in list1_data["todos"])
+        assert not any(t["title"] == "线程2任务" for t in list1_data["todos"])
 
         # 线程2应该只看到线程2的任务
-        assert "线程2任务" in list2_data["message"]
-        assert "线程1任务" not in list2_data["message"]
+        assert any(t["title"] == "线程2任务" for t in list2_data["todos"])
+        assert not any(t["title"] == "线程1任务" for t in list2_data["todos"])
 
 
 @pytest.mark.integration
@@ -380,7 +380,7 @@ class TestToolManagerIntegration:
             task_data = json.loads(task_result)
             assert task_data["success"] is True
 
-        # Test 5: 检查数据隔离(返回格式化的 markdown 字符串)
+        # Test 5: 检查数据隔离(返回结构化任务列表)
         user1_t1_list_result = user1_t1_list._run()
         user1_t2_list_result = user1_t2_list._run()
         user2_t1_list_result = user2_t1_list._run()
@@ -390,12 +390,12 @@ class TestToolManagerIntegration:
         user2_t1_data = json.loads(user2_t1_list_result)
 
         # 每个上下文应该只看到自己的任务
-        assert "用户1线程1任务" in user1_t1_data["message"]
-        assert "用户1线程2任务" not in user1_t1_data["message"]
-        assert "用户2线程1任务" not in user1_t1_data["message"]
+        assert any(t["title"] == "用户1线程1任务" for t in user1_t1_data["todos"])
+        assert not any(t["title"] == "用户1线程2任务" for t in user1_t1_data["todos"])
+        assert not any(t["title"] == "用户2线程1任务" for t in user1_t1_data["todos"])
 
-        assert "用户1线程2任务" in user1_t2_data["message"]
-        assert "用户2线程1任务" in user2_t1_data["message"]
+        assert any(t["title"] == "用户1线程2任务" for t in user1_t2_data["todos"])
+        assert any(t["title"] == "用户2线程1任务" for t in user2_t1_data["todos"])
 
     @pytest.mark.asyncio
     async def test_tool_caching_mechanism_integration(

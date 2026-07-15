@@ -5,11 +5,12 @@ name: "Personal Agent Assistant"
 description: "个人助手Agent，支持记忆管理、TODO任务等"
 
 # 模型配置
-model_id: "ark-agent-plan:kimi-k2.6"
+model_id: "aliyun-token-plan:qwen3.7-max"
 
 # 备选方案（需要对应的API密钥或服务）:
-# - Kimi K2.6: model_id: "ark-agent-plan:kimi-k2.6" (火山引擎 Ark Agent Plan 订阅) [默认主模型]
-# - Qwen3.7-Plus: model_id: "aliyun-token-plan:qwen3.7-plus" (阿里云 Token Plan 订阅, 1M上下文)
+# - Qwen3.7-Max: model_id: "aliyun-token-plan:qwen3.7-max" (阿里云 Token Plan 订阅, 1M上下文) [默认主模型]
+# - Kimi K2.6: model_id: "ark-agent-plan:kimi-k2.6" (火山引擎 Ark Agent Plan 订阅)
+# - Qwen3.7-Plus: model_id: "aliyun-token-plan:qwen3.7-plus" (阿里云 Token Plan 订阅, 多模态, 1M上下文)
 # - scnet:Kimi-K2.6 (超算互联网聚合)
 # - DeepSeek V4 Pro: model_id: "deepseek:deepseek-v4-pro" (旗舰推理, 1M上下文)
 # - OpenAI: model_id: "openai:gpt-5.5" (旗舰模型, 1.05M上下文, 128K输出, 多模态)
@@ -28,8 +29,7 @@ first_turn_prompt: |
 
 # 工具配置
 tools:
-  - "requirement_memory"
-  - "search_memories"
+  - "memory_recall_group"
   - "search_available_tools"
   - "todo_manager_group"
 
@@ -58,4 +58,3 @@ memory:
   type: "local"  # 空字符串表示不开启记忆
   total_char_budget: 20000  # 主历史区字符预算
   index_char_budget: 10000  # 索引区独立预算(可调, 建议 10k-20k)
-  include_todo_in_context: true  # Personal Assistant需要TODO记忆

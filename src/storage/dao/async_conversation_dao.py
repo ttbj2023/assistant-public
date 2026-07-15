@@ -10,7 +10,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select, update
 
 from ..formatters.conversation_formatter import create_conversation_formatter
 from ..models.conversation import ConversationIndex, ConversationIndexGroup
@@ -110,6 +110,97 @@ class AsyncConversationIndexDAO:
                 return list(result.scalars().all())
         except Exception as e:
             logger.error("异步获取轮次范围内的对话索引失败: %s", e)
+            raise
+
+    async def get_round_range_by_time_range(
+        self,
+        user_id: str,
+        thread_id: str,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> tuple[int, int] | None:
+        """查 created_at 落 [start_time, end_time) 内的 MIN/MAX round_number.
+
+        用于 time_filter(口语时间) → round_range(轮次区间) 转换:
+        filter_parser 产出的 time_range 经此方法映射到检索路实际消费的 round_range.
+
+        Args:
+            user_id: 用户ID
+            thread_id: 线程ID
+            start_time: 区间起始 (包含)
+            end_time: 区间结束 (不包含)
+
+        Returns:
+            (min_round, max_round) 或 None (区间内无对话)
+
+        """
+        try:
+            async with self.db_ops.session_factory() as session:
+                statement = select(
+                    func.min(ConversationIndex.round_number),
+                    func.max(ConversationIndex.round_number),
+                ).where(
+                    ConversationIndex.user_id == user_id,
+                    ConversationIndex.thread_id == thread_id,
+                    ConversationIndex.created_at >= start_time,
+                    ConversationIndex.created_at < end_time,
+                )
+                result = await session.execute(statement)
+                row = result.one()
+                if row[0] is None:
+                    return None
+                return (row[0], row[1])
+        except Exception as e:
+            logger.error("按时间范围查询轮次区间失败: %s", e)
+            raise
+
+    async def update_conversation_index(
+        self,
+        user_id: str,
+        thread_id: str,
+        round_number: int,
+        *,
+        topic: str,
+        summary: str,
+    ) -> bool:
+        """只更新索引元数据(topic/summary), 不碰基础内容字段.
+
+        与 store_index_data_with_upsert(全量 UPSERT)互补: LLM 索引生成后独立写入
+        topic/summary, 避免与基础内容存储路径竞争同一行导致 data race(全量覆盖擦除).
+
+        Args:
+            user_id: 用户ID
+            thread_id: 线程ID
+            round_number: 轮次号(定位行)
+            topic: 对话主题
+            summary: 对话摘要
+
+        Returns:
+            True=行存在并更新, False=行不存在(未更新)
+
+        """
+        try:
+            async with (
+                self.db_ops.session_factory() as session,
+                session.begin(),
+            ):
+                stmt = (
+                    update(ConversationIndex)
+                    .where(
+                        ConversationIndex.user_id == user_id,
+                        ConversationIndex.thread_id == thread_id,
+                        ConversationIndex.round_number == round_number,
+                    )
+                    .values(
+                        topic=topic,
+                        summary=summary,
+                        updated_at=datetime.now(UTC),
+                    )
+                )
+                result = await session.execute(stmt)
+                return result.rowcount > 0
+        except Exception as e:
+            logger.error("更新对话索引元数据失败: %s", e)
             raise
 
     async def list_conversations(
@@ -523,8 +614,10 @@ class AsyncConversationIndexDAO:
                     # 更新现有记录 - 使用提取出的字段
                     existing.user_message = user_message
                     existing.assistant_response = assistant_response
-                    existing.topic = extracted_topic
-                    existing.summary = extracted_summary
+                    if extracted_topic is not None:
+                        existing.topic = extracted_topic
+                    if extracted_summary is not None:
+                        existing.summary = extracted_summary
                     existing.updated_at = datetime.now(UTC)
 
                     await session.flush()

@@ -37,17 +37,17 @@ class WechatPublishInput(QueryAliasModel):
     author: str | None = Field(
         default=None,
         max_length=50,
-        description="作者名称, 首次指定后会记住为默认值",
+        description="作者名称(可选, 不填则不显示). 指定后记住为默认值",
     )
 
 
 class WechatPublishTool(BaseInternalTool):
-    """微信推送工具 - 将Markdown文章发布到微信公众号草稿箱."""
+    """微信公众号推送工具 - 将Markdown文章发布到草稿箱."""
 
     name: str = "wechat_publish"
     summary: str = "微信公众号推送工具, 将Markdown文章发布到草稿箱"
     search_keywords: ClassVar[list[str]] = [
-        "微信",
+        "微信公众号",
         "公众号",
         "推送",
         "发布",
@@ -56,10 +56,9 @@ class WechatPublishTool(BaseInternalTool):
         "wechat",
     ]
     description: str = (
-        "微信推送工具, 将Markdown文章发布到微信公众号草稿箱.\n\n"
+        "微信公众号推送工具, 将Markdown文章发布到公众号草稿箱.\n\n"
         "如有已生成的图片附件, 可在文中用 [file: id] 引用.\n"
-        '示例: {"content": "# 文章\\n正文...", '
-        '"title": "我的文章", "author": "张三"}'
+        '示例: {"content": "# 文章\\n正文...", "title": "我的文章"}'
     )
     args_schema: type = WechatPublishInput
     timeout: float = 300.0

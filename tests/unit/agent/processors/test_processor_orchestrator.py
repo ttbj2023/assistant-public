@@ -30,13 +30,7 @@ def _mock_conv_service(round_num: int = 1, latest: int = 0) -> Mock:
     svc = Mock()
     svc.allocate_round_number = AsyncMock(return_value=round_num)
     svc.get_latest_round_number = AsyncMock(return_value=latest)
-    return svc
-
-
-def _mock_conv_data_service() -> Mock:
-    """创建mock对话数据服务."""
-    svc = Mock()
-    svc.confirm_round_number_usage = AsyncMock()
+    svc.get_conversation_by_round = AsyncMock(return_value=Mock())
     return svc
 
 
@@ -700,15 +694,9 @@ class TestFinalizeConversation:
             return_value=conv_memory
         )
 
-        with (
-            patch(
-                "src.agent.processors.processor_orchestrator.create_conversation_service",
-                return_value=_mock_conv_service(1, 0),
-            ),
-            patch(
-                "src.agent.processors.processor_orchestrator.create_conversation_data_service",
-                return_value=_mock_conv_data_service(),
-            ),
+        with patch(
+            "src.agent.processors.processor_orchestrator.create_conversation_service",
+            return_value=_mock_conv_service(1, 0),
         ):
             result = await orchestrator.finalize_conversation(
                 user_input="Hello",
@@ -758,20 +746,14 @@ class TestFinalizeConversation:
             return_value=conv_memory
         )
 
-        mock_data_svc = _mock_conv_data_service()
-        mock_data_svc.confirm_round_number_usage = AsyncMock(
+        mock_conv_svc = _mock_conv_service(1, 0)
+        mock_conv_svc.get_conversation_by_round = AsyncMock(
             side_effect=RuntimeError("confirm failed")
         )
 
-        with (
-            patch(
-                "src.agent.processors.processor_orchestrator.create_conversation_service",
-                return_value=_mock_conv_service(1, 0),
-            ),
-            patch(
-                "src.agent.processors.processor_orchestrator.create_conversation_data_service",
-                return_value=mock_data_svc,
-            ),
+        with patch(
+            "src.agent.processors.processor_orchestrator.create_conversation_service",
+            return_value=mock_conv_svc,
         ):
             result = await orchestrator.finalize_conversation(
                 user_input="Hello",

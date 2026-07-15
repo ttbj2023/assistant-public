@@ -90,7 +90,7 @@ flowchart LR
 
     subgraph BG["Background fire-and-forget"]
         E["IndexRunService<br/>semantic run detection"] --> F["Arc-phrase freezing<br/>(never retroactive)"]
-        G["Pinned memory 1-step update"]
+        G["Pinned memory rewrite"]
     end
 
     subgraph Pull["Pull path (model-initiated)"]
@@ -171,7 +171,7 @@ Uses the [OpenClaw](https://github.com/openclaw/openclaw) gateway to reach WeCha
 
 ## Project Status
 
-- **Maturity**: personal project, running in production, 300+ source files / 2900+ unit tests / layered architecture / CI gates
+- **Maturity**: personal project, running in production, 300+ source files / 3000+ unit tests / layered architecture / CI gates
 - **Limitations**: strong dependency on the Chinese/China ecosystem (A-share quotes / Volcengine models / WeChat channel); no public memory benchmark
 - **Feedback**: Issues welcome / email [jsjrjft@outlook.com](mailto:jsjrjft@outlook.com); **PRs not accepted** (personal project, no collaboration for now)
 - **Docs**: documentation is in Chinese — see [README.md (中文)](README.md) and `docs/`

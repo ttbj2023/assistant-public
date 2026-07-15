@@ -44,7 +44,6 @@ class QueryStockPriceTool(BaseInternalTool):
     """查询A股个股实时行情."""
 
     name: str = "query_stock_price"
-    summary: str = "查询A股个股实时行情(现价/涨跌幅/开盘最高最低/成交量/五档)"
     search_keywords: ClassVar[list[str]] = [
         "股票",
         "股价",

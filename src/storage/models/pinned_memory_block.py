@@ -1,11 +1,8 @@
-"""用户要求记事本数据模型.
+"""统一置顶记忆单一块数据模型.
 
-独立存储用户对助手的非一次性要求, 由主对话模型通过 requirement_memory 工具
-全文重写维护. 与置顶记忆分库 (独立 requirement_memory.db), 便于排除/删库调试.
-
-设计:
-- 每 user/thread 单行, content 为完整要求列表 (一行一条)
-- 限额 (≤10 行 / ≤500 字) 由 UserRequirementService 在写入前校验
+主模型每轮全文覆写的存储载体. 每 user/thread/agent 单行, content 为完整
+记忆文本 (一行一条). 与 simple_pinned_memory 表共存于 pinned_memory.db
+(迁移期间), 迁移完成后旧表停用.
 """
 
 from __future__ import annotations
@@ -20,10 +17,10 @@ from sqlmodel import Field, Index, SQLModel
 logger = logging.getLogger(__name__)
 
 
-class UserRequirementBase(SQLModel):
-    """用户要求记事本基础模型."""
+class PinnedMemoryBlockBase(SQLModel):
+    """统一置顶记忆单一块基础模型."""
 
-    content: str = Field(default="", max_length=1000, description="要求列表(一行一条)")
+    content: str = Field(default="", max_length=2000, description="记忆内容(一行一条)")
 
     model_config = {"validate_assignment": True, "str_strip_whitespace": True}
 
@@ -36,10 +33,10 @@ class UserRequirementBase(SQLModel):
         return v.strip()
 
 
-class UserRequirement(UserRequirementBase, table=True):
-    """用户要求记事本数据表 (每 user/thread 单行)."""
+class PinnedMemoryBlock(PinnedMemoryBlockBase, table=True):
+    """统一置顶记忆单一块数据表 (每 user/thread 单行)."""
 
-    __tablename__ = "user_requirement"
+    __tablename__ = "pinned_memory_block"
     __table_args__ = (
         Index("idx_user_thread", "user_id", "thread_id", unique=True),
         {"extend_existing": True},
@@ -70,4 +67,4 @@ class UserRequirement(UserRequirementBase, table=True):
         from_attributes = True
 
 
-__all__ = ["UserRequirement"]
+__all__ = ["PinnedMemoryBlock"]

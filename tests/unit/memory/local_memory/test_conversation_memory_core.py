@@ -1,6 +1,6 @@
 """ConversationMemoryCore 核心功能测试
 
-测试对话记忆核心的6个并行操作、数据一致性、异常处理等关键功能。
+测试对话记忆核心的并行操作、数据一致性、异常处理等关键功能。
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import pytest
 from src.agent.memory.local_memory import pinned_memory_service
 from src.agent.memory.local_memory.core import ConversationMemoryCore
 from src.config.agent_config import AgentConfig
-from src.core.types import PinnedMemoryUpdateResult
 from tests.mocks.memory.local_memory import (
     create_mock_conversation_data,
 )
@@ -27,7 +26,7 @@ from tests.unit.memory.local_memory.test_base import (
 
 
 async def _drain_pinned_bg_tasks() -> None:
-    """等待所有置顶后台任务完成(置顶更新/审计已转 fire-and-forget)."""
+    """等待所有置顶后台任务完成(置顶覆写 fire-and-forget)."""
     pending = list(pinned_memory_service.get_bg_tasks())
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)
@@ -35,7 +34,7 @@ async def _drain_pinned_bg_tasks() -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_pinned_module_state():
-    """每个测试前后清理置顶模块级状态(锁/审计轮次/后台任务集).
+    """每个测试前后清理置顶模块级状态(锁/后台任务集).
 
     xdist 每进程独立, 同进程内测试共享模块状态, 需清理避免互相污染.
     """
@@ -163,15 +162,6 @@ class TestConversationMemoryCore(
 
         # 创建其他service的mock（避免真实初始化）
         mock_vector_service = AsyncMock()
-        mock_conv_data_service = AsyncMock()
-        mock_pinned_manager_instance = AsyncMock()
-        mock_pinned_manager_instance.get_memory_for_analysis.return_value = (
-            "### 基本画像\n(空)\n\n### 口味偏好\n(空)\n"
-        )
-        mock_analyzer_instance = AsyncMock()
-        mock_analyzer_instance.analyze_pinned_memory_update.return_value = (
-            PinnedMemoryUpdateResult()
-        )
         mock_analyzer = AsyncMock()
         mock_analyzer_instance2 = AsyncMock()
         mock_analyzer_instance2.analyze_conversation_index.return_value = MagicMock(
@@ -189,25 +179,14 @@ class TestConversationMemoryCore(
                 "src.agent.memory.local_memory.core.create_vector_service",
                 return_value=mock_vector_service,
             ),
-            patch(
-                "src.agent.memory.local_memory.core.create_conversation_data_service",
-                return_value=mock_conv_data_service,
-            ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory.SimplePinnedMemoryManager",
-                return_value=mock_pinned_manager_instance,
-            ),
-            patch(
-                "src.inference.content_analyzer.simple_analyzer.SimpleContentAnalyzer",
-                return_value=mock_analyzer_instance,
+            patch.object(
+                conversation_memory_core._pinned_svc,
+                "update",
+                AsyncMock(),
             ),
             patch(
                 "src.inference.content_analyzer.simple_analyzer.get_content_analyzer",
                 return_value=mock_analyzer,
-            ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory_service.create_todo_service",
-                return_value=mock_pinned_manager_instance,
             ),
         ):
             # 执行测试 - 并行任务中的错误不会导致整个方法失败
@@ -234,7 +213,7 @@ class TestConversationMemoryCore(
         entered = asyncio.Event()
         release = asyncio.Event()
 
-        async def slow_pinned_update(data):
+        async def slow_pinned_update(data, messages_snapshot=None):
             entered.set()
             await release.wait()  # 模拟慢 LLM, 永不自行放行
 
@@ -244,9 +223,6 @@ class TestConversationMemoryCore(
             ),
             patch("src.agent.memory.local_memory.core.create_conversation_service"),
             patch("src.agent.memory.local_memory.core.create_vector_service"),
-            patch(
-                "src.agent.memory.local_memory.core.create_conversation_data_service"
-            ),
             patch(
                 "src.inference.content_analyzer.simple_analyzer.get_content_analyzer"
             ),
@@ -265,142 +241,6 @@ class TestConversationMemoryCore(
         assert not release.is_set()
         release.set()
         await _drain_pinned_bg_tasks()
-
-    @pytest.mark.timeout(10)
-    @pytest.mark.asyncio
-    async def test_audit_holding_lock_serializes_pinned_update(
-        self, conversation_memory_core, sample_conversation_data
-    ):
-        """审计持锁期间, 每轮置顶更新在锁上排队, 串行化杜绝 lost update."""
-        audit_release = asyncio.Event()
-        audit_holding = asyncio.Event()
-        update_started = asyncio.Event()
-        update_done = asyncio.Event()
-
-        async def blocking_audit(memory_block, number_map, index_block):
-            audit_holding.set()
-            await audit_release.wait()
-            return []
-
-        async def fast_analyze_update(*args, **kwargs):
-            return PinnedMemoryUpdateResult()
-
-        with (
-            patch(
-                "src.inference.content_analyzer.pinned_memory_audit_analyzer.PinnedMemoryAuditAnalyzer"
-            ) as mock_audit_cls,
-            patch(
-                "src.inference.content_analyzer.simple_analyzer.SimpleContentAnalyzer"
-            ) as mock_simple_cls,
-            patch(
-                "src.agent.memory.local_memory.pinned_memory.SimplePinnedMemoryManager"
-            ) as mock_pm_cls,
-            patch(
-                "src.agent.memory.local_memory.core.create_conversation_service",
-                new=AsyncMock(),
-            ),
-            patch("src.config.inference_config.get_config") as mock_cfg,
-            patch.object(
-                conversation_memory_core._pinned_svc,
-                "_get_todo_list",
-                new=AsyncMock(return_value=""),
-            ),
-        ):
-            mock_audit_inst = AsyncMock()
-            mock_audit_inst.audit = blocking_audit
-            mock_audit_cls.return_value = mock_audit_inst
-
-            mock_pm = AsyncMock()
-            mock_pm.get_memory_for_audit.return_value = (
-                "[1] x",
-                {1: {"field": "basic_info", "content": "x"}},
-            )
-            mock_pm.get_memory_for_analysis.return_value = "block"
-            mock_pm.apply_operations.return_value = True
-            mock_pm_cls.return_value = mock_pm
-
-            mock_simple_inst = AsyncMock()
-            mock_simple_inst.analyze_pinned_memory_update = fast_analyze_update
-            mock_simple_cls.return_value = mock_simple_inst
-
-            mock_cfg.return_value = MagicMock()
-
-            # 1. 启动审计 → 持锁, 在 blocking_audit 处阻塞
-            audit_task = asyncio.create_task(
-                conversation_memory_core._pinned_svc.audit(sample_conversation_data)
-            )
-            await asyncio.wait_for(audit_holding.wait(), timeout=8)
-
-            # 2. 启动置顶更新 → 应在 _get_pinned_lock 上排队
-            async def update_then_signal():
-                update_started.set()
-                await conversation_memory_core._pinned_svc.update(
-                    sample_conversation_data
-                )
-                update_done.set()
-
-            update_task = asyncio.create_task(update_then_signal())
-            await update_started.wait()
-            assert not update_done.is_set(), "置顶更新不应在审计持锁期间完成"
-
-            # 3. 放行审计 → 锁释放 → 置顶更新随后完成
-            audit_release.set()
-            await asyncio.wait_for(update_task, timeout=1.0)
-            assert update_done.is_set()
-
-            audit_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await audit_task
-
-    @pytest.mark.timeout(10)
-    @pytest.mark.asyncio
-    async def test_mark_audited_at_commit_point_prevents_retrigger(
-        self, conversation_memory_core
-    ):
-        """early-mark: round20 触发审计后立即同步 mark, round21 不再重复触发.
-
-        修复前 mark 在审计 finally 才执行, 慢审计期间 round21 也会触发(R20/R21 双发).
-        """
-        conversation_memory_core._embeddings_enabled = False
-        from src.agent.memory.local_memory.pinned_memory_service import _should_audit
-
-        data_r20 = create_mock_conversation_data(
-            round_number=20, user_message="m20", assistant_response="r20"
-        )
-
-        audit_release = asyncio.Event()
-
-        async def slow_audit(data):
-            await audit_release.wait()
-
-        async def noop_update(data):
-            return None
-
-        with (
-            patch.object(conversation_memory_core._pinned_svc, "audit", slow_audit),
-            patch.object(conversation_memory_core._pinned_svc, "update", noop_update),
-            patch("src.agent.memory.local_memory.core.create_conversation_service"),
-            patch("src.agent.memory.local_memory.core.create_vector_service"),
-            patch(
-                "src.agent.memory.local_memory.core.create_conversation_data_service"
-            ),
-            patch(
-                "src.inference.content_analyzer.simple_analyzer.get_content_analyzer"
-            ),
-        ):
-            # round20: 触发审计(early-mark 立即把 last 推到 20), 审计任务后台阻塞
-            await conversation_memory_core.add_conversation_round(data_r20)
-
-            # round21: 即使 round20 审计仍未完成, 也不应再触发
-            uid = conversation_memory_core.user_id
-            tid = conversation_memory_core.thread_id
-            aid = conversation_memory_core.agent_id
-            assert not _should_audit(uid, tid, aid, 21), (
-                "round21 不应在 round20 审计未完成时重复触发"
-            )
-
-            audit_release.set()
-            await _drain_pinned_bg_tasks()
 
 
 class TestConversationMemoryCoreEmbeddingsConfig(
@@ -433,22 +273,13 @@ class TestConversationMemoryCoreEmbeddingsConfig(
 
         with (
             patch(
-                "src.agent.memory.local_memory.core.create_conversation_data_service"
-            ),
-            patch(
                 "src.agent.memory.local_memory.core.create_vector_service"
             ) as mock_create_vec,
             patch(
-                "src.inference.content_analyzer.simple_analyzer.SimpleContentAnalyzer"
-            ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory.SimplePinnedMemoryManager"
-            ),
-            patch(
                 "src.inference.content_analyzer.simple_analyzer.get_content_analyzer"
             ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory_service.create_todo_service"
+            patch.object(
+                conversation_memory_core._pinned_svc, "update", AsyncMock()
             ),
         ):
             # 设置向量服务Mock
@@ -477,22 +308,13 @@ class TestConversationMemoryCoreEmbeddingsConfig(
 
         with (
             patch(
-                "src.agent.memory.local_memory.core.create_conversation_data_service"
-            ),
-            patch(
                 "src.agent.memory.local_memory.core.create_vector_service"
             ) as mock_create_vec,
             patch(
-                "src.inference.content_analyzer.simple_analyzer.SimpleContentAnalyzer"
-            ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory.SimplePinnedMemoryManager"
-            ),
-            patch(
                 "src.inference.content_analyzer.simple_analyzer.get_content_analyzer"
             ),
-            patch(
-                "src.agent.memory.local_memory.pinned_memory_service.create_todo_service"
+            patch.object(
+                conversation_memory_core._pinned_svc, "update", AsyncMock()
             ),
         ):
             # 设置向量服务Mock

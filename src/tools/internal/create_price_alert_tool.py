@@ -84,7 +84,6 @@ class CreatePriceAlertTool(BaseInternalTool):
     """创建A股个股价格监控, 突破阈值时提醒一次."""
 
     name: str = "create_price_alert"
-    summary: str = "创建A股个股价格监控, 到价/突破阈值时通过微信提醒(一次性)"
     search_keywords: ClassVar[list[str]] = [
         "股票",
         "股价",

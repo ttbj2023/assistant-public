@@ -9,6 +9,7 @@ from __future__ import annotations
 from .conversation import (
     ConversationIndex,
 )
+from .pinned_memory_block import PinnedMemoryBlock
 from .scheduled_message import (
     MessageStatus,
     ScheduledMessage,
@@ -28,6 +29,7 @@ from .user_channel_config import (
 __all__ = [
     "ConversationIndex",
     "MessageStatus",
+    "PinnedMemoryBlock",
     "ScheduledMessage",
     "ScheduledMessageBase",
     "SimplePinnedMemory",

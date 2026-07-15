@@ -34,7 +34,7 @@ inference:
     arc_model_params:
       max_tokens: 1024
       reasoning_effort: "minimal"
-    # 判断类任务(置顶/SimpleMemory) fallback 保思考(全局默认关思考, 判断任务需保留)
+    # 判断类任务(SimpleMemory) fallback 保思考(全局默认关思考, 判断任务需保留)
     fallback_model_params:
       extra_body:
         thinking:

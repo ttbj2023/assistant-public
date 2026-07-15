@@ -25,15 +25,11 @@ from .streaming import (
 # 通用数据类型
 from .types import (
     ConversationIndexResult,
-    MemoryOperation,
-    PinnedMemoryUpdateResult,
 )
 
 __all__ = [
     # 数据类型
     "ConversationIndexResult",
-    "MemoryOperation",
-    "PinnedMemoryUpdateResult",
     # 流式响应
     "StreamChunk",
     "StreamContent",

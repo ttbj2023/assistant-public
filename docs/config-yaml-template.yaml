@@ -23,7 +23,6 @@ core:
     # 记忆系统专用缓存 (被 src/agent/memory/local_memory/cache.py 直接读取)
     pinned_memory_cache_size: 50
     conversation_cache_size: 100
-    todolist_cache_size: 50
     enable_cache_stats: true
 
 # ===========================================
@@ -116,10 +115,6 @@ inference:
     model: <your-model-id>
     model_params:
       max_tokens: 2048
-    pinned_memory_model: ""         # 空=跟随主 model
-    # pinned_memory_model_params:
-    #   temperature: 0.0
-    audit_model: ""                 # 置顶记忆周期审计模型 (空=使用主 model)
     # arc_model: <your-model-id>    # 索引弧短语蒸馏
     # arc_model_params: {}
     dedup_enabled: true

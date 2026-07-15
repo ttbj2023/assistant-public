@@ -7,6 +7,7 @@ from typing import Any, ClassVar, override
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.storage.models.todo import TodoStatus
 from src.tools.internal.todo_manager_base import TodoManagerBase
 
 logger = logging.getLogger(__name__)
@@ -63,19 +64,31 @@ class ListTodosTool(TodoManagerBase):
             limit = min(request.limit or 50, 100)
 
             service = await self._get_todo_service()
-            formatted = await service.get_formatted_todolist(
-                self.user_id,
-                self.thread_id,
-                limit=limit,
-                status=status,
-                priority=priority,
-                include_section_title=True,
-                format_template="markdown",
-            )
-            return self._json_result(True, formatted or "没有找到任务")
+            if status is not None:
+                todos = await service.list_todos(
+                    self.user_id,
+                    self.thread_id,
+                    status=status,
+                    priority=priority,
+                    limit=limit,
+                )
+            else:
+                todos = await service.list_todos(
+                    self.user_id,
+                    self.thread_id,
+                    statuses=[TodoStatus.PENDING, TodoStatus.IN_PROGRESS],
+                    priority=priority,
+                    limit=limit,
+                )
+            todo_dicts = [self._todo_to_dict(t) for t in todos]
+            count = len(todo_dicts)
+            message = f"共 {count} 条活跃任务" if count else "没有找到任务"
+            return self._json_result(True, message, todos=todo_dicts, count=count)
         except Exception as e:
             logger.error("获取任务列表失败: %s", e)
-            return self._json_result(False, f"获取任务列表失败: {e!s}")
+            return self._json_result(
+                False, f"获取任务列表失败: {e!s}", action=None, error=str(e)
+            )
 
 
 __all__ = ["ListTodosTool"]

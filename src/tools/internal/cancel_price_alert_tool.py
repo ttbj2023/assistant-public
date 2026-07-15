@@ -31,7 +31,6 @@ class CancelPriceAlertTool(BaseInternalTool):
     """取消一条价格监控规则."""
 
     name: str = "cancel_price_alert"
-    summary: str = "取消一条价格监控规则"
     search_keywords: ClassVar[list[str]] = [
         "股票",
         "价格",

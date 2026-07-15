@@ -66,6 +66,29 @@ _SIGNED_FILE_URL_RE = re.compile(
     r"/(?P<fid>[0-9a-f]{8})/\d+/[0-9a-f]{32}/[^/)]+\)"
 )
 
+# <details> HTML 标签 — 前端渲染约定, 不应出现在 LLM 上下文.
+# 先匹配闭合标签, 再匹配残余开标签; 开标签正则属性值感知,
+# 处理 LLM 生成标签中 arguments 内未转义的 > (如 Markdown 引用).
+_DETAILS_CLOSED_RE = re.compile(
+    r"\n?<details\b[^>]*>[\s\S]*?</details>\s*", re.IGNORECASE
+)
+_DETAILS_OPEN_RE = re.compile(
+    r"\n?<details\b(?:\"[^\"]*\"|'[^']*'|[^>\"'])*>\s*", re.IGNORECASE
+)
+_DETAILS_CLOSE_TAG_RE = re.compile(r"\n?</details>\s*", re.IGNORECASE)
+
+# DeepSeek DSML 原生工具调用标记 (全角竖线 ｜ U+FF5C)
+_DSML_TAG_RE = re.compile(r"</?\uff5c\uff5cDSML\uff5c\uff5c\w+>\s*")
+
+
+def _strip_tool_artifacts_text(text: str) -> str:
+    """剥离 <details> 标签 + DSML 标记, 返回清洗后的纯文本."""
+    text = _DETAILS_CLOSED_RE.sub("", text)
+    text = _DETAILS_OPEN_RE.sub("", text)
+    text = _DETAILS_CLOSE_TAG_RE.sub("", text)
+    text = _DSML_TAG_RE.sub("", text)
+    return text.strip()
+
 
 def _decode_data_uri(url: str) -> bytes | None:
     """解析 base64 data URI 返回解码 bytes; 非 data URI 或解码失败返回 None."""
@@ -779,6 +802,9 @@ class InferenceCoordinator:
             user_id,
         )
 
+        # 剥离历史 assistant 消息中的工具调用渲染标记(simple 模式前端透传泄漏)
+        history_messages = self._strip_tool_artifacts_in_history(history_messages)
+
         current_msg = self._build_human_message(
             user_content,
             llm_model,
@@ -1297,6 +1323,61 @@ class InferenceCoordinator:
                 len(valid_fids),
             )
         return new_messages
+
+    @staticmethod
+    def _strip_tool_artifacts_in_history(
+        history_messages: list[BaseMessage] | None,
+    ) -> list[BaseMessage] | None:
+        """剥离历史 assistant 消息中的工具调用渲染标记.
+
+        simple 模式前端透传的历史含 <details type="tool_calls"> 标签
+        (format_tool_call_done 泄漏或 LLM 文本模仿) 和 DSML 标记
+        (DeepSeek 原生工具调用泄漏). 这些标记引导 LLM 用文本格式
+        替代标准 function calling, 破坏 ReAct 循环.
+
+        local 模式历史为纯文本(DB 重组), 正则不匹配, 零副作用.
+        """
+        if not history_messages:
+            return history_messages
+
+        new_messages: list[BaseMessage] = []
+        changed = False
+        for msg in history_messages:
+            if not isinstance(msg, AIMessage):
+                new_messages.append(msg)
+                continue
+            content = getattr(msg, "content", None)
+            if isinstance(content, str):
+                new_text = _strip_tool_artifacts_text(content)
+                if new_text != content:
+                    changed = True
+                    new_messages.append(
+                        msg.model_copy(update={"content": new_text}),
+                    )
+                    continue
+            elif isinstance(content, list):
+                block_changed = False
+                new_blocks: list[dict[str, Any]] = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text = block.get("text", "")
+                        new_text = _strip_tool_artifacts_text(text)
+                        if new_text != text:
+                            block_changed = True
+                            new_blocks.append({"type": "text", "text": new_text})
+                            continue
+                    new_blocks.append(block)
+                if block_changed:
+                    changed = True
+                    new_messages.append(
+                        msg.model_copy(update={"content": new_blocks}),
+                    )
+                    continue
+            new_messages.append(msg)
+
+        if changed:
+            logger.debug("🧹 历史清洗: 剥离工具调用渲染标记")
+        return new_messages if changed else history_messages
 
     def _extract_agent_result(self, agent_result: Any) -> str:
         """从Agent结果中提取响应内容."""

@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.agent.memory.local_memory import index_run_service, pinned_memory_service
+from src.inference.content_analyzer.pinned_memory_rewriter import RewriteResult
 
 
 async def _drain_bg_tasks() -> None:
@@ -36,7 +37,7 @@ async def _drain_bg_tasks() -> None:
 
 @pytest.fixture(autouse=True)
 async def _reset_pinned_module_state() -> AsyncIterator[None]:
-    """每个测试前后清理置顶/索引模块级状态 (锁/审计轮次/后台任务).
+    """每个测试前后清理置顶/索引模块级状态 (锁/后台任务).
 
     teardown 先 drain 后台任务 (释放 aiosqlite 连接), 再清模块状态, 避免 loop
     关闭时未完成任务泄漏连接. xdist 每进程独立, 同进程内测试共享模块状态,
@@ -53,25 +54,21 @@ async def _reset_pinned_module_state() -> AsyncIterator[None]:
 
 @pytest.fixture
 def llm_mocks() -> Iterator[dict[str, MagicMock]]:
-    """统一 Mock 三个 LLM 分析器 + 向量服务, 返回可配置的 mock 句柄.
+    """统一 Mock LLM 分析器 + 向量服务, 返回可配置的 mock 句柄.
 
     Mock 边界 (仅外部依赖):
-        - SimpleContentAnalyzer (索引分析 + 置顶更新分析, 调真实 LLM API)
-        - PinnedMemoryAuditAnalyzer (置顶审计, 调真实 LLM API)
+        - SimpleContentAnalyzer (索引分析, 调真实 LLM API)
+        - PinnedMemoryRewriter.rewrite (置顶覆写, 默认 needs_update=False 跳过写库;
+          需要验证写入的测试在内部 patch 覆盖)
+        - IndexArcAnalyzer (弧短语蒸馏)
         - create_vector_service (ChromaDB 向量存储, 双路径 patch)
 
     保留真实 (内部组件):
         ConversationMemoryCore / PinnedMemoryService / ConversationDataService /
-        ConversationService / MemoryService / SimplePinnedMemoryManager / SQLite.
+        ConversationService / SQLite.
     """
     index_analyzer = MagicMock()
     index_analyzer.analyze_conversation_index = AsyncMock()
-
-    pinned_analyzer = MagicMock()
-    pinned_analyzer.analyze_pinned_memory_update = AsyncMock()
-
-    audit_analyzer = MagicMock()
-    audit_analyzer.audit = AsyncMock()
 
     arc_analyzer = MagicMock()
     arc_analyzer.distill = AsyncMock(return_value="话题弧短语")
@@ -84,18 +81,6 @@ def llm_mocks() -> Iterator[dict[str, MagicMock]]:
             patch(
                 "src.inference.content_analyzer.simple_analyzer.get_content_analyzer",
                 return_value=index_analyzer,
-            )
-        )
-        stack.enter_context(
-            patch(
-                "src.inference.content_analyzer.simple_analyzer.SimpleContentAnalyzer",
-                return_value=pinned_analyzer,
-            )
-        )
-        stack.enter_context(
-            patch(
-                "src.inference.content_analyzer.pinned_memory_audit_analyzer.PinnedMemoryAuditAnalyzer",
-                return_value=audit_analyzer,
             )
         )
         stack.enter_context(
@@ -122,10 +107,16 @@ def llm_mocks() -> Iterator[dict[str, MagicMock]]:
                 return_value=vector_service,
             )
         )
+        stack.enter_context(
+            patch(
+                "src.inference.content_analyzer.pinned_memory_rewriter.PinnedMemoryRewriter.rewrite",
+                new=AsyncMock(
+                    return_value=RewriteResult(needs_update=False, content="")
+                ),
+            )
+        )
         yield {
             "index": index_analyzer,
-            "pinned": pinned_analyzer,
-            "audit": audit_analyzer,
             "arc": arc_analyzer,
             "vector": vector_service,
         }

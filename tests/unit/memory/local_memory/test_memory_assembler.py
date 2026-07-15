@@ -1,13 +1,13 @@
 """MemoryAssembler 单元测试.
 
 测试职责: 验证 messages 数组路径的组装行为
-测试范围: assemble_memory_context 端到端 (Mock pinned/TODO 获取)
+测试范围: assemble_memory_context 端到端 (Mock pinned 获取)
           _build_history_messages 滚动缓存语义 (命中零 DB / 冷启动种子化)
           _find_latest_formatted_suffix_start 纯预算驱动
 
 select_main_history_suffix 的纯函数测试见 test_history_budget.py.
 
-Mock策略: Mock MemoryAssembler 的 pinned/TODO 方法,
+Mock策略: Mock MemoryAssembler 的 pinned 方法,
           Mock create_conversation_service 避免 DB 访问.
 """
 
@@ -71,7 +71,6 @@ class TestAssembleMemoryContext:
         agent_config = Mock()
         agent_config.memory = Mock()
         agent_config.memory.total_char_budget = 40000
-        agent_config.memory.include_todo_in_context = False
 
         assembler = MemoryAssembler(
             agent_id="test-agent",
@@ -96,7 +95,6 @@ class TestAssembleMemoryContext:
         assert isinstance(ctx, MemoryContext)
         assert ctx.history_messages == []
         assert ctx.system_prompt_extension == ""
-        assert ctx.todo_list == ""
 
     @pytest.mark.asyncio
     async def test_pinned_memory_wrapped_in_xml_extension(self) -> None:
@@ -104,7 +102,6 @@ class TestAssembleMemoryContext:
         agent_config = Mock()
         agent_config.memory = Mock()
         agent_config.memory.total_char_budget = 40000
-        agent_config.memory.include_todo_in_context = False
 
         assembler = MemoryAssembler(
             agent_id="test-agent",
@@ -137,7 +134,6 @@ class TestAssembleMemoryContext:
         agent_config = Mock()
         agent_config.memory = Mock()
         agent_config.memory.total_char_budget = 1000
-        agent_config.memory.include_todo_in_context = False
 
         assembler = MemoryAssembler(
             agent_id="test-agent",
@@ -203,7 +199,6 @@ class TestAssembleMemoryContext:
         agent_config.memory = Mock()
         agent_config.memory.total_char_budget = 20000
         agent_config.memory.index_char_budget = 10000
-        agent_config.memory.include_todo_in_context = False
 
         assembler = MemoryAssembler(agent_id="test-agent", agent_config=agent_config)
         assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
@@ -256,7 +251,7 @@ class TestRollingMainHistoryCache:
         agent_config.memory.total_char_budget = budget
         # 关闭索引区, 隔离主历史行为
         agent_config.memory.index_char_budget = 0
-        agent_config.memory.include_todo_in_context = False
+
         assembler = MemoryAssembler(agent_id="test-agent", agent_config=agent_config)
         assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
         return assembler

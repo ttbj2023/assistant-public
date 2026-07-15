@@ -30,7 +30,7 @@ class LoggingConfig(BaseConfig):
         description="单个日志文件最大字节数(默认20MB)",
     )
     backup_count: int = Field(
-        default=5,
+        default=8,
         ge=0,
         description="保留的轮转备份文件数量",
     )

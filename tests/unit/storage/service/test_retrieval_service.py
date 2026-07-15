@@ -6,6 +6,7 @@
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from datetime import UTC, datetime
 from langchain_core.documents import Document
 
 from src.storage.service.retrieval_service import (
@@ -109,6 +110,8 @@ def mock_conversation_service(mock_conversation_dao):
     # SQL 关键词检索路默认返回空(各测试可按需覆写为真实命中轮次)
     mock_service.search_rounds_by_keywords = AsyncMock(return_value=[])
     mock_service.get_conversations_in_range = AsyncMock(return_value=[])
+    # time_range → round_range 转换默认返回 None(区间内无对话)
+    mock_service.get_round_range_by_time_range = AsyncMock(return_value=None)
 
     return mock_service
 
@@ -301,8 +304,15 @@ class TestDualStageRetrievalService:
         test_user,
         test_thread_id,
     ):
-        """测试带过滤器的搜索应走SQL关键词检索."""
+        """time_range 过滤器应转换为 round_range 传递到 SQL 检索路.
+
+        修复 filter_parser 产出 time_range 而 SQL/向量路消费 round_range 的键名断裂 bug:
+        time_range 经 conversation_service 转换为 round_range 后, 必须真实到达 SQL 路.
+        """
         conv = _make_conv_index(5, "filtered content", "filtered response")
+        mock_conversation_service.get_round_range_by_time_range = AsyncMock(
+            return_value=(5, 10),
+        )
         mock_conversation_service.search_rounds_by_keywords = AsyncMock(
             return_value=[5],
         )
@@ -319,12 +329,156 @@ class TestDualStageRetrievalService:
             enable_vector_search=False,
         )
 
-        filters = {"time_range": "last_7_days", "keywords": ["test"]}
+        filters = {"time_range": (datetime.now(UTC), datetime.now(UTC))}
         results = await service.search_conversations(
             "test query", max_results=10, filters=filters
         )
 
         assert len(results) == 1
+        # 关键断言: SQL 路收到转换后的 round_range, 而非 None
+        call = mock_conversation_service.search_rounds_by_keywords.await_args
+        assert call.kwargs.get("round_range") == (5, 10)
+        mock_conversation_service.get_round_range_by_time_range.assert_awaited_once()
+
+
+class TestTimeFilterResolution:
+    """time_range → round_range 转换测试 (修复 filter_parser 与检索路键名断裂 bug)."""
+
+    @pytest.mark.asyncio
+    async def test_empty_time_window_should_return_empty_without_fallback(
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
+    ):
+        """时间窗口内无对话时应返回空列表, 且不触发 fallback.
+
+        fallback 会无差别返回最近对话, 让时间过滤失效; 故转换得 None 时
+        应直接返回空, 不走 list_conversations.
+        """
+        mock_conversation_service.get_round_range_by_time_range = AsyncMock(
+            return_value=None,
+        )
+        mock_conversation_service.list_conversations = AsyncMock(return_value=[])
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+            enable_sql_search=True,
+            enable_vector_search=False,
+        )
+
+        filters = {"time_range": (datetime.now(UTC), datetime.now(UTC))}
+        results = await service.search_conversations(
+            "test query", max_results=10, filters=filters
+        )
+
+        assert results == []
+        mock_conversation_service.list_conversations.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_search_with_filters_should_resolve_time_filter_to_round_range(
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
+    ):
+        """search_with_filters 应将 time_filter 字符串解析并转换为 round_range.
+
+        端到端: time_filter="yesterday" → FilterParser 产 time_range →
+        conversation_service 转 round_range → 到达 SQL 路.
+        """
+        mock_conversation_service.get_round_range_by_time_range = AsyncMock(
+            return_value=(3, 8),
+        )
+        mock_conversation_service.search_rounds_by_keywords = AsyncMock(
+            return_value=[],
+        )
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+            enable_sql_search=True,
+            enable_vector_search=False,
+        )
+
+        await service.search_with_filters(
+            query="test", time_filter="yesterday", max_results=10
+        )
+
+        mock_conversation_service.get_round_range_by_time_range.assert_awaited_once()
+        call = mock_conversation_service.search_rounds_by_keywords.await_args
+        assert call.kwargs.get("round_range") == (3, 8)
+
+    @pytest.mark.asyncio
+    async def test_time_range_should_intersect_with_existing_round_range(
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
+    ):
+        """time_range 转换出的 round_range 应与已有 round_range 取交集."""
+        mock_conversation_service.get_round_range_by_time_range = AsyncMock(
+            return_value=(5, 20),
+        )
+        mock_conversation_service.search_rounds_by_keywords = AsyncMock(
+            return_value=[],
+        )
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+            enable_sql_search=True,
+            enable_vector_search=False,
+        )
+
+        filters = {
+            "time_range": (datetime.now(UTC), datetime.now(UTC)),
+            "round_range": (1, 10),
+        }
+        await service.search_conversations("test", max_results=10, filters=filters)
+
+        call = mock_conversation_service.search_rounds_by_keywords.await_args
+        assert call.kwargs.get("round_range") == (5, 10)
+
+    @pytest.mark.asyncio
+    async def test_no_time_range_should_skip_conversion(
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
+    ):
+        """filters 无 time_range 时不触发转换 (向后兼容)."""
+        mock_conversation_service.search_rounds_by_keywords = AsyncMock(
+            return_value=[],
+        )
+        mock_conversation_service.list_conversations = AsyncMock(return_value=[])
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+            enable_sql_search=True,
+            enable_vector_search=False,
+        )
+
+        filters = {"round_range": (1, 5)}
+        await service.search_conversations("test", max_results=10, filters=filters)
+
+        mock_conversation_service.get_round_range_by_time_range.assert_not_awaited()
+        call = mock_conversation_service.search_rounds_by_keywords.await_args
+        assert call.kwargs.get("round_range") == (1, 5)
 
 
 class TestDualStageRetrievalServiceDualPath:
@@ -1220,6 +1374,70 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
         # Assert
         assert result == []
+
+
+class TestHookFormat:
+    """search_memories 返回钩子格式 ([轮X] topic: summary), 而非完整原文.
+
+    钩子化改造(切片D): 避免上下文浪费(此前搜一次拉 10 轮全文, 仅 1-3 轮相关).
+    全文由 get_round_detail 二次取.
+    """
+
+    @pytest.mark.asyncio
+    async def test_normal_path_should_return_hook_format(
+        self, mock_conversation_service, mock_vector_service, test_user,
+        test_thread_id,
+    ):
+        """正常路径 page_content 应为钩子, 不含完整原文."""
+        conv = _make_conv_index(5, "完整用户消息原文内容", "完整助手回复原文")
+        conv.topic = "项目进度"
+        conv.summary = "讨论了时间表"
+        mock_conversation_service.get_conversations_by_rounds = AsyncMock(
+            return_value=[conv],
+        )
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+        )
+        docs = await service._async_get_final_documents([5], 10)
+
+        assert len(docs) == 1
+        content = docs[0].page_content
+        assert "[轮5]" in content
+        assert "项目进度" in content
+        assert "讨论了时间表" in content
+        # 不应包含完整原文
+        assert "完整用户消息原文内容" not in content
+        assert "完整助手回复原文" not in content
+
+    @pytest.mark.asyncio
+    async def test_none_summary_should_fallback_to_user_message_preview(
+        self, mock_conversation_service, mock_vector_service, test_user,
+        test_thread_id,
+    ):
+        """summary 为 None 时 fallback 到 user_message 前50字符 (沿用 core.py 模式)."""
+        conv = _make_conv_index(7, "这是一段较长的用户消息内容用于测试fallback截断逻辑", "回复")
+        conv.topic = None
+        conv.summary = None
+        mock_conversation_service.get_conversations_by_rounds = AsyncMock(
+            return_value=[conv],
+        )
+
+        service = DualStageRetrievalService(
+            conversation_service=mock_conversation_service,
+            vector_service=mock_vector_service,
+            user_id=test_user,
+            thread_id=test_thread_id,
+        )
+        docs = await service._async_get_final_documents([7], 10)
+
+        content = docs[0].page_content
+        assert "[轮7]" in content
+        # fallback 到 user_message 前50字符
+        assert "这是一段较长的用户消息内容用于测试fallback截断" in content
 
 
 class TestDualStageRetrievalServiceHealthCheckExtra:

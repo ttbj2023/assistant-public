@@ -44,25 +44,6 @@ class ContentAnalyzerConfig(BaseModel):
         },
         description="主模型bind参数(max_tokens=2048; reasoning_effort 用模型注册默认 minimal)",
     )
-    pinned_memory_model: str = Field(
-        default="",
-        description=(
-            "置顶记忆每轮更新专属模型(空=使用主model). "
-            "置顶更新是精确字符串匹配提取, 区别于索引摘要, 可独立选模型/参数."
-        ),
-    )
-    pinned_memory_model_params: dict[str, Any] = Field(
-        default_factory=dict,
-        description="置顶记忆更新专属bind参数(空=使用主model_params)",
-    )
-    audit_model: str = Field(
-        default="ark-agent-plan:doubao-seed-2.0-pro",
-        description="置顶记忆周期审计模型(读全局整理, 区别于每轮model; 评测验证doubao pro precision优)",
-    )
-    audit_model_params: dict[str, Any] = Field(
-        default_factory=dict,
-        description="审计模型专属bind参数(空则用模型注册默认, doubao pro默认reasoning_effort=medium)",
-    )
     arc_model: str = Field(
         default="ark-agent-plan:doubao-seed-2.0-mini",
         description=(

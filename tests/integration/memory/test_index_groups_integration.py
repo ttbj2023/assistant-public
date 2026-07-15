@@ -54,7 +54,6 @@ def _make_assembler(
             memory=AgentMemoryConfig(
                 total_char_budget=total_budget,
                 index_char_budget=index_budget,
-                include_todo_in_context=False,
             ),
         ),
         user_id=user_id,

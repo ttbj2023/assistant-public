@@ -74,7 +74,7 @@ class TestCreateTodo:
     async def test_create_success(self, create_tool, mock_service):
         with (
             patch.object(create_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(create_tool, "_invalidate_todo_cache"),
+
         ):
             result = await create_tool._arun(title="新任务")
         data = json.loads(result)
@@ -88,12 +88,13 @@ class TestCreateTodo:
         data = json.loads(result)
         assert data["success"] is False
         assert "标题不能为空" in data["message"]
+        assert data["error"] == "任务标题不能为空"
 
     @pytest.mark.asyncio
     async def test_create_with_priority(self, create_tool, mock_service):
         with (
             patch.object(create_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(create_tool, "_invalidate_todo_cache"),
+
         ):
             await create_tool._arun(title="任务", priority="high")
         assert (
@@ -101,32 +102,40 @@ class TestCreateTodo:
         )
 
     @pytest.mark.asyncio
-    async def test_create_attaches_current_todos(self, create_tool, mock_service):
-        """硬保证: 创建成功后返回值附带写后的真实TODO列表快照."""
+    async def test_create_success_returns_structured(self, create_tool, mock_service):
+        """创建成功后返回结构化结果: action/affected_todo_id/todo/current_todos."""
         with (
             patch.object(create_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(create_tool, "_invalidate_todo_cache"),
+
         ):
             result = await create_tool._arun(title="新任务")
         data = json.loads(result)
         assert data["success"] is True
-        assert data["current_todos"] == "## 待办\n- [1] 测试任务"
-        # 口径与 <current_todos> 一致: 只取活跃任务
-        call_kwargs = mock_service.get_formatted_todolist.call_args.kwargs
+        assert data["action"] == "created"
+        assert data["affected_todo_id"] == 1
+        assert data["todo"]["id"] == 1
+        assert data["todo"]["title"] == "测试任务"
+        assert isinstance(data["current_todos"], list)
+        assert len(data["current_todos"]) == 1
+        assert data["current_todos"][0]["title"] == "测试任务"
+        # 只取活跃任务
+        call_kwargs = mock_service.list_todos.call_args.kwargs
         assert call_kwargs["statuses"] == [TodoStatus.PENDING, TodoStatus.IN_PROGRESS]
 
     @pytest.mark.asyncio
-    async def test_create_no_current_todos_when_empty(self, create_tool, mock_service):
-        """快照为空时不附 current_todos 字段(避免噪音)."""
-        mock_service.get_formatted_todolist = AsyncMock(return_value="")
+    async def test_create_attaches_empty_list_when_no_active(
+        self, create_tool, mock_service
+    ):
+        """无活跃任务时 current_todos 为空列表, 保持形状稳定."""
+        mock_service.list_todos = AsyncMock(return_value=[])
         with (
             patch.object(create_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(create_tool, "_invalidate_todo_cache"),
+
         ):
             result = await create_tool._arun(title="新任务")
         data = json.loads(result)
         assert data["success"] is True
-        assert "current_todos" not in data
+        assert data["current_todos"] == []
 
 
 # ========== ListTodosTool ==========
@@ -134,19 +143,46 @@ class TestCreateTodo:
 
 class TestListTodos:
     @pytest.mark.asyncio
-    async def test_list_returns_formatted(self, list_tool, mock_service):
+    async def test_list_success_returns_structured(self, list_tool, mock_service):
+        """list_todos 成功返回 todos(list)/count/message."""
         with patch.object(list_tool, "_get_todo_service", return_value=mock_service):
             result = await list_tool._arun()
         data = json.loads(result)
         assert data["success"] is True
-        assert "测试任务" in data["message"]
+        assert isinstance(data["todos"], list)
+        assert len(data["todos"]) == 1
+        assert data["todos"][0]["title"] == "测试任务"
+        assert data["count"] == 1
+        assert "共 1 条" in data["message"]
 
     @pytest.mark.asyncio
     async def test_list_empty(self, list_tool, mock_service):
-        mock_service.get_formatted_todolist = AsyncMock(return_value="")
+        mock_service.list_todos = AsyncMock(return_value=[])
         with patch.object(list_tool, "_get_todo_service", return_value=mock_service):
             result = await list_tool._arun()
-        assert "没有找到任务" in json.loads(result)["message"]
+        data = json.loads(result)
+        assert data["success"] is True
+        assert data["todos"] == []
+        assert data["count"] == 0
+        assert data["message"] == "没有找到任务"
+
+    @pytest.mark.asyncio
+    async def test_list_default_uses_active_statuses(self, list_tool, mock_service):
+        """默认返回活跃任务(PENDING + IN_PROGRESS)."""
+        with patch.object(list_tool, "_get_todo_service", return_value=mock_service):
+            await list_tool._arun()
+        call_kwargs = mock_service.list_todos.call_args.kwargs
+        assert call_kwargs["statuses"] == [TodoStatus.PENDING, TodoStatus.IN_PROGRESS]
+
+    @pytest.mark.asyncio
+    async def test_list_failure_returns_error(self, list_tool, mock_service):
+        """列表查询异常时返回 error 字段(修复 fallback 丢错)."""
+        mock_service.list_todos = AsyncMock(side_effect=RuntimeError("db down"))
+        with patch.object(list_tool, "_get_todo_service", return_value=mock_service):
+            result = await list_tool._arun()
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "db down" in data["error"]
 
 
 # ========== UpdateTodoTool ==========
@@ -157,7 +193,6 @@ class TestUpdateTodo:
     async def test_update_success(self, update_tool, mock_service):
         with (
             patch.object(update_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(update_tool, "_invalidate_todo_cache"),
         ):
             result = await update_tool._arun(todo_id=1, status="completed")
         data = json.loads(result)
@@ -168,7 +203,6 @@ class TestUpdateTodo:
     async def test_update_only_provided_fields(self, update_tool, mock_service):
         with (
             patch.object(update_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(update_tool, "_invalidate_todo_cache"),
         ):
             await update_tool._arun(todo_id=1, title="新标题")
         kwargs = mock_service.update_todo.call_args.kwargs
@@ -176,16 +210,29 @@ class TestUpdateTodo:
         assert "status" not in kwargs
 
     @pytest.mark.asyncio
-    async def test_update_attaches_current_todos(self, update_tool, mock_service):
-        """硬保证: 更新成功后返回值附带写后的真实TODO列表快照."""
+    async def test_update_failure_returns_error(self, update_tool):
+        """无效输入时返回 error 字段(修复 fallback 丢错)."""
+        result = await update_tool._arun(todo_id=1, status="invalid")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "无效的状态" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_update_success_returns_structured(self, update_tool, mock_service):
+        """更新成功后返回结构化结果: action/affected_todo_id/todo/current_todos."""
         with (
             patch.object(update_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(update_tool, "_invalidate_todo_cache"),
         ):
             result = await update_tool._arun(todo_id=1, status="completed")
         data = json.loads(result)
         assert data["success"] is True
-        assert data["current_todos"] == "## 待办\n- [1] 测试任务"
+        assert data["action"] == "updated"
+        assert data["affected_todo_id"] == 1
+        assert data["todo"]["id"] == 1
+        assert data["todo"]["status"] == "pending"
+        assert isinstance(data["current_todos"], list)
+        assert len(data["current_todos"]) == 1
+        assert data["current_todos"][0]["title"] == "测试任务"
 
 
 # ========== DeleteTodoTool ==========
@@ -193,14 +240,20 @@ class TestUpdateTodo:
 
 class TestDeleteTodo:
     @pytest.mark.asyncio
-    async def test_delete_success(self, delete_tool, mock_service):
+    async def test_delete_success_returns_structured(self, delete_tool, mock_service):
+        """删除成功后返回结构化结果: action/affected_todo_id/current_todos, 无 todo."""
         with (
             patch.object(delete_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(delete_tool, "_invalidate_todo_cache"),
         ):
             result = await delete_tool._arun(todo_id=1)
         data = json.loads(result)
         assert data["success"] is True
+        assert data["action"] == "deleted"
+        assert data["affected_todo_id"] == 1
+        assert isinstance(data["current_todos"], list)
+        assert len(data["current_todos"]) == 1
+        assert data["current_todos"][0]["title"] == "测试任务"
+        assert "todo" not in data
         mock_service.delete_todo.assert_called_once_with(1, "u1")
 
     @pytest.mark.asyncio
@@ -208,19 +261,9 @@ class TestDeleteTodo:
         mock_service.delete_todo = AsyncMock(return_value=False)
         with patch.object(delete_tool, "_get_todo_service", return_value=mock_service):
             result = await delete_tool._arun(todo_id=999)
-        assert json.loads(result)["success"] is False
-
-    @pytest.mark.asyncio
-    async def test_delete_attaches_current_todos(self, delete_tool, mock_service):
-        """硬保证: 删除成功后返回值附带写后的真实TODO列表快照."""
-        with (
-            patch.object(delete_tool, "_get_todo_service", return_value=mock_service),
-            patch.object(delete_tool, "_invalidate_todo_cache"),
-        ):
-            result = await delete_tool._arun(todo_id=1)
         data = json.loads(result)
-        assert data["success"] is True
-        assert data["current_todos"] == "## 待办\n- [1] 测试任务"
+        assert data["success"] is False
+        assert data["error"] == "任务ID 999 不存在或删除失败"
 
 
 # ========== TodoManagerBase 共享逻辑 ==========
@@ -257,9 +300,24 @@ class TestTodoManagerBase:
 
     @pytest.mark.asyncio
     async def test_get_fresh_todolist_degrades_on_error(self, create_tool):
-        """_get_fresh_todolist 异常时降级返回空串, 不影响写操作的成功返回."""
+        """_get_fresh_todolist 异常时降级返回空列表, 不影响写操作的成功返回."""
         with patch.object(
             create_tool, "_get_todo_service", side_effect=RuntimeError("db down")
         ):
             snapshot = await create_tool._get_fresh_todolist()
-        assert snapshot == ""
+        assert snapshot == []
+
+    @pytest.mark.asyncio
+    async def test_get_fresh_todolist_returns_structured_list(
+        self, create_tool, mock_service
+    ):
+        """_get_fresh_todolist 返回 list[dict] 且只取活跃任务."""
+        with patch.object(create_tool, "_get_todo_service", return_value=mock_service):
+            snapshot = await create_tool._get_fresh_todolist()
+        assert isinstance(snapshot, list)
+        assert len(snapshot) == 1
+        assert snapshot[0]["id"] == 1
+        assert snapshot[0]["title"] == "测试任务"
+        assert snapshot[0]["status"] == "pending"
+        call_kwargs = mock_service.list_todos.call_args.kwargs
+        assert call_kwargs["statuses"] == [TodoStatus.PENDING, TodoStatus.IN_PROGRESS]

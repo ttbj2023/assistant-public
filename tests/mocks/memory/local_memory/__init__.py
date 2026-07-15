@@ -9,7 +9,6 @@ from datetime import datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from src.core.types import PinnedMemoryUpdateResult
 from src.storage.models.conversation import (
     ConversationData,
     ConversationIndex,
@@ -41,7 +40,7 @@ class ConversationMemoryCoreMocks:
         """设置分析器Mock"""
         self.content_analyzer = AsyncMock()
         self.content_analyzer.analyze_pinned_memory_update = AsyncMock(
-            return_value=PinnedMemoryUpdateResult()
+            return_value=MagicMock()
         )
         self.content_analyzer.generate_conversation_index = AsyncMock(
             return_value=ConversationIndex(
@@ -73,7 +72,7 @@ class ConversationMemoryCoreMocks:
         self.conversation_dao.create_conversation.return_value = None
         self.conversation_dao.create_conversation_index.return_value = None
         self.content_analyzer.analyze_pinned_memory_update.return_value = (
-            PinnedMemoryUpdateResult()
+            MagicMock()
         )
         self.vector_store.add_conversations.return_value = None
 

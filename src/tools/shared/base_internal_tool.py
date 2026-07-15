@@ -30,13 +30,13 @@ class BaseInternalTool(BaseTool):
     - 可选: 实现 _get_service() 提供带缓存的 Service/DAO 访问
 
     description 字段规范:
-    - 前 3 行: 自然描述工具的核心能力, 供工具筛选模型做降噪判断
-      第 1 行: 一句话核心能力
-      第 2 行: 主要使用场景或能力范围
-      第 3 行: 补充说明或关键细节
-    - 后续行: 操作说明/参数/示例, 供主模型使用工具时参考
+    - 「组描述」和「独立工具描述」进入 _llm_tool_filter 筛选, 这两类遵循:
+      前 3 行: 供筛选模型做降噪判断(第1行核心能力/第2行场景/第3行补充)
+      后续行: 操作说明/参数/示例, 供主模型使用工具时参考
+    - group member 描述不参与筛选(筛选只看组描述), 仅作唤醒后注入主对话
+      LLM 的操作说明, 可自由组织(做什么/怎么用/返回什么/配合关系)
     - summary 字段面向 search_available_tools 的简短描述;
-      对于被工具组统一管理的子工具, 应保留默认空值, 由工具组 summary 接管
+      group member 应保留默认空值, 由组描述 summary 接管
     - search_keywords 字段面向关键词匹配算法, 与 description 分离
     """
 

@@ -90,7 +90,7 @@ flowchart LR
 
     subgraph BG["后台 fire-and-forget"]
         E["IndexRunService<br/>语义 run 检测"] --> F["弧短语冻结<br/>(永不回溯)"]
-        G["置顶记忆 1-step 更新"]
+        G["置顶记忆 主模型覆写"]
     end
 
     subgraph Pull["Pull 路径 (模型主动)"]
@@ -217,7 +217,7 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 
 ## 项目状态
 
-- **成熟度**: 个人项目, 生产环境持续运行, 300+ 源文件 / 2900+ 单元测试 / 分层架构 / CI 门禁
+- **成熟度**: 个人项目, 生产环境持续运行, 300+ 源文件 / 3000+ 单元测试 / 分层架构 / CI 门禁
 - **局限**: 强依赖中文/中国生态 (A股行情 / 火山引擎模型 / 微信渠道); 记忆系统无公开 benchmark
 - **反馈**: Issues 欢迎 / 邮件 [jsjrjft@outlook.com](mailto:jsjrjft@outlook.com); **不接受 PR** (个人项目, 暂不开放协同)
 

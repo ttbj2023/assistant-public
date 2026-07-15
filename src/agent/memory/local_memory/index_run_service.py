@@ -8,13 +8,14 @@
 始终用各轮已有 summary 做判定与蒸馏, 不读原文.
 
 拥有独立模块级状态: RMW 串行化锁,未闭合 run 跟踪,fire-and-forget 后台任务.
-进程重启会丢失未闭合 run(其轮次留在 fine 区作 bridge, 可接受; 仿 pinned audit).
+进程重启会丢失未闭合 run(其轮次留在 fine 区作 bridge, 可接受; 仿 pinned 重启特性).
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 from src.storage.service import create_conversation_service
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # 默认压缩旋钮(可由 agent_config.memory 覆盖, 见 config 集成)
-_DEFAULT_SIMILARITY_THRESHOLD = 0.5
+_DEFAULT_SIMILARITY_THRESHOLD = 0.45
 _DEFAULT_ARC_MAX_CHARS = 60
 # 单轮 run 也冻结: 保证索引区时间线完整无洞(对齐 backfill 语义)
 _MIN_RUN_SIZE = 1
@@ -40,6 +41,30 @@ _open_runs: dict[str, dict[str, Any]] = {}
 _index_run_locks: dict[str, asyncio.Lock] = {}
 # 存活后台任务引用: 防 fire-and-forget task 被提前 GC
 _index_run_bg_tasks: set[asyncio.Task[None]] = set()
+
+
+# 角色标签清洗: 只删 "用户"/"助手" 标签词, 保留其后内容(L1b 方案)
+_ROLE_LABEL_RE = re.compile(r"^(用户|助手)\s*")
+_TRAIL_LABEL_RE = re.compile(r"([，,])\s*助手\s*")  # noqa: RUF001
+
+
+def clean_summary_for_embedding(summary: str) -> str:
+    """剥离 summary 角色标签词用于 embedding, 保留对话双方内容.
+
+    摘要中的 "用户xxx，助手yyy" 格式性内容会干扰 embedding 语义集中度,
+    本函数只删除角色标签词本身, 保留 xxx/yyy 的实质内容.
+
+    Args:
+        summary: 原始摘要文本
+
+    Returns:
+        剥离角色标签后的文本
+
+    """
+    s = summary.strip()
+    s = _ROLE_LABEL_RE.sub("", s)
+    s = _TRAIL_LABEL_RE.sub(r"\1", s)
+    return s.strip()
 
 
 def _run_key(user_id: str, thread_id: str, agent_id: str) -> str:
@@ -278,7 +303,9 @@ class IndexRunService:
             return
 
         try:
-            cur_emb = await embeddings.aembed_query(cur_conv.summary or "")
+            cur_emb = await embeddings.aembed_query(
+                clean_summary_for_embedding(cur_conv.summary or "")
+            )
         except Exception as e:
             logger.warning("本轮 summary embedding 失败, 跳过: %s", e)
             return
@@ -343,7 +370,9 @@ class IndexRunService:
         entries: list[dict[str, Any]] = []
         for r in rounds:
             try:
-                emb = await embeddings.aembed_query(r.summary or "")
+                emb = await embeddings.aembed_query(
+                    clean_summary_for_embedding(r.summary or "")
+                )
             except Exception as e:
                 logger.warning(
                     "懒补偿 embedding 失败 round %d, 跳过补偿: %s",

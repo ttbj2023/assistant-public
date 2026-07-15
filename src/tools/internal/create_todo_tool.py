@@ -50,7 +50,9 @@ class CreateTodoTool(TodoManagerBase):
             request = CreateTodoRequest(**kwargs)
             title = request.title.strip()
             if not title:
-                return self._json_result(False, "任务标题不能为空")
+                return self._json_result(
+                    False, "任务标题不能为空", action=None, error="任务标题不能为空"
+                )
 
             priority = self._parse_priority(request.priority)
             status = self._parse_status(request.status)
@@ -66,16 +68,20 @@ class CreateTodoTool(TodoManagerBase):
                 status=status,
                 due_date=due_date,
             )
-            self._invalidate_todo_cache()
             todo_dict = self._todo_to_dict(todo)
-            snapshot = await self._get_fresh_todolist()
-            extra: dict[str, Any] = {"todo": todo_dict}
-            if snapshot:
-                extra["current_todos"] = snapshot
+            current_todos = await self._get_fresh_todolist()
+            extra: dict[str, Any] = {
+                "action": "created",
+                "affected_todo_id": todo.id,
+                "todo": todo_dict,
+                "current_todos": current_todos,
+            }
             return self._json_result(True, f"成功创建任务: {todo.title}", **extra)
         except Exception as e:
             logger.error("创建任务失败: %s", e)
-            return self._json_result(False, f"创建任务失败: {e!s}")
+            return self._json_result(
+                False, f"创建任务失败: {e!s}", action=None, error=str(e)
+            )
 
 
 __all__ = ["CreateTodoTool"]

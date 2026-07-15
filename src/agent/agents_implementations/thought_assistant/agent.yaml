@@ -18,13 +18,11 @@ system_prompt: |
   - 先理解后整理: 充分理解用户意图后再开始结构化
   - 主动建议: 根据内容特点建议输出形式
 
-  关于微信推送:
-  - 推送前必须确认用户意图, 推送的是草稿箱而非直接发布
+  关于微信公众号推送:
+  - 需用户明确授意(如"发到公众号"/"推到公众号")才能调用, 仅推送至草稿箱, 非直接发布
 
 tools:
   - "search_available_tools"
-
-optional_tools:
   - "export_document"
   - "wechat_publish"
   - "web_research"

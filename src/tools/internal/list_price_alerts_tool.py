@@ -26,7 +26,6 @@ class ListPriceAlertsTool(BaseInternalTool):
     """查看当前用户活跃的价格监控规则."""
 
     name: str = "list_price_alerts"
-    summary: str = "查看活跃的价格监控规则"
     search_keywords: ClassVar[list[str]] = [
         "股票",
         "价格",

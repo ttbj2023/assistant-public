@@ -50,8 +50,8 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "members": ["create_todo", "list_todos", "update_todo", "delete_todo"],
             "prompt_hint": (
                 "写操作(create_todo/update_todo/delete_todo)完成后, 必须以数据库最新真实状态"
-                "为准向用户汇报任务情况; 写工具返回中的 current_todos 字段即为该真实状态, "
-                "亦可额外调用 list_todos 复核; 严禁凭记忆或猜测描述任务, "
+                "为准向用户汇报任务情况; 写工具返回中的 current_todos 是结构化任务列表(list of dict), "
+                "即为该真实状态, 亦可额外调用 list_todos 复核; 严禁凭记忆或猜测描述任务, "
                 "严禁在未实际执行写操作时声称已完成创建/更新/删除"
             ),
         },
@@ -88,6 +88,33 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "list_price_alerts",
                 "cancel_price_alert",
             ],
+        },
+        "memory_recall_group": {
+            "name": "memory_recall_group",
+            "summary": "历史对话检索, 按内容搜索或按轮次取原文(索引区下钻)",
+            "description": (
+                "历史对话记忆检索工具组, 唤醒后提供搜索与取详情两个子工具.\n"
+                "search_memories: 按关键词搜索历史对话, 返回概览钩子(轮次+主题+摘要).\n"
+                "get_round_detail: 按轮次号取回完整原文(从钩子/索引区下钻)."
+            ),
+            "keywords": [
+                "记忆",
+                "历史",
+                "之前",
+                "回忆",
+                "上次",
+                "搜索对话",
+                "记得",
+                "聊过",
+                "说过",
+                "前面",
+                "上一轮",
+            ],
+            "members": ["search_memories", "get_round_detail"],
+            "prompt_hint": (
+                "search_memories 返回概览钩子(轮次+主题+摘要), 需要完整内容时用 "
+                "get_round_detail 按轮次号取原文. 先 search 定位, 再 get_round_detail 取细节"
+            ),
         },
     },
     "internal_tools": {
@@ -131,13 +158,13 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "description": "异步记忆检索和对话历史搜索工具",
             "config": {"max_results": 20, "enable_vector_search": True},
         },
-        "requirement_memory": {
-            "name": "requirement_memory",
-            "class_path": "src.tools.internal.async_requirement_memory_tool.AsyncRequirementMemoryTool",
+        "get_round_detail": {
+            "name": "get_round_detail",
+            "class_path": "src.tools.internal.async_round_detail_tool.AsyncRoundDetailTool",
             "enabled": True,
-            "timeout": 10.0,
-            "description": "记录/更新用户对助手的非一次性要求(记事本, 注入系统提示词)",
-            "config": {"max_lines": 10, "max_total_length": 500},
+            "timeout": 30.0,
+            "description": "按轮次号获取对话完整原文(索引区下钻 fetch 工具)",
+            "config": {},
         },
         "health_data_manager": {
             "name": "health_data_manager",

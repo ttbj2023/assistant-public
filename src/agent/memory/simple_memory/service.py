@@ -1,14 +1,9 @@
 """SimpleMemoryService - Simple 模式长期记忆子系统.
 
-管理长期记忆(preferences/insights)的增量更新. 每轮对话后 fire-and-forget
-执行 Stage 1 提取: 单次完整交换(用户消息 + 助手回复) + 已有记忆 -> operations
--> 增量写入(三层去重).
+管理长期记忆的主模型每轮全文覆写. 每轮对话后 fire-and-forget 执行:
+messages 快照 + response + 当前记忆 -> 主模型判断 -> needs_update 时全文覆写.
 
-拥有独立的模块级状态: RMW 串行化锁,fire-and-forget 后台任务.
-周期审计与 Stage 2 综合(洞察提炼)属 P2, 此处暂不实现.
-
-与 PinnedMemoryService 的关系: 模式同构, 但提取输入含 assistant_response,
-字段为 preferences/insights, 无 TODO 去重参考.
+拥有独立的模块级状态: RMW 串行化锁, fire-and-forget 后台任务.
 """
 
 from __future__ import annotations
@@ -18,14 +13,12 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from src.config.agent_config import AgentConfig
     from src.storage.models.conversation import ConversationData
 
 logger = logging.getLogger(__name__)
 
-# RMW 串行化锁: 按 user:thread:agent 索引, 模块级跨实例共享.
-# fire-and-forget 后台任务共用此锁排队, 避免 read(LLM)write 竞态导致 lost update.
 _memory_locks: dict[str, asyncio.Lock] = {}
-# 存活后台任务引用: 防 fire-and-forget task 被提前 GC(完成时自动 discard).
 _memory_bg_tasks: set[asyncio.Task[None]] = set()
 
 
@@ -34,10 +27,7 @@ def _lock_key(user_id: str, thread_id: str, agent_id: str) -> str:
 
 
 def _get_memory_lock(user_id: str, thread_id: str, agent_id: str) -> asyncio.Lock:
-    """获取 RMW 锁(按 user:thread:agent 索引, lazy 创建).
-
-    单线程 asyncio 下 get+set 之间无 await, 视为原子.
-    """
+    """获取 RMW 锁(按 user:thread:agent 索引, lazy 创建)."""
     key = _lock_key(user_id, thread_id, agent_id)
     lock = _memory_locks.get(key)
     if lock is None:
@@ -65,68 +55,85 @@ def get_bg_tasks() -> set[asyncio.Task[None]]:
 
 
 class SimpleMemoryService:
-    """Simple 模式长期记忆服务 - 管理 Stage 1 增量提取.
+    """Simple 模式长期记忆服务 - 主模型每轮全文覆写."""
 
-    每轮对话后 fire-and-forget: 单次完整交换 + 已有记忆 -> operations -> 增量写入.
-    """
-
-    def __init__(self, user_id: str, thread_id: str, agent_id: str) -> None:
+    def __init__(
+        self,
+        user_id: str,
+        thread_id: str,
+        agent_id: str,
+        agent_config: AgentConfig | None = None,
+    ) -> None:
         self.user_id = user_id
         self.thread_id = thread_id
         self.agent_id = agent_id
+        self.model_id = getattr(agent_config, "model_id", "deepseek:deepseek-v4-pro")
+        llm_config = getattr(agent_config, "llm_config", None) or {}
+        self.model_params = {k: v for k, v in llm_config.items() if k != "model"}
 
-    def on_conversation_round(self, conversation_data: ConversationData) -> None:
-        """每轮对话后的提取入口: fire-and-forget Stage 1 更新."""
-        _spawn_bg_task(self.update(conversation_data))
+    def on_conversation_round(
+        self,
+        conversation_data: ConversationData,
+        messages_snapshot: list[Any] | None = None,
+    ) -> None:
+        """每轮对话后的覆写入口: fire-and-forget."""
+        _spawn_bg_task(self.update(conversation_data, messages_snapshot))
 
-    async def update(self, conversation_data: ConversationData) -> None:
-        """长期记忆 Stage 1 提取(增删改, 精确字符串匹配 + 语义去重).
+    async def update(
+        self,
+        conversation_data: ConversationData,
+        messages_snapshot: list[Any] | None = None,
+    ) -> None:
+        """长期记忆主模型覆写 (全文 overwrite, mode=simple)."""
+        if not messages_snapshot:
+            logger.debug("📌 无 messages 快照, 跳过主模型覆写")
+            return
 
-        每轮对话后执行: user_message + assistant_response + current_memory
-        -> operations -> 增量写入.
-        """
         logger.debug(
-            f"📌 开始长期记忆更新: {conversation_data.user_id}:{conversation_data.thread_id}:{conversation_data.round_number}",
+            f"📌 开始长期记忆覆写: {conversation_data.user_id}:"
+            f"{conversation_data.thread_id}:{conversation_data.round_number}",
         )
 
         memory_lock = _get_memory_lock(self.user_id, self.thread_id, self.agent_id)
         await memory_lock.acquire()
         try:
-            from src.inference.content_analyzer.simple_memory_analyzer import (
-                SimpleMemoryAnalyzer,
+            from src.inference.content_analyzer.pinned_memory_rewriter import (
+                PinnedMemoryRewriter,
             )
+            from src.storage.service import create_pinned_memory_block_service
 
-            from .manager import SimpleMemoryManager
-
-            analyzer = SimpleMemoryAnalyzer()
-            manager = SimpleMemoryManager(
-                conversation_data.user_id,
-                conversation_data.thread_id,
+            block_service = await create_pinned_memory_block_service(
+                self.user_id,
+                self.thread_id,
                 agent_id=self.agent_id,
             )
-
-            memory_block = await manager.get_memory_for_analysis()
-
-            result = await analyzer.analyze_memory_update(
-                user_message=conversation_data.user_message,
-                assistant_response=conversation_data.assistant_response,
-                memory_block=memory_block,
+            current_memory = await block_service.get_content(
+                self.user_id,
+                self.thread_id,
             )
 
-            if result.has_operations and result.operations:
-                updated = await manager.apply_operations(result.operations)
-                if updated:
-                    logger.debug(
-                        "✅ 长期记忆已更新, 操作数: %d",
-                        len(result.operations),
-                    )
-                else:
-                    logger.debug("✅ 长期记忆操作未产生变更")
-            else:
-                logger.debug("✅ 长期记忆无需更新")
+            rewriter = PinnedMemoryRewriter(
+                model_id=self.model_id,
+                model_params=self.model_params,
+            )
+            result = await rewriter.rewrite(
+                messages=messages_snapshot,
+                response=conversation_data.assistant_response,
+                current_memory=current_memory,
+                mode="simple",
+            )
 
+            if result.needs_update and result.content:
+                await block_service.set_content(
+                    self.user_id,
+                    self.thread_id,
+                    result.content,
+                )
+                logger.debug("✅ 长期记忆已覆写")
+            else:
+                logger.debug("✅ 长期记忆无需更新 (needs_update=False)")
         except Exception as e:
-            logger.error("❌ 长期记忆更新失败: %s", e)
+            logger.error("❌ 长期记忆覆写失败: %s", e)
         finally:
             memory_lock.release()
 

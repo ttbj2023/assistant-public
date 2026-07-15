@@ -94,7 +94,6 @@ class SimplePinnedMemory(SimplePinnedMemoryBase, table=True):
         ),
         description="更新时间",
     )
-    access_count: int = Field(default=0, description="访问次数")
 
     class Config:
         """SQLModel配置."""

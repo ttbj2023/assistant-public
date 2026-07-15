@@ -1,16 +1,16 @@
 """MemoryAssembler 记忆组装集成测试.
 
-验证记忆组装器协调多数据源 (ConversationService/MemoryService/TodoService) +
+验证记忆组装器协调多数据源 (ConversationService/MemoryService) +
 字符预算分配 + 缓存协同的真实行为, 补充单元测试过度 Mock 的部分:
 
 - 首轮空历史边界
-- 4 部分组装格式 (pinned XML / Human-AI 交替历史 / TODO markdown)
+- 组装格式 (pinned XML / Human-AI 交替历史)
 - 字符预算分配 (主历史/索引区独立预算) 与索引区伪对话轮生成
 - pinned 缓存命中跳过 DB
 - 增量 fetch (新轮次不全量重读)
 
 测试策略: 灰盒且零外部 Mock - 全部真实组件 (MemoryAssembler / ConversationService /
-MemoryService / TodoService / SQLite / SplittableMemoryCache), 组装过程不调 LLM、
+MemoryService / SQLite / SplittableMemoryCache), 组装过程不调 LLM、
 不涉及向量, 故无需任何 Mock, 是真实度最高的集成测试.
 """
 
@@ -21,12 +21,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.memory.local_memory.assembler import MemoryAssembler
 from src.config.agent_config import AgentConfig, AgentMemoryConfig
-from src.storage.models.simple_pinned_memory import SimplePinnedMemoryType
-from src.storage.service.service_factory import (
-    create_conversation_service,
-    create_memory_service,
-    create_todo_service,
-)
+from src.storage.service import create_pinned_memory_block_service
+from src.storage.service.service_factory import create_conversation_service
 
 _AGENT_ID = "test-agent"
 
@@ -34,15 +30,13 @@ _AGENT_ID = "test-agent"
 def _make_assembler(
     user_id: str,
     thread_id: str,
-    *,
-    include_todo: bool = True,
 ) -> MemoryAssembler:
-    """构造真实 MemoryAssembler 实例 (include_todo 默认启用以便验证 TODO 部分)."""
+    """构造真实 MemoryAssembler 实例."""
     return MemoryAssembler(
         agent_id=_AGENT_ID,
         agent_config=AgentConfig(
             agent_id=_AGENT_ID,
-            memory=AgentMemoryConfig(include_todo_in_context=include_todo),
+            memory=AgentMemoryConfig(),
         ),
         user_id=user_id,
         thread_id=thread_id,
@@ -86,7 +80,7 @@ class TestMemoryAssemblyIntegration:
 
         协作场景: 空库 + MemoryAssembler → get_latest_round_number 返回 0
         Mock 边界: 无 (零 Mock, 全真实)
-        验证重点: history_messages=[] / system_prompt_extension="" / todo_list=""
+        验证重点: history_messages=[] / system_prompt_extension=""
         业务价值: 首轮对话边界正确性, 不生成空标签
         """
         assembler = _make_assembler(test_user, test_thread_id)
@@ -94,40 +88,28 @@ class TestMemoryAssemblyIntegration:
 
         assert ctx.history_messages == []
         assert ctx.system_prompt_extension == ""
-        assert ctx.todo_list == ""
 
     @pytest.mark.asyncio
-    async def test_integration_assembler_four_parts_format(
+    async def test_integration_assembler_pinned_and_history_format(
         self,
         test_user,
         test_thread_id,
     ):
-        """测试 4 部分组装格式 (pinned XML + Human/AI 交替历史 + TODO markdown).
+        """测试组装格式 (pinned XML + Human/AI 交替历史).
 
-        协作场景: 预置 5 轮对话 + 1 条置顶 + 1 条 TODO → MemoryAssembler
+        协作场景: 预置 5 轮对话 + 1 条置顶 → MemoryAssembler
         Mock 边界: 无
         验证重点: history_messages 为 Human/AIMessage 交替;
-                  extension 含 <pinned_memory>...</pinned_memory> XML 包裹;
-                  todo_list 非空 (含 TODO 标题)
+                  extension 含 <pinned_memory>...</pinned_memory> XML 包裹
         业务价值: 记忆组装输出格式契约, 供 LLM 正确解析
         """
         await _seed_conversations(test_user, test_thread_id, count=5)
 
-        mem_service = await create_memory_service(
+        block_service = await create_pinned_memory_block_service(
             test_user, test_thread_id, agent_id=_AGENT_ID
         )
-        await mem_service.update_memory(
-            SimplePinnedMemoryType.BASIC_INFO,
-            "用户是软件工程师",
-            test_user,
-            test_thread_id,
-        )
-
-        todo_service = await create_todo_service(
-            test_user, test_thread_id, agent_id=_AGENT_ID
-        )
-        await todo_service.create_todo(
-            title="完成集成测试报告", user_id=test_user, thread_id=test_thread_id
+        await block_service.set_content(
+            test_user, test_thread_id, "用户是软件工程师"
         )
 
         assembler = _make_assembler(test_user, test_thread_id)
@@ -141,9 +123,6 @@ class TestMemoryAssemblyIntegration:
         assert "<pinned_memory>" in ctx.system_prompt_extension
         assert "</pinned_memory>" in ctx.system_prompt_extension
         assert "用户是软件工程师" in ctx.system_prompt_extension
-
-        assert ctx.todo_list != ""
-        assert "完成集成测试报告" in ctx.todo_list
 
     @pytest.mark.asyncio
     async def test_integration_assembler_budget_split_and_index_pseudo_round(
@@ -201,26 +180,16 @@ class TestMemoryAssemblyIntegration:
         """
         await _seed_conversations(test_user, test_thread_id, count=2)
 
-        mem_service = await create_memory_service(
+        block_service = await create_pinned_memory_block_service(
             test_user, test_thread_id, agent_id=_AGENT_ID
         )
-        await mem_service.update_memory(
-            SimplePinnedMemoryType.BASIC_INFO,
-            "原始置顶内容",
-            test_user,
-            test_thread_id,
-        )
+        await block_service.set_content(test_user, test_thread_id, "原始置顶内容")
 
         assembler = _make_assembler(test_user, test_thread_id)
         ctx1 = await assembler.assemble_memory_context(test_user, test_thread_id)
         assert "原始置顶内容" in ctx1.system_prompt_extension
 
-        await mem_service.update_memory(
-            SimplePinnedMemoryType.BASIC_INFO,
-            "被绕过缓存的新内容",
-            test_user,
-            test_thread_id,
-        )
+        await block_service.set_content(test_user, test_thread_id, "被绕过缓存的新内容")
 
         ctx2 = await assembler.assemble_memory_context(test_user, test_thread_id)
         assert "原始置顶内容" in ctx2.system_prompt_extension, "应命中缓存返回旧值"

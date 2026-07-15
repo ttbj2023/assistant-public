@@ -1,6 +1,6 @@
 """LocalMemoryProcessor - 原生 messages 数组形式的记忆处理器.
 
-历史走原生 messages 数组, 当前轮上下文 (时间/TODO/missed_messages/user_input)
+历史走原生 messages 数组, 当前轮上下文 (时间/missed_messages/user_input)
 走当前 HumanMessage 的 XML 前缀.
 
 LLM 收到的最终结构:
@@ -11,7 +11,6 @@ LLM 收到的最终结构:
   ...
   [HumanMessage(<missed_messages>错过消息</missed_messages>
                 <current_context>时间</current_context>
-                <current_todos>待办</current_todos>
                 <user_input>真实输入</user_input>)]        <- 当前轮
 
 首轮对话: 返回空 history + current_content 只含 <first_turn_guidance> + <user_input>.
@@ -70,7 +69,6 @@ class LocalMemoryProcessor(BaseProcessor):
 
         根据 agent_config 条件性组装:
         - 始终: [过往对话回顾] / <conversation_index> / <current_context> / <user_input>
-        - include_todo_in_context: <current_todos> + 任务操作规则
         - 定时消息工具存在: <missed_messages>
 
         Args:
@@ -100,20 +98,6 @@ class LocalMemoryProcessor(BaseProcessor):
             )
 
         lines.append("- <current_context>: 当前时间等环境信息")
-
-        # 条件: include_todo_in_context
-        memory_cfg = getattr(agent_config, "memory", None)
-        if memory_cfg and getattr(memory_cfg, "include_todo_in_context", False):
-            lines.append(
-                "- <current_todos>: 当前活跃的待办事项(数据库实时拉取); "
-                "[#N]是任务ID, update/delete时传 todo_id=N",
-            )
-            lines.append("")
-            lines.append("关于任务操作:")
-            lines.append(
-                "- 历史回复里展示过的待办表格只是当时的展示文本, "
-                "任务的真实状态一律以本轮 <current_todos> 为唯一真相来源",
-            )
 
         lines.append(
             "- <user_input>: 用户本次发送的消息, 你的回复应基于此内容",
@@ -222,7 +206,6 @@ class LocalMemoryProcessor(BaseProcessor):
 
             history_messages: list[BaseMessage] = []
             system_prompt_extension = ""
-            current_todos_str = ""
 
             if is_first_turn:
                 logger.info("首轮对话, 跳过历史组装, 注入开场专属提示词")
@@ -255,7 +238,6 @@ class LocalMemoryProcessor(BaseProcessor):
             )
             history_messages = ctx.history_messages
             system_prompt_extension = ctx.system_prompt_extension
-            current_todos_str = ctx.todo_list
 
             missed_str = await self._get_missed_messages(
                 user_id,
@@ -265,7 +247,6 @@ class LocalMemoryProcessor(BaseProcessor):
 
             current_content = self._build_current_content(
                 time_str=time_str,
-                todos_str=current_todos_str,
                 missed_str=missed_str,
                 user_input=user_input,
             )
@@ -308,17 +289,14 @@ class LocalMemoryProcessor(BaseProcessor):
     @staticmethod
     def _build_current_content(
         time_str: str,
-        todos_str: str,
         missed_str: str,
         user_input: str,
     ) -> str:
-        """非首轮的 current_content: missed_messages + 时间 + TODO + user_input."""
+        """非首轮的 current_content: missed_messages + 时间 + user_input."""
         parts = []
         if missed_str:
             parts.append(f"<missed_messages>\n{missed_str}\n</missed_messages>")
         parts.append(f"<current_context>\n时间: {time_str}\n</current_context>")
-        if todos_str:
-            parts.append(f"<current_todos>\n{todos_str}\n</current_todos>")
         parts.append(f"<user_input>\n{user_input.strip()}\n</user_input>")
         return "\n\n".join(parts)
 

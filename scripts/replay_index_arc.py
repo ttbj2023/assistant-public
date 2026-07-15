@@ -98,6 +98,14 @@ async def backfill_one(
     apply: bool,
 ) -> dict:
     """回填单个对话库, 返回统计."""
+    # simple 模式无索引/弧短语架构, 显式跳过(不依赖 summary 为空的隐式行为)
+    from src.agent.factory import AgentFactory
+
+    cfg = await AgentFactory().load_agent_config(agent)
+    if cfg.memory and cfg.memory.type == "simple":
+        logger.info("[%s/%s/%s] simple 模式, 跳过弧短语回填", user, thread, agent)
+        return {"rounds": 0, "runs": 0, "frozen": 0, "skipped": 0}
+
     # detect_runs_full_coverage 已迁回 index_run_service(在线懒补偿共用)
     from src.agent.memory.local_memory.index_run_service import (
         detect_runs_full_coverage,

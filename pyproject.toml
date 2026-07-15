@@ -307,6 +307,10 @@ max-complexity = 15  # 核心模式稍宽松，适应AI项目复杂性
 # wechat 转换器: 整文件 LaTeX->Unicode 映射表 (希腊字母/数学符号)
 "src/tools/internal/wechat_publish/converter.py" = ["RUF001"]
 
+# 对话测试脚本: 报告输出与测试数据含故意使用的中文标点/emoji符号
+"scripts/conversation_test.py" = ["RUF001"]
+"scripts/conversation_test_lib/**/*.py" = ["RUF001"]
+
 # API文件: FastAPI特定要求
 "src/api/fastapi_app.py" = [
     "RUF029",    # FastAPI lifespan要求async但可能不使用async特性

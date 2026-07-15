@@ -1,6 +1,6 @@
 """Thought Assistant Agent实现.
 
-基于OrchestratorAgent的思绪整理助手, 支持笔记整理/文稿生成/思维导图/微信推送.
+基于OrchestratorAgent的思绪整理助手, 支持笔记整理/文稿生成/思维导图/微信公众号推送.
 """
 
 from __future__ import annotations

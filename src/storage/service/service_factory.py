@@ -108,13 +108,13 @@ async def create_memory_service(user_id: str, thread_id: str, *, agent_id: str) 
     return MemoryService(db_manager.session_factory)
 
 
-async def create_user_requirement_service(
+async def create_pinned_memory_block_service(
     user_id: str,
     thread_id: str,
     *,
     agent_id: str,
 ) -> Any:
-    """创建用户要求记事本服务实例 (独立分库).
+    """创建统一置顶记忆单一块服务实例 (与 SimplePinnedMemory 共享 pinned_memory.db).
 
     Args:
         user_id: 用户ID
@@ -122,21 +122,21 @@ async def create_user_requirement_service(
         agent_id: Agent ID
 
     Returns:
-        用户要求记事本服务实例
+        PinnedMemoryBlockService 实例
 
     """
     from src.storage.dao.async_database_manager import (
-        create_async_requirement_memory_db_manager,
+        create_async_pinned_memory_db_manager,
     )
 
-    from .user_requirement_service import UserRequirementService
+    from .pinned_memory_block_service import PinnedMemoryBlockService
 
-    db_manager = await create_async_requirement_memory_db_manager(
+    db_manager = await create_async_pinned_memory_db_manager(
         user_id,
         thread_id,
         agent_id=agent_id,
     )
-    return UserRequirementService(db_manager.session_factory)
+    return PinnedMemoryBlockService(db_manager.session_factory)
 
 
 def create_vector_service(user_id: str, thread_id: str, *, agent_id: str) -> Any:
@@ -234,42 +234,6 @@ async def create_retrieval_service(
         enable_sql_search=enable_sql_search,
         enable_vector_search=enable_vector_search,
         max_results=max_results,
-    )
-
-
-async def create_conversation_data_service(
-    user_id: str,
-    thread_id: str,
-    *,
-    agent_id: str,
-) -> Any:
-    """创建统一对话数据服务实例.
-
-    Args:
-        user_id: 用户ID
-        thread_id: 线程ID
-        agent_id: Agent ID
-
-    Returns:
-        统一对话数据服务实例
-
-    """
-    from .conversation_data_service import ConversationDataService
-
-    conv_service = await create_conversation_service(
-        user_id,
-        thread_id,
-        agent_id=agent_id,
-    )
-    memory_service = await create_memory_service(user_id, thread_id, agent_id=agent_id)
-    todo_service = await create_todo_service(user_id, thread_id, agent_id=agent_id)
-    vector_service = create_vector_service(user_id, thread_id, agent_id=agent_id)
-
-    return ConversationDataService(
-        conversation_service=conv_service,
-        memory_service=memory_service,
-        todo_service=todo_service,
-        vector_service=vector_service,
     )
 
 

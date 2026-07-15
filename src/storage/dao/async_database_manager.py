@@ -40,13 +40,13 @@ from src.storage.models.health_data import (
     WorkoutRecord,
     WorkoutSample,
 )
+from src.storage.models.pinned_memory_block import PinnedMemoryBlock
 from src.storage.models.price_alert import PriceAlertRule
 from src.storage.models.scheduled_message import ScheduledMessage
 from src.storage.models.simple_pinned_memory import SimplePinnedMemory
 from src.storage.models.todo import TodoItem
 from src.storage.models.usage import UsageRecord
 from src.storage.models.user_channel_config import UserChannelConfig
-from src.storage.models.user_requirement import UserRequirement
 
 logger = logging.getLogger(__name__)
 
@@ -385,7 +385,7 @@ async def create_async_pinned_memory_db_manager(
             return _db_manager_cache[database_url]
 
         manager = AsyncDatabaseManager(database_url)
-        await manager.create_tables([SimplePinnedMemory])
+        await manager.create_tables([SimplePinnedMemory, PinnedMemoryBlock])
 
         # 数据迁移: 清理已移除的 OTHER_INFO 枚举值 (f59c162e 重命名为 ADDRESSING)
         async with manager.engine.begin() as conn:
@@ -396,47 +396,6 @@ async def create_async_pinned_memory_db_manager(
             )
             if result.rowcount > 0:
                 logger.info("✅ 迁移: 清理 %d 条 OTHER_INFO 记忆", result.rowcount)
-
-        _db_manager_cache[database_url] = manager
-        return manager
-
-
-async def create_async_requirement_memory_db_manager(
-    user_id: str,
-    thread_id: str,
-    *,
-    agent_id: str,
-) -> AsyncDatabaseManager:
-    """创建异步用户要求记事本数据库管理器 (Agent物理隔离, 独立分库).
-
-    与置顶记忆分库 (requirement_memory.db), 便于排除/删库调试.
-
-    Args:
-        user_id: 用户ID
-        thread_id: 线程ID
-        agent_id: Agent ID
-
-    Returns:
-        异步数据库管理器实例
-
-    """
-    db_path = get_database_path(
-        user_id,
-        thread_id,
-        "requirement_memory",
-        agent_id=agent_id,
-    )
-    database_url = f"sqlite+aiosqlite:///{db_path}"
-
-    if database_url in _db_manager_cache:
-        return _db_manager_cache[database_url]
-
-    async with _db_cache_lock:
-        if database_url in _db_manager_cache:
-            return _db_manager_cache[database_url]
-
-        manager = AsyncDatabaseManager(database_url)
-        await manager.create_tables([UserRequirement])
 
         _db_manager_cache[database_url] = manager
         return manager

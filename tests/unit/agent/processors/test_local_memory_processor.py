@@ -19,7 +19,6 @@ from src.agent.processors.local_memory_processor import LocalMemoryProcessor
 
 def _make_agent_config(
     first_turn_prompt: str = "",
-    include_todo: bool = True,
     total_char_budget: int = 20000,
     tools: list[str] | None = None,
     optional_tools: list[str] | None = None,
@@ -30,7 +29,6 @@ def _make_agent_config(
     cfg.id = "personal-assistant"
     cfg.memory = Mock()
     cfg.memory.total_char_budget = total_char_budget
-    cfg.memory.include_todo_in_context = include_todo
     cfg.tools = tools if tools is not None else []
     cfg.optional_tools = optional_tools if optional_tools is not None else []
     return cfg
@@ -39,13 +37,11 @@ def _make_agent_config(
 def _make_memory_ctx(
     history_messages: list | None = None,
     extension: str = "",
-    todo_list: str = "",
 ) -> MemoryContext:
     """构造一个 MemoryContext."""
     return MemoryContext(
         history_messages=history_messages or [],
         system_prompt_extension=extension,
-        todo_list=todo_list,
     )
 
 
@@ -104,7 +100,7 @@ class TestLocalMemoryProcessor:
         agent_config: Mock,
         test_user: str,
     ) -> None:
-        """非首轮: history 非空, extension 含 pinned, current_content 含 4 个 XML 标签."""
+        """非首轮: history 非空, extension 含 pinned, current_content 含 XML 标签."""
         processor_config = {"agent_config": agent_config}
 
         mock_conv_service = AsyncMock()
@@ -119,7 +115,6 @@ class TestLocalMemoryProcessor:
         fake_ctx = _make_memory_ctx(
             history_messages=fake_messages,
             extension="<pinned_memory>\n用户偏好\n</pinned_memory>",
-            todo_list="[#1] 任务A",
         )
 
         mock_assembler = AsyncMock()
@@ -153,8 +148,6 @@ class TestLocalMemoryProcessor:
         assert "用户偏好" in ctx.system_prompt_extension
 
         assert "<current_context>" in ctx.current_content
-        assert "<current_todos>" in ctx.current_content
-        assert "[#1] 任务A" in ctx.current_content
         assert "<missed_messages>" in ctx.current_content
         assert "错过消息1" in ctx.current_content
         assert "<user_input>" in ctx.current_content
@@ -176,7 +169,6 @@ class TestLocalMemoryProcessor:
         fake_ctx = _make_memory_ctx(
             history_messages=[HumanMessage(content="x"), AIMessage(content="y")],
             extension="",
-            todo_list="",
         )
         mock_assembler = AsyncMock()
         mock_assembler.assemble_memory_context.return_value = fake_ctx
@@ -200,7 +192,6 @@ class TestLocalMemoryProcessor:
             )
 
         assert ctx.system_prompt_extension == ""
-        assert "<current_todos>" not in ctx.current_content
         assert "<missed_messages>" not in ctx.current_content
 
     @pytest.mark.asyncio
@@ -252,7 +243,6 @@ class TestLocalMemoryProcessor:
         fake_ctx = _make_memory_ctx(
             history_messages=[HumanMessage(content="h"), AIMessage(content="a")],
             extension="",
-            todo_list="",
         )
         mock_assembler = AsyncMock()
         mock_assembler.assemble_memory_context.return_value = fake_ctx
@@ -302,28 +292,24 @@ class TestLocalMemoryProcessorCurrentContentBuilder:
     """_build_current_content / _build_first_turn_content 静态方法测试."""
 
     def test_build_current_content_all_sections(self) -> None:
-        """所有部分都存在时应按顺序拼接 4 个 XML 标签."""
+        """所有部分都存在时应按顺序拼接 XML 标签."""
         content = LocalMemoryProcessor._build_current_content(
             time_str="2026-06-22 10:00:00 CST",
-            todos_str="[#1] 任务",
             missed_str="错过",
             user_input="你好",
         )
         assert content.index("<missed_messages>") < content.index("<current_context>")
-        assert content.index("<current_context>") < content.index("<current_todos>")
-        assert content.index("<current_todos>") < content.index("<user_input>")
+        assert content.index("<current_context>") < content.index("<user_input>")
         assert "你好" in content
 
     def test_build_current_content_skips_empty_sections(self) -> None:
-        """todos/missed 为空时应跳过对应标签, 仅保留 context + user_input."""
+        """missed 为空时应跳过对应标签, 仅保留 context + user_input."""
         content = LocalMemoryProcessor._build_current_content(
             time_str="2026-06-22 10:00:00 CST",
-            todos_str="",
             missed_str="",
             user_input="你好",
         )
         assert "<current_context>" in content
-        assert "<current_todos>" not in content
         assert "<missed_messages>" not in content
         assert "<user_input>" in content
 
@@ -338,7 +324,6 @@ class TestLocalMemoryProcessorCurrentContentBuilder:
         assert "请引导" in content
         assert "<current_context>" in content
         assert "<user_input>" in content
-        assert "<current_todos>" not in content
 
 
 # ========== get_prompt_hint ==========
@@ -355,34 +340,18 @@ class TestGetPromptHint:
     def test_should_always_contain_base_tags(self):
         """始终包含 [过往对话回顾] / <current_context> / <user_input>."""
         processor = LocalMemoryProcessor(None)
-        cfg = _make_agent_config(include_todo=False)
+        cfg = _make_agent_config()
         hint = processor.get_prompt_hint(cfg)
         assert "[过往对话回顾]" in hint
         assert "<conversation_index>" in hint
         assert "<current_context>" in hint
         assert "<user_input>" in hint
-
-    def test_should_include_todos_when_enabled(self):
-        """include_todo_in_context=True 时含 <current_todos> 和任务操作规则."""
-        processor = LocalMemoryProcessor(None)
-        cfg = _make_agent_config(include_todo=True)
-        hint = processor.get_prompt_hint(cfg)
-        assert "<current_todos>" in hint
-        assert "唯一真相来源" in hint
-
-    def test_should_exclude_todos_when_disabled(self):
-        """include_todo_in_context=False 时不含 <current_todos>."""
-        processor = LocalMemoryProcessor(None)
-        cfg = _make_agent_config(include_todo=False)
-        hint = processor.get_prompt_hint(cfg)
         assert "<current_todos>" not in hint
-        assert "唯一真相来源" not in hint
 
     def test_should_include_missed_messages_when_scheduled_present(self):
         """定时消息工具存在时含 <missed_messages>."""
         processor = LocalMemoryProcessor(None)
         cfg = _make_agent_config(
-            include_todo=False,
             optional_tools=["scheduled_messenger_group"],
         )
         hint = processor.get_prompt_hint(cfg)
@@ -392,7 +361,6 @@ class TestGetPromptHint:
         """无定时消息工具时不含 <missed_messages>."""
         processor = LocalMemoryProcessor(None)
         cfg = _make_agent_config(
-            include_todo=False,
             optional_tools=["web_research"],
         )
         hint = processor.get_prompt_hint(cfg)
@@ -402,10 +370,8 @@ class TestGetPromptHint:
         """提示词中的标签顺序应与 _build_current_content 一致."""
         processor = LocalMemoryProcessor(None)
         cfg = _make_agent_config(
-            include_todo=True,
             optional_tools=["scheduled_messenger_group"],
         )
         hint = processor.get_prompt_hint(cfg)
         assert hint.index("<missed_messages>") < hint.index("<current_context>")
-        assert hint.index("<current_context>") < hint.index("<current_todos>")
-        assert hint.index("<current_todos>") < hint.index("<user_input>")
+        assert hint.index("<current_context>") < hint.index("<user_input>")

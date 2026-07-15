@@ -22,6 +22,7 @@ services:
     volumes:
       - ../config.yaml:/app/config.yaml:ro
       - ../data:/app/data
+      - ../logs:/app/logs
       - ../src/auth/static_users.yaml:/app/src/auth/static_users.yaml
     env_file:
       - ../.env

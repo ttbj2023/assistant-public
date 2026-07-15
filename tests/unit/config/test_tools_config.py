@@ -467,3 +467,44 @@ class TestNoneDefenseForDictCategories:
             "internal_tools" in rec.message and "dict" in rec.message
             for rec in caplog.records
         )
+
+
+class TestMemoryRecallGroupCatalog:
+    """memory_recall_group 配置一致性测试 (search/fetch 职责分离的 group 化)."""
+
+    def test_group_defined_with_search_and_fetch_members(self) -> None:
+        """group 应含 search_memories(search) 和 get_round_detail(fetch) 两个 member."""
+        from src.config.tool_catalog import get_builtin_tools_config
+
+        config = get_builtin_tools_config()
+        assert "memory_recall_group" in config["tool_groups"]
+        members = config["tool_groups"]["memory_recall_group"]["members"]
+        assert "search_memories" in members
+        assert "get_round_detail" in members
+
+    def test_group_members_all_registered_in_internal_tools(self) -> None:
+        """group 的每个 member 都必须在 internal_tools 注册, 否则唤醒后无法实例化."""
+        from src.config.tool_catalog import get_builtin_tools_config
+
+        config = get_builtin_tools_config()
+        members = config["tool_groups"]["memory_recall_group"]["members"]
+        for member in members:
+            assert member in config["internal_tools"], (
+                f"{member} 未在 internal_tools 注册"
+            )
+
+    def test_group_has_wakeup_keywords(self) -> None:
+        """group 应配置唤醒关键词, 否则 search_available_tools 无法按语义命中."""
+        from src.config.tool_catalog import get_builtin_tools_config
+
+        config = get_builtin_tools_config()
+        keywords = config["tool_groups"]["memory_recall_group"].get("keywords", [])
+        assert len(keywords) > 0
+
+    def test_search_memories_not_in_agent_config_default_core_tools(self) -> None:
+        """group 化后 search_memories 应从核心工具列表移除, 改由 group 唤醒."""
+        from src.config.agent_config import AgentConfig
+
+        cfg = AgentConfig()
+        assert "search_memories" not in cfg.tools
+        assert "memory_recall_group" in cfg.tools

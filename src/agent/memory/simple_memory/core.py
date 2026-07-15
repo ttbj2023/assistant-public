@@ -52,6 +52,7 @@ class SimpleMemoryCore:
             self.user_id,
             self.thread_id,
             self.agent_id,
+            agent_config=agent_config,
         )
 
     async def add_conversation_round(self, conversation_data: ConversationData) -> None:
@@ -69,8 +70,12 @@ class SimpleMemoryCore:
             # 1. 存当前轮(复用 conversation_index 表, 仅原始内容, 跳过索引/向量)
             await self._store_round(conversation_data)
 
-            # 2. fire-and-forget 触发 Stage 1 长期记忆提取
-            self._memory_svc.on_conversation_round(conversation_data)
+            # 2. fire-and-forget 触发主模型覆写
+            messages_snapshot = conversation_data.metadata.get("_messages_snapshot")
+            self._memory_svc.on_conversation_round(
+                conversation_data,
+                messages_snapshot=messages_snapshot,
+            )
 
             logger.debug(
                 f"✅ SimpleMemoryCore 完成: {self.user_id}:{self.thread_id}:{conversation_data.round_number}",

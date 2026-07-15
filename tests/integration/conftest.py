@@ -228,8 +228,7 @@ async def pinned_memory_db(test_user, test_thread_id):
             content TEXT NOT NULL,
             priority INTEGER DEFAULT 50,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            access_count INTEGER DEFAULT 0
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
@@ -327,8 +326,7 @@ async def db_session(test_user, test_thread_id):
             content TEXT NOT NULL,
             priority INTEGER DEFAULT 50,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            access_count INTEGER DEFAULT 0
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
