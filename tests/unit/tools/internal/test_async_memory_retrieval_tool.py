@@ -12,11 +12,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.tools.internal.async_memory_retrieval_tool import AsyncMemoryRetrievalTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool():
-    return AsyncMemoryRetrievalTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = AsyncMemoryRetrievalTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 @pytest.fixture
@@ -36,22 +39,6 @@ def _inject_service(tool, mock_service):
         return mock_service
 
     return patch.object(tool, "_get_service", side_effect=_fake_get_service)
-
-
-class TestInit:
-    """测试初始化."""
-
-    def test_empty_user_id_raises(self):
-        with pytest.raises(ValueError, match="用户ID不能为空"):
-            AsyncMemoryRetrievalTool(user_id="", thread_id="t1", agent_id="a1")
-
-    def test_empty_thread_id_raises(self):
-        with pytest.raises(ValueError, match="线程ID不能为空"):
-            AsyncMemoryRetrievalTool(user_id="u1", thread_id="", agent_id="a1")
-
-    def test_whitespace_user_id_raises(self):
-        with pytest.raises(ValueError, match="用户ID不能为空"):
-            AsyncMemoryRetrievalTool(user_id="  ", thread_id="t1", agent_id="a1")
 
 
 class TestFormatDocumentsToResults:

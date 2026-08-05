@@ -79,6 +79,14 @@ PROVIDER_CONFIGS = {
         requires_auth=False,
         description="本地嵌入服务(Ollama bge-m3, 纯CPU)",
     ),
+    "local-reranker": ProviderConfig(
+        name="local-reranker",
+        base_url="http://localhost:8768",
+        base_url_env="RERANKER_BASE_URL",
+        api_key_env=None,
+        requires_auth=False,
+        description="本地重排序服务(Qwen3-Reranker-0.6B, 纯CPU)",
+    ),
     "openai": ProviderConfig(
         name="openai",
         base_url="https://api3.wlai.vip/v1",

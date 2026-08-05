@@ -2275,20 +2275,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-chroma"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "chromadb" },
-    { name = "langchain-core" },
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/0e/54896830b7331c90788cf96b2c37858977c199da9ecdaf85cf11eb6e6bc1/langchain_chroma-1.1.0.tar.gz", hash = "sha256:8069685e7848041e998d16c8a4964256b031fd20551bf59429173415bc2adc12", size = 220382, upload-time = "2025-12-12T16:23:01.399Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/35/2a6d1191acaad043647e28313b0ecd161d61f09d8be37d1996a90d752c13/langchain_chroma-1.1.0-py3-none-any.whl", hash = "sha256:ff65e4a2ccefb0fb9fde2ff38705022ace402f979d557f018f6e623f7288f0fc", size = 12981, upload-time = "2025-12-12T16:23:00.196Z" },
-]
-
-[[package]]
 name = "langchain-core"
 version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
@@ -3845,13 +3831,13 @@ dependencies = [
     { name = "httpx" },
     { name = "langchain", extra = ["openai"] },
     { name = "langchain-anthropic" },
-    { name = "langchain-chroma" },
     { name = "langchain-core" },
     { name = "langchain-deepseek" },
     { name = "langchain-google-genai" },
     { name = "langchain-ollama" },
     { name = "lxml" },
     { name = "markdown" },
+    { name = "pandas" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
@@ -3868,51 +3854,19 @@ ai-extended = [
     { name = "openai" },
     { name = "transformers" },
 ]
-dev = [
-    { name = "bandit" },
-    { name = "httpx" },
-    { name = "mypy" },
-    { name = "pandas" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-dotenv" },
-    { name = "pytest-mock" },
-    { name = "pytest-timeout" },
-    { name = "pytest-xdist" },
-    { name = "python-docx" },
-    { name = "ruff" },
-    { name = "safety" },
-    { name = "vulture" },
-]
 dev-full = [
     { name = "accelerate" },
-    { name = "bandit" },
     { name = "diskcache" },
-    { name = "httpx" },
     { name = "ipywidgets" },
     { name = "jupyter" },
     { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
-    { name = "mypy" },
     { name = "notebook" },
     { name = "numpy" },
     { name = "openai" },
-    { name = "pandas" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-dotenv" },
-    { name = "pytest-mock" },
-    { name = "pytest-timeout" },
-    { name = "pytest-xdist" },
-    { name = "python-docx" },
     { name = "redis" },
-    { name = "ruff" },
-    { name = "safety" },
     { name = "transformers" },
-    { name = "vulture" },
 ]
 distributed-cache = [
     { name = "diskcache" },
@@ -3929,13 +3883,29 @@ jupyter = [
     { name = "notebook" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-dotenv" },
+    { name = "pytest-mock" },
+    { name = "pytest-timeout" },
+    { name = "pytest-xdist" },
+    { name = "python-docx" },
+    { name = "ruff" },
+    { name = "safety" },
+    { name = "vulture" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'ai-extended'", specifier = ">=0.24.0" },
     { name = "aiofiles", specifier = ">=24.0.0" },
     { name = "aiosmtplib", specifier = ">=3.0.0" },
     { name = "aiosqlite", specifier = ">=0.19.0" },
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "bleach", extras = ["css"], specifier = ">=6.0.0" },
     { name = "cachetools", specifier = ">=5.3.0" },
@@ -3944,13 +3914,11 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "fastmcp-slim", extras = ["client"], specifier = ">=3.0.0" },
     { name = "httpx", specifier = ">=0.25.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.25.0" },
     { name = "ipywidgets", marker = "extra == 'jupyter'", specifier = ">=8.1.0" },
     { name = "jupyter", marker = "extra == 'jupyter'", specifier = ">=1.0.0" },
     { name = "langchain", specifier = ">=1.3.0,<2.0" },
     { name = "langchain", extras = ["openai"], specifier = ">=1.3.0,<2.0" },
     { name = "langchain-anthropic", specifier = ">=1.1,<2.0" },
-    { name = "langchain-chroma", specifier = ">=1.0.0" },
     { name = "langchain-core", specifier = ">=1.1,<2.0" },
     { name = "langchain-deepseek", specifier = ">=1.0.1,<2.0" },
     { name = "langchain-google-genai", specifier = ">=4.2,<5.0" },
@@ -3960,34 +3928,39 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.5.0" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.4.0" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "notebook", marker = "extra == 'jupyter'", specifier = ">=7.0.0" },
     { name = "numpy", marker = "extra == 'ai-extended'", specifier = ">=1.24.0" },
     { name = "openai", marker = "extra == 'ai-extended'", specifier = ">=1.3.0" },
-    { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "personal-memory-enhance", extras = ["ai-extended", "dev", "distributed-cache", "docs", "jupyter"], marker = "extra == 'dev-full'" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "personal-memory-enhance", extras = ["ai-extended", "distributed-cache", "docs", "jupyter"], marker = "extra == 'dev-full'" },
     { name = "pydantic", specifier = ">=2.5.0" },
     { name = "pydantic-settings", specifier = ">=2.1.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
-    { name = "pytest-dotenv", marker = "extra == 'dev'", specifier = ">=0.5.2" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12.0" },
-    { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.1.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5.0" },
-    { name = "python-docx", marker = "extra == 'dev'", specifier = ">=1.1.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "redis", marker = "extra == 'distributed-cache'", specifier = ">=5.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.0" },
-    { name = "safety", marker = "extra == 'dev'", specifier = ">=3.8.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.14" },
     { name = "trafilatura", specifier = ">=1.6" },
     { name = "transformers", marker = "extra == 'ai-extended'", specifier = ">=4.35.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
-    { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.0" },
 ]
-provides-extras = ["dev", "ai-extended", "distributed-cache", "docs", "jupyter", "dev-full", "production"]
+provides-extras = ["ai-extended", "distributed-cache", "docs", "jupyter", "dev-full", "production"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bandit", specifier = ">=1.7.0" },
+    { name = "mypy", specifier = ">=2.0" },
+    { name = "pytest", specifier = ">=8.4.0" },
+    { name = "pytest-asyncio", specifier = ">=0.21.0" },
+    { name = "pytest-cov", specifier = ">=4.1.0" },
+    { name = "pytest-dotenv", specifier = ">=0.5.2" },
+    { name = "pytest-mock", specifier = ">=3.12.0" },
+    { name = "pytest-timeout", specifier = ">=2.1.0" },
+    { name = "pytest-xdist", specifier = ">=3.5.0" },
+    { name = "python-docx", specifier = ">=1.1.0" },
+    { name = "ruff", specifier = ">=0.15.0" },
+    { name = "safety", specifier = ">=3.8.1" },
+    { name = "vulture", specifier = ">=2.0" },
+]
 
 [[package]]
 name = "pexpect"

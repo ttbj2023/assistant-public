@@ -3,10 +3,10 @@
 专注于测试检索服务的业务逻辑，Mock所有外部依赖。
 """
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from datetime import UTC, datetime
 from langchain_core.documents import Document
 
 from src.storage.service.retrieval_service import (

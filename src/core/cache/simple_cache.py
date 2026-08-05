@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, ParamSpec, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 # 标准缓存库
 from cachetools import LRUCache
@@ -49,10 +49,6 @@ def build_simple_cache_key(
 
 logger = logging.getLogger(__name__)
 
-# 使用ParamSpec来更好地处理泛型
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 # 定义协议以替代Any类型
 class LLMClientProtocol(Protocol):
@@ -69,14 +65,6 @@ class EmbeddingsClientProtocol(Protocol):
     def embed_query(self, text: str, **kwargs: Any) -> list[float]: ...
 
     def embed_documents(self, texts: list[str], **kwargs: Any) -> list[list[float]]: ...
-
-
-class ToolProtocol(Protocol):
-    """工具协议, 支持 LangChain BaseTool 接口."""
-
-    def _run(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    async def _arun(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 T = TypeVar("T")
@@ -258,33 +246,21 @@ class SimpleMemoryCache:
         self.set(cache_key, client)
 
     def get_stats(self) -> dict[str, Any]:
-        """获取缓存统计信息(兼容性方法).
+        """获取缓存统计信息.
+
+        单一共享缓存, 返回扁平的真实统计 (不再伪造 llm/embedding 分项).
 
         Returns:
             统计信息字典
-
         """
-        # 使用新的统计功能
-        cache_stats = self.get_cache_stats()
-
-        return {
-            "llm_clients": {"hit_rate": cache_stats["hit_rate"]},
-            "embedding_clients": {"hit_rate": cache_stats["hit_rate"]},
-            "total_hit_rate": cache_stats["hit_rate"],
-            "detailed_stats": cache_stats,  # 添加详细统计信息
-        }
-
-    def get_client_count(self) -> dict[str, int]:
-        """获取客户端数量统计(兼容性方法).
-
-        Returns:
-            客户端数量字典
-
-        """
+        stats = self.get_cache_stats()
         return {
             "total_clients": self.size(),
-            "llm_clients": 0,
-            "embedding_clients": 0,
+            "hit_rate": stats["hit_rate"],
+            "current_size": stats["current_size"],
+            "max_size": stats["max_size"],
+            "hits": stats["hits"],
+            "misses": stats["misses"],
         }
 
     def clear_all_clients(self) -> None:
@@ -322,15 +298,9 @@ def get_token_cache() -> SimpleMemoryCache:
     return get_cache("token", maxsize=1000)
 
 
-def is_token_cache_enabled() -> bool:
-    """Token缓存是否启用."""
-    return get_cache("token", maxsize=1000) is not None
-
-
 __all__ = [
     "SimpleMemoryCache",
     "get_cache",
     "get_client_cache",
     "get_token_cache",
-    "is_token_cache_enabled",
 ]

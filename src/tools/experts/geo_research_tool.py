@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import ClassVar, override
+from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.tools.experts.geo_research.service import run_geo_research
-from src.tools.shared.base_expert_tool import BaseExpertTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,8 @@ class GeoResearchInput(BaseModel):
     language: str = Field(default="zh", description="回答语言: zh/en")
 
 
-class GeoResearchTool(BaseExpertTool):
+@sync_runnable
+class GeoResearchTool(BaseTool):
     """地理出行研究工具 - Gemini Maps + 百度地图."""
 
     name: str = "geo_navigator"
@@ -62,6 +64,7 @@ class GeoResearchTool(BaseExpertTool):
 
     model_id: str = ""
     timeout: float = 120.0
+    mcp_bridge: Any = None
 
     @override
     async def _arun(

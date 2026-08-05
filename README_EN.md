@@ -139,7 +139,7 @@ api (routes) -> session (message queue / orchestration) -> agent (Agent framewor
 
 **First principle extended**: don't stuff all tools into context at once (wastes tokens + choice overload); discover and inject on demand. At startup, only **core tools** + `search_available_tools` + `load_skill` are loaded.
 
-Four tool sources: internal (3-level isolation: user/thread/agent) / external (stateless global) / expert (independent agent orchestration — subagent wrapper, see Conversation Model) / MCP. Dormant tools are discovered via `search_available_tools` and injected at runtime by `ToolDiscoveryMiddleware` (two isomorphic middlewares based on LangChain v1.0 `AgentMiddleware`: `awrap_model_call` for injection + `awrap_tool_call` for routing). Tool groups are transparent to the main model — searching a group name expands to all members.
+Three tool sources: internal (3-level isolation: user/thread/agent) / external (stateless global, including direct API wrappers and MCP integrations) / expert (independent agent orchestration — subagent wrapper, see Conversation Model). Dormant tools are discovered via `search_available_tools` and injected at runtime by `ToolDiscoveryMiddleware` (two isomorphic middlewares based on LangChain v1.0 `AgentMiddleware`: `awrap_model_call` for injection + `awrap_tool_call` for routing). Tool groups are transparent to the main model — searching a group name expands to all members.
 
 ### Skills — Cross-domain capability spanning Context and Tools
 

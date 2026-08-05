@@ -1,6 +1,6 @@
 # config.yaml 参考
 
-**版本**: v2 | **更新**: 2026-07-14
+**版本**: v2 | **更新**: 2026-07-24
 
 `config.yaml` 只保存非敏感应用配置。未知字段会被 `config_doctor --strict` 拒绝。密钥不要写入本文件。
 
@@ -105,8 +105,6 @@ inference:
     arc_model: "ark-agent-plan:doubao-seed-2.0-mini"
     arc_model_params: {}
     fallback_model_params: null
-    dedup_enabled: true
-    dedup_threshold: 0.9
   image_description:
     model: "ark-agent-plan:doubao-seed-2.0-mini"
     model_params: {}
@@ -174,6 +172,8 @@ inference:
 ```
 
 Provider API Key 和 `*_BASE_URL` 不写在此处, 由 `.env` + `provider_registry.py` 管理。
+
+> 注: `content_analyzer.fallback_model_params` 不是独立的 fallback 模型(v1.8.4 已移除模型切换 fallback), 而是判断类任务(置顶记忆更新 / `SimpleMemory`)对全局 `inference.fallback.text_model_params` 的额外 bind 参数覆盖, 例如需要启用思考时显式配置; 索引生成 / 弧蒸馏仍走全局默认。
 
 ## tools
 

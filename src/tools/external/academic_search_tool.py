@@ -1,8 +1,8 @@
 """学术搜索工具 - web_research内部工具, 调用DataPro学术论文数据集.
 
 定位: web_research deep模式的内部工具, 供Agent编排使用.
-与professional_database的区别: academic_search专精学术论文, 只在web_research内部使用,
-不暴露给主对话; professional_database面向主对话的结构化数据(金融/工商/风险).
+与datapro领域工具族的区别: academic_search专精学术论文, 只在web_research内部使用,
+不暴露给主对话; datapro领域工具(finance_data/business_registry/enterprise_risk)面向主对话的结构化数据.
 
 DataPro学术返回结构(5篇论文, 每篇6字段):
 - name: 论文标题
@@ -21,10 +21,11 @@ import json
 import logging
 from typing import Any, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.credentials_registry import get_credential
-from src.tools.shared.base_external_tool import BaseExternalTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,8 @@ class AcademicSearchInput(BaseModel):
     )
 
 
-class AcademicSearchTool(BaseExternalTool):
+@sync_runnable
+class AcademicSearchTool(BaseTool):
     """学术论文搜索工具 - 调用DataPro学术论文数据集."""
 
     name: str = "academic_search"
@@ -70,7 +72,6 @@ class AcademicSearchTool(BaseExternalTool):
         description="DataPro API Key的环境变量名",
     )
 
-    @override
     async def is_available(self) -> bool:
         return bool(_get_datapro_api_key(self.api_key_env))
 

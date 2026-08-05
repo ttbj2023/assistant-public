@@ -81,7 +81,9 @@ class TestConversationServiceCreate:
         conversation_service.conversation_dao.store_index_data = AsyncMock(
             return_value=mock_conversation_index
         )
-        conversation_service.allocate_round_number = AsyncMock(return_value=1)
+        conversation_service._allocate_round_number_in_session = AsyncMock(
+            return_value=1
+        )
 
         result = await conversation_service.create_conversation(
             user_message="你好",
@@ -103,7 +105,9 @@ class TestConversationServiceCreate:
         conversation_service.conversation_dao.store_index_data = AsyncMock(
             return_value=mock_conversation_index
         )
-        conversation_service.allocate_round_number = AsyncMock(return_value=5)
+        conversation_service._allocate_round_number_in_session = AsyncMock(
+            return_value=5
+        )
 
         await conversation_service.create_conversation(
             user_message="测试消息",
@@ -114,9 +118,12 @@ class TestConversationServiceCreate:
             round_number=None,
         )
 
-        conversation_service.allocate_round_number.assert_called_once_with(
-            test_user, "test_thread"
+        conversation_service._allocate_round_number_in_session.assert_called_once()
+        call_args = (
+            conversation_service._allocate_round_number_in_session.call_args
         )
+        assert call_args.args[1] == test_user
+        assert call_args.args[2] == "test_thread"
 
     @pytest.mark.asyncio
     async def test_create_conversation_should_use_preallocated_round(
@@ -177,7 +184,9 @@ class TestConversationServiceCreate:
         conversation_service.conversation_dao.store_index_data = AsyncMock(
             return_value=mock_conversation_index
         )
-        conversation_service.allocate_round_number = AsyncMock(return_value=1)
+        conversation_service._allocate_round_number_in_session = AsyncMock(
+            return_value=1
+        )
 
         await conversation_service.create_conversation(
             user_message="消息",

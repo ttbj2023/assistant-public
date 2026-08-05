@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from src.auth.auth_manager import get_auth_manager
+from src.core.datetime_utils import now_utc, to_user_tz
 from src.inference.llm.response_utils import content_to_text
 from src.storage.service.health_data_extraction_service import (
     get_health_data_extraction_service,
@@ -136,7 +137,7 @@ async def run_audit(
             current_round,
         )
 
-        result = await _call_audit_llm(message_text, snapshot)
+        result = await _call_audit_llm(user_id, message_text, snapshot)
 
         extractions = result.get("extractions", [])
         operations = result.get("operations", [])
@@ -162,8 +163,12 @@ async def run_audit(
         logger.info("健康数据审计+提取: 完成 (%s:%s)", user_id, thread_id)
 
     except Exception as e:
-        logger.warning("健康数据审计异常 (%s:%s): %s", user_id, thread_id, e)
-        mark_audited(user_id, thread_id, agent_id, current_round)
+        logger.warning(
+            "健康数据审计异常 (%s:%s): %s, 本轮跳过, 下轮重试",
+            user_id,
+            thread_id,
+            e,
+        )
 
 
 def _build_message_text(
@@ -186,17 +191,18 @@ def _build_message_text(
 
 
 async def _call_audit_llm(
+    user_id: str,
     user_message: str,
     data_snapshot: str,
 ) -> dict[str, list[dict[str, Any]]]:
     """通过项目标准 LLM 调用体系调用审计模型, 返回 extractions + operations."""
     from langchain_core.messages import HumanMessage
 
-    from src.inference.llm.model_loader import create_llm
-    from src.inference.usage import usage_source
+    from src.inference.llm.model_loader import invoke_with_fallback
 
     prompt_template = _load_audit_prompt()
-    current_date = date.today().strftime("%Y-%m-%d")
+    tz = get_auth_manager().get_user_timezone(user_id)
+    current_date = to_user_tz(now_utc(), tz).strftime("%Y-%m-%d")
 
     prompt = (
         prompt_template
@@ -205,18 +211,13 @@ async def _call_audit_llm(
         .replace("{data_snapshot}", data_snapshot or "暂无历史数据")  # noqa: RUF027
     )
 
-    model_id = _get_model_id()
-    params = _get_model_params()
-    llm = create_llm(model_id)
-    if params:
-        llm = llm.bind(**params)
-
-    json_config = _get_json_mode_config(model_id)
-    with usage_source("health_extraction"):
-        response = await llm.ainvoke(
-            [HumanMessage(content=prompt)],
-            **json_config,
-        )
+    response = await invoke_with_fallback(
+        prompt=[HumanMessage(content=prompt)],
+        primary_model=_get_model_id(),
+        primary_params=_get_model_params() or None,
+        usage_tag="health_extraction",
+        use_json_mode=True,
+    )
 
     content = response.content
     text_content = content_to_text(content)
@@ -367,13 +368,6 @@ def _get_model_params() -> dict[str, Any]:
     except Exception as e:
         logger.warning("审计模型参数获取失败, 使用空参数: %s", e)
         return {}
-
-
-def _get_json_mode_config(model_id: str) -> dict[str, Any]:
-    """获取模型的 JSON 模式配置."""
-    from src.inference.llm.json_mode_config import get_json_mode_config
-
-    return get_json_mode_config(model_id)
 
 
 __all__ = [

@@ -321,18 +321,6 @@ def generate_report(
         w("```")
         w("")
 
-    if pinned:
-        dedup_note = (
-            "> **置顶记忆语义去重**: 配置 `dedup_enabled` 时, 重复/相似表述的 add "
-            "应按嵌入向量余弦相似度去重. "
-        )
-        if use_all:
-            dedup_note += "full 版含「置顶记忆去重验证」轮次, 若上表出现内容高度重叠的多条记录, 可能表示去重未生效."
-        else:
-            dedup_note += "若上表出现内容高度重叠的多条记录, 可结合 full 版去重验证轮次进一步排查."
-        w(dedup_note)
-        w("")
-
     w("### 3.3 todo.db")
     w("")
     todos = db_data.get("todos", [])

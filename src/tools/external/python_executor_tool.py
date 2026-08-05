@@ -8,11 +8,12 @@ import time
 from typing import Any, ClassVar, override
 
 import httpx
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
 from src.config.runtime_env import get_tool_runtime_base_url
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,8 @@ class PythonExecutorInput(QueryAliasModel):
     )
 
 
-class PythonExecutorTool(BaseExternalTool):
+@sync_runnable
+class PythonExecutorTool(BaseTool):
     """Python精确计算与数据分析沙箱工具 - 将代码发送到Docker沙箱执行并返回输出."""
 
     name: str = "python_executor"
@@ -109,7 +111,7 @@ class PythonExecutorTool(BaseExternalTool):
             return self._format_execution_result(result, duration_ms)
         except Exception as e:
             logger.exception("PythonExecutorTool执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     async def _execute_remote(
         self,

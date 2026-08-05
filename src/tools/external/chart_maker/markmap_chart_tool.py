@@ -7,11 +7,16 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from .chart_maker_base import ChartMakerBase
+from langchain_core.tools import BaseTool
+
+from src.tools.shared.tool_runtime import sync_runnable
+
+from .chart_render import render_chart
 from .models import MarkmapChartInput
 
 
-class MarkmapChartTool(ChartMakerBase):
+@sync_runnable
+class MarkmapChartTool(BaseTool):
     """渲染 markmap 思维导图为 PNG 图片."""
 
     engine: ClassVar[str] = "markmap"
@@ -37,7 +42,8 @@ class MarkmapChartTool(ChartMakerBase):
         height: int | None = None,
         scale: int = 3,
     ) -> str:
-        return await self._render(
+        return await render_chart(
+            "markmap",
             code=code,
             filename=filename,
             title=title,

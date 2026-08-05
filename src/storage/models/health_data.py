@@ -15,6 +15,8 @@ from typing import Any
 from sqlalchemy import JSON, Column, DateTime, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
+from src.core.datetime_utils import now_utc
+
 
 class WeightRecordBase(SQLModel):
     """体重记录基础模型 - 原始体重记录, 允许同一天多条."""
@@ -48,7 +50,7 @@ class WeightRecord(WeightRecordBase, table=True):
 
     id: int | None = Field(default=None, primary_key=True, description="记录ID")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -93,7 +95,7 @@ class MedicalReport(MedicalReportBase, table=True):
         description="报告数据(JSON格式扁平键值对)",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -213,12 +215,12 @@ class DailyHealthSummary(DailyHealthSummaryBase, table=True):
     id: int | None = Field(default=None, primary_key=True, description="记录ID")
     record_date: date = Field(..., description="记录日期")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),
@@ -295,12 +297,12 @@ class WeeklyHealthSummary(WeeklyHealthSummaryBase, table=True):
     id: int | None = Field(default=None, primary_key=True, description="记录ID")
     week_start: date = Field(..., description="周一日期")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),
@@ -343,7 +345,7 @@ class FoodProduct(FoodProductBase, table=True):
     """食品包装目录表模型.
 
     数据库表名:food_products
-    用途: meal_record提取时查询精确营养数据, 无匹配时LLM推断.
+    用途: 仅审计快照引用, 提取流程不查询; 营养数据当前不推断, 由外部录入.
     """
 
     __tablename__ = "food_products"
@@ -361,7 +363,7 @@ class FoodProduct(FoodProductBase, table=True):
         description="过敏原列表",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -402,7 +404,7 @@ class ShoppingItem(ShoppingItemBase, table=True):
 
     id: int | None = Field(default=None, primary_key=True, description="商品ID")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -467,7 +469,7 @@ class WorkoutRecord(WorkoutRecordBase, table=True):
         description='训练动作明细(JSON): [{"name":"深蹲","sets":4,"reps":12,"weight_kg":60}]',
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -525,7 +527,7 @@ class MealRecord(MealRecordBase, table=True):
         description="摄入项列表(JSON)",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -583,7 +585,7 @@ class WorkoutSample(SQLModel, table=True):
         description="数据来源设备",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -618,7 +620,7 @@ class ECGRecord(SQLModel, table=True):
         description="数据来源",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )

@@ -192,7 +192,7 @@ async def _check_storage_health() -> dict[str, Any]:
         from src.storage.service import (
             StorageHealthAggregator,
             create_conversation_service,
-            create_memory_service,
+            create_pinned_memory_block_service,
             create_todo_service,
             create_vector_service,
         )
@@ -208,7 +208,7 @@ async def _check_storage_health() -> dict[str, Any]:
             temp_thread_id,
             agent_id="health_check",
         )
-        memory_service = await create_memory_service(
+        memory_service = await create_pinned_memory_block_service(
             temp_user_id,
             temp_thread_id,
             agent_id="health_check",

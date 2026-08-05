@@ -5,7 +5,7 @@
 主要Service类:
 - ConversationService: 对话业务逻辑
 - TodoService: TODO业务逻辑
-- MemoryService: 记忆业务逻辑
+- PinnedMemoryBlockService: 统一置顶记忆块业务逻辑
 - VectorService: 向量存储业务逻辑
 - RetrievalService: 检索服务接口
 - DualStageRetrievalService: 双阶段检索服务实现
@@ -21,7 +21,7 @@
 from src.storage.service import (
     create_conversation_service,
     create_todo_service,
-    create_memory_service,
+    create_pinned_memory_block_service,
     create_vector_service,
     create_retrieval_service,
     create_health_service,
@@ -42,14 +42,12 @@ from __future__ import annotations
 
 from .conversation_service import ConversationService
 from .health_check_mixin import ServiceHealthCheckMixin
-from .memory_service import MemoryService
 from .pinned_memory_block_service import PinnedMemoryBlockService
 from .retrieval_service import DualStageRetrievalService, RetrievalService
 from .scheduled_message_service import ScheduledMessageService
 from .service_factory import (
     create_conversation_service,
     create_health_service,
-    create_memory_service,
     create_pinned_memory_block_service,
     create_retrieval_service,
     create_scheduled_message_service,
@@ -66,7 +64,6 @@ from .vector_service import VectorService
 __all__ = [
     "ConversationService",
     "DualStageRetrievalService",
-    "MemoryService",
     "PinnedMemoryBlockService",
     "RetrievalService",
     "ScheduledMessageService",
@@ -78,7 +75,6 @@ __all__ = [
     "VectorService",
     "create_conversation_service",
     "create_health_service",
-    "create_memory_service",
     "create_pinned_memory_block_service",
     "create_retrieval_service",
     "create_scheduled_message_service",

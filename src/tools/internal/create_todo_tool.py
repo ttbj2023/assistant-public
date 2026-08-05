@@ -5,9 +5,18 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.internal.todo_manager_base import TodoManagerBase
+from src.tools.internal.todo_helpers import (
+    TodoServiceAccessor,
+    json_result,
+    parse_due_date,
+    parse_priority,
+    parse_status,
+    todo_to_dict,
+)
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +39,8 @@ class CreateTodoRequest(BaseModel):
     due_date: str | None = Field(None, description="截止日期, ISO格式如 2025-06-15")
 
 
-class CreateTodoTool(TodoManagerBase):
+@sync_runnable
+class CreateTodoTool(BaseTool):
     """创建一条TODO任务."""
 
     name: str = "create_todo"
@@ -44,21 +54,27 @@ class CreateTodoTool(TodoManagerBase):
     )
     args_schema: type[CreateTodoRequest] = CreateTodoRequest
 
+    def _get_accessor(self) -> TodoServiceAccessor:
+        if not hasattr(self, "_todo_acc"):
+            acc = TodoServiceAccessor(self.user_id, self.thread_id, self.agent_id)
+            object.__setattr__(self, "_todo_acc", acc)
+        return self._todo_acc
+
     @override
     async def _arun(self, **kwargs: Any) -> str:
         try:
             request = CreateTodoRequest(**kwargs)
             title = request.title.strip()
             if not title:
-                return self._json_result(
+                return json_result(
                     False, "任务标题不能为空", action=None, error="任务标题不能为空"
                 )
 
-            priority = self._parse_priority(request.priority)
-            status = self._parse_status(request.status)
-            due_date = self._parse_due_date(request.due_date)
+            priority = parse_priority(request.priority)
+            status = parse_status(request.status)
+            due_date = parse_due_date(request.due_date)
 
-            service = await self._get_todo_service()
+            service = await self._get_accessor().get_service()
             todo = await service.create_todo(
                 title=title,
                 user_id=self.user_id,
@@ -68,20 +84,18 @@ class CreateTodoTool(TodoManagerBase):
                 status=status,
                 due_date=due_date,
             )
-            todo_dict = self._todo_to_dict(todo)
-            current_todos = await self._get_fresh_todolist()
+            todo_dict = todo_to_dict(todo)
+            current_todos = await self._get_accessor().get_fresh_todolist()
             extra: dict[str, Any] = {
                 "action": "created",
                 "affected_todo_id": todo.id,
                 "todo": todo_dict,
                 "current_todos": current_todos,
             }
-            return self._json_result(True, f"成功创建任务: {todo.title}", **extra)
+            return json_result(True, f"成功创建任务: {todo.title}", **extra)
         except Exception as e:
             logger.error("创建任务失败: %s", e)
-            return self._json_result(
-                False, f"创建任务失败: {e!s}", action=None, error=str(e)
-            )
+            return json_result(False, f"创建任务失败: {e!s}", action=None, error=str(e))
 
 
 __all__ = ["CreateTodoTool"]

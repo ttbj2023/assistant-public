@@ -1,8 +1,8 @@
-"""模型用量采集与落库.
+"""模型用量采集.
 
-依赖说明: 本模块对 storage.service 的依赖 (采集即落库, 天然耦合) 经架构
-评估保留, 详见 AGENTS.md "分层依赖总览 - 已知的语义合理交叉依赖". 后续
-依赖审计请勿重复标记为违规.
+采集 LLM/embedding 用量并产出 UsageRecordCreate; 落库经注入的 UsageSink
+端口完成 (组合根注入 StorageUsageSink, 详见 configure_usage_sink). 本模块
+不依赖 storage, 加载期与 storage 零耦合 (依赖倒置, 端口-适配器).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import logging
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, override
+from typing import Any, Protocol, override
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
@@ -24,8 +24,7 @@ from src.core.context import (
     replace_user_context,
     reset_user_context,
 )
-from src.storage.models.usage import UsageRecordCreate
-from src.storage.service import create_usage_service
+from src.core.types import UsageRecordCreate
 from src.utils.async_utils import spawn_background_task
 from src.utils.token_utils import TokenEstimator
 
@@ -219,10 +218,26 @@ def _build_usage_record_from_context(
     return data
 
 
+class UsageSink(Protocol):
+    """用量落库端口 - inference 依赖此抽象, storage 提供适配器, 组合根注入."""
+
+    async def record(self, data: UsageRecordCreate) -> None: ...
+
+
+_sink: UsageSink | None = None
+
+
+def configure_usage_sink(sink: UsageSink | None) -> None:
+    """组合根注入落库实现; None=禁用落库(测试/无DB环境)."""
+    global _sink
+    _sink = sink
+
+
 async def _persist_usage(data: UsageRecordCreate) -> None:
+    if _sink is None:
+        return
     try:
-        service = await create_usage_service(data.user_id)
-        await service.record_usage(data)
+        await _sink.record(data)
     except Exception as e:
         logger.warning("用量记录写入失败(非阻塞): %s", e)
 
@@ -244,9 +259,12 @@ class UsageTrackingCallback(AsyncCallbackHandler):
     非 chat 的 LLM 触发 on_llm_start, 二者皆记录开始时刻供 on_llm_end 计算.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, provider: str | None = None) -> None:
         # run_id -> 开始时刻; on_llm_end/on_llm_error 时 pop 清理
         self._llm_start_times: dict[Any, float] = {}
+        # LLM 创建时绑定的业务 provider; 优先于 response model_name 推断
+        # (OpenAI 兼容端点 response 不带 provider 前缀, 推断会失败)
+        self._default_provider = provider
 
     def _record_start(self, run_id: Any) -> None:
         if run_id is not None:
@@ -262,6 +280,7 @@ class UsageTrackingCallback(AsyncCallbackHandler):
         parent_run_id: Any | None = None,
         **kwargs: Any,
     ) -> Any:
+        del serialized
         self._record_start(run_id)
 
     @override
@@ -274,6 +293,7 @@ class UsageTrackingCallback(AsyncCallbackHandler):
         parent_run_id: Any | None = None,
         **kwargs: Any,
     ) -> Any:
+        del serialized
         self._record_start(run_id)
 
     @override
@@ -290,7 +310,7 @@ class UsageTrackingCallback(AsyncCallbackHandler):
         usage, raw_usage, metadata = extract_llm_usage(response)
 
         model_id = _model_id_from_response(response, raw_usage, kwargs.get("metadata"))
-        provider = _provider_from_model_id(model_id)
+        provider = self._default_provider or _provider_from_model_id(model_id)
 
         record_usage_from_context(
             operation="llm_chat",
@@ -323,9 +343,11 @@ class UsageTrackingCallback(AsyncCallbackHandler):
         self._llm_start_times.pop(run_id, None)
 
 
-def get_usage_tracking_callback() -> UsageTrackingCallback:
-    """获取进程级用量采集 callback."""
-    return UsageTrackingCallback()
+def get_usage_tracking_callback(
+    *, provider: str | None = None
+) -> UsageTrackingCallback:
+    """获取用量采集 callback, 绑定指定 LLM 的 provider."""
+    return UsageTrackingCallback(provider=provider)
 
 
 def extract_llm_usage(

@@ -4,7 +4,7 @@
 支持6种数据类型: weight_record, meal_record, workout_record,
 shopping_list, food_product, medical_report.
 
-架构: DeepSeek V4 Flash (JSON Mode) 单次调用完成检测+分类+转录.
+架构: 单次 LLM 调用(JSON Mode)完成检测+分类+转录, 模型经 model_loader 按配置调用.
 """
 
 from __future__ import annotations

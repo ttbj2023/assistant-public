@@ -10,10 +10,15 @@ from __future__ import annotations
 import logging
 from typing import Any, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.storage.service import create_conversation_service
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import (
+    format_tool_error,
+    format_tool_success,
+    sync_runnable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +39,8 @@ class GetRoundDetailRequest(BaseModel):
     )
 
 
-class AsyncRoundDetailTool(BaseInternalTool):
+@sync_runnable
+class AsyncRoundDetailTool(BaseTool):
     """按轮次号获取对话完整原文."""
 
     name: str = "get_round_detail"
@@ -49,15 +55,9 @@ class AsyncRoundDetailTool(BaseInternalTool):
 
     _conversation_service: Any
 
-    def __init__(self, user_id: str, thread_id: str, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """初始化轮次详情工具."""
-        if not user_id or not user_id.strip():
-            raise ValueError("用户ID不能为空")
-
-        if not thread_id or not thread_id.strip():
-            raise ValueError("线程ID不能为空")
-
-        super().__init__(user_id, thread_id, **kwargs)
+        super().__init__(**kwargs)
         object.__setattr__(self, "_conversation_service", None)
 
     async def _get_service(self) -> Any:
@@ -112,7 +112,7 @@ class AsyncRoundDetailTool(BaseInternalTool):
 
             not_found = [rn for rn in round_numbers if rn not in conv_by_round]
 
-            return self._format_success(
+            return format_tool_success(
                 {
                     "results": results,
                     "total_count": len(results),
@@ -123,7 +123,7 @@ class AsyncRoundDetailTool(BaseInternalTool):
 
         except Exception as e:
             logger.error("❌ 获取轮次详情失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
 
 __all__ = ["AsyncRoundDetailTool", "GetRoundDetailRequest"]

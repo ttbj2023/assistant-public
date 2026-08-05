@@ -82,39 +82,13 @@ async def create_todo_service(user_id: str, thread_id: str, *, agent_id: str) ->
     return TodoService(db_manager.session_factory)
 
 
-async def create_memory_service(user_id: str, thread_id: str, *, agent_id: str) -> Any:
-    """创建记忆服务实例 (底层Engine全局复用).
-
-    Args:
-        user_id: 用户ID
-        thread_id: 线程ID
-        agent_id: Agent ID
-
-    Returns:
-        记忆服务实例
-
-    """
-    from src.storage.dao.async_database_manager import (
-        create_async_pinned_memory_db_manager,
-    )
-
-    from .memory_service import MemoryService
-
-    db_manager = await create_async_pinned_memory_db_manager(
-        user_id,
-        thread_id,
-        agent_id=agent_id,
-    )
-    return MemoryService(db_manager.session_factory)
-
-
 async def create_pinned_memory_block_service(
     user_id: str,
     thread_id: str,
     *,
     agent_id: str,
 ) -> Any:
-    """创建统一置顶记忆单一块服务实例 (与 SimplePinnedMemory 共享 pinned_memory.db).
+    """创建统一置顶记忆单一块服务实例.
 
     Args:
         user_id: 用户ID

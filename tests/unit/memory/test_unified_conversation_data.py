@@ -5,13 +5,11 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agent.memory.local_memory import pinned_memory_service
 from src.agent.memory.local_memory.core import ConversationMemoryCore
 from src.storage.models.conversation import (
     ConversationData,
@@ -50,7 +48,7 @@ class TestConversationMemoryCoreUnifiedData:
         sample_conversation_data: ConversationData,
     ) -> None:
         """测试使用统一ConversationData添加对话轮次."""
-        # 模拟四个并行操作
+        # 模拟并行存储操作 (SQL/向量) + 串行索引生成
         with (
             patch.object(
                 memory_core, "_store_conversation_content", new_callable=AsyncMock
@@ -59,19 +57,15 @@ class TestConversationMemoryCoreUnifiedData:
                 memory_core, "_store_vector_conversation", new_callable=AsyncMock
             ) as mock_vector,
             patch.object(
-                memory_core._pinned_svc, "update", new_callable=AsyncMock
-            ) as mock_pinned,
-            patch.object(
                 memory_core, "_generate_conversation_index", new_callable=AsyncMock
             ) as mock_index,
         ):
             # 调用添加对话轮次
             await memory_core.add_conversation_round(sample_conversation_data)
 
-            # 验证所有四个方法都被调用，且使用相同的ConversationData
+            # 验证各存储方法都被调用，且使用相同的ConversationData
             mock_sql.assert_called_once_with(sample_conversation_data)
             mock_vector.assert_called_once_with(sample_conversation_data)
-            mock_pinned.assert_called_once_with(sample_conversation_data, None)
             mock_index.assert_called_once_with(sample_conversation_data)
 
             # 验证 ConversationData 内容正确传递
@@ -145,9 +139,7 @@ class TestConversationMemoryCoreUnifiedData:
 
             # 验证 update_conversation_index 被调用(索引元数据独立写入, 不再全量 UPSERT)
             mock_manager.update_conversation_index.assert_called_once()
-            call_kwargs = (
-                mock_manager.update_conversation_index.call_args.kwargs
-            )
+            call_kwargs = mock_manager.update_conversation_index.call_args.kwargs
             assert call_kwargs["topic"] == "测试主题"
             assert call_kwargs["summary"] == "测试摘要"
 
@@ -181,12 +173,11 @@ class TestConversationMemoryCoreUnifiedData:
         memory_core: ConversationMemoryCore,
         sample_conversation_data: ConversationData,
     ) -> None:
-        """测试四个并行操作使用相同的数据确保一致性."""
+        """测试并行操作使用相同的数据确保一致性."""
         # 用于存储各个操作接收到的数据
         received_data = {
             "sql": None,
             "vector": None,
-            "pinned": None,
             "index": None,
         }
 
@@ -196,36 +187,24 @@ class TestConversationMemoryCoreUnifiedData:
         async def capture_vector(data: ConversationData) -> None:
             received_data["vector"] = data
 
-        async def capture_pinned(
-            data: ConversationData, messages_snapshot=None
-        ) -> None:
-            received_data["pinned"] = data
-
         async def capture_index(data: ConversationData) -> None:
             received_data["index"] = data
 
         # 替换方法
         memory_core._store_conversation_content = capture_sql  # type: ignore
         memory_core._store_vector_conversation = capture_vector  # type: ignore
-        memory_core._pinned_svc.update = capture_pinned  # type: ignore
         memory_core._generate_conversation_index = capture_index  # type: ignore
 
         # 执行添加对话轮次
         await memory_core.add_conversation_round(sample_conversation_data)
-        # 置顶更新已转 fire-and-forget, 等待后台任务完成再断言
-        await asyncio.gather(
-            *pinned_memory_service.get_bg_tasks(), return_exceptions=True
-        )
 
         # 验证所有操作接收到相同的对象
         assert received_data["sql"] is sample_conversation_data
         assert received_data["vector"] is sample_conversation_data
-        assert received_data["pinned"] is sample_conversation_data
         assert received_data["index"] is sample_conversation_data
 
         # 验证数据一致性（移除冗余的conversation_id检查，使用round_number确保唯一性）
         assert received_data["sql"].round_number == received_data["vector"].round_number
-        assert received_data["sql"].user_message == received_data["pinned"].user_message
         assert (
             received_data["sql"].assistant_response
             == received_data["index"].assistant_response

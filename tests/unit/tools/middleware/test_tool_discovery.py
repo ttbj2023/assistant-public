@@ -258,7 +258,8 @@ class TestCheckAndActivate:
     def test_should_expand_group_name_to_members(self):
         """search命中组名时应展开为整组成员激活."""
         dormant = [
-            _make_dormant_tool("schedule_message"),
+            _make_dormant_tool("schedule_message_wechat"),
+            _make_dormant_tool("schedule_message_email"),
             _make_dormant_tool("list_scheduled_messages"),
             _make_dormant_tool("cancel_scheduled_message"),
         ]
@@ -266,7 +267,8 @@ class TestCheckAndActivate:
             dormant,
             group_members_map={
                 "scheduled_messenger_group": [
-                    "schedule_message",
+                    "schedule_message_wechat",
+                    "schedule_message_email",
                     "list_scheduled_messages",
                     "cancel_scheduled_message",
                 ],
@@ -279,7 +281,8 @@ class TestCheckAndActivate:
         request = _make_model_request(messages=[tool_msg])
         mw._check_and_activate(request)
         assert mw._activated_tools == {
-            "schedule_message",
+            "schedule_message_wechat",
+            "schedule_message_email",
             "list_scheduled_messages",
             "cancel_scheduled_message",
         }

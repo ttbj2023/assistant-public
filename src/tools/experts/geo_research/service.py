@@ -100,9 +100,8 @@ async def run_geo_research(
     depth: str = "quick",
     language: str = "zh",
     *,
-    model_id: str = "",  # noqa: ARG001
+    model_id: str = "",
     timeout: float = 120.0,
-    mcp_bridge: Any | None = None,  # noqa: ARG001
 ) -> dict[str, Any]:
     """执行地理出行研究查询.
 
@@ -112,7 +111,6 @@ async def run_geo_research(
         language: 回答语言 "zh" / "en"
         model_id: Agent使用的模型ID
         timeout: Agent执行超时
-        mcp_bridge: 不再使用, 保留接口兼容
 
     Returns:
         包含result/query/depth/language/elapsed_seconds/tools_used的dict
@@ -168,6 +166,7 @@ async def run_geo_research(
         language,
         start_time=start_time,
         timeout=timeout,
+        model_id=model_id,
     )
 
 
@@ -202,11 +201,15 @@ async def _run_deep(
     *,
     start_time: float,
     timeout: float,
+    model_id: str = "",
 ) -> dict[str, Any]:
     """Deep模式: grounding结果作为上下文 + 专家Agent + 统一地图工具."""
     geo_tools = create_geo_sub_tools()
 
-    llm = ExpertModelFactory.create_for_tool("geo_navigator")
+    llm = ExpertModelFactory.create_for_tool(
+        "geo_navigator",
+        model_id=model_id or None,
+    )
 
     retry_cfg = get_retry_config().expert_agent
     agent = create_agent(
@@ -256,7 +259,7 @@ async def _run_deep(
         result = await asyncio.wait_for(
             agent.ainvoke(
                 {"messages": [HumanMessage(content=prompt)]},
-                config=RunnableConfig(max_concurrency=1, recursion_limit=16),
+                config=RunnableConfig(max_concurrency=1, recursion_limit=50),
             ),
             timeout=timeout,
         )

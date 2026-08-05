@@ -10,9 +10,10 @@ import contextlib
 import logging
 import os
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from src.core.datetime_utils import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def build_unique_filename(filename: str, fmt: str) -> tuple[str, str]:
     Returns:
         (磁盘文件名含时间戳, 展示文件名)
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = now_utc().strftime("%Y%m%d_%H%M%S")
     short_hash = os.urandom(4).hex()
     unique_filename = f"{filename}_{timestamp}_{short_hash}.{fmt}"
     display_filename = f"{filename}.{fmt}"

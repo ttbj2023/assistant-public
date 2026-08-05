@@ -14,14 +14,18 @@ import logging
 import re
 from typing import ClassVar, Literal, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
 OutputFormat = Literal["pdf", "docx"]
+
+# 允许的样式白名单 (与 templates/ 目录下的内置模板一一对应)
+_ALLOWED_STYLES = frozenset({"default", "academic", "business", "technical"})
 
 # 自动生成文件名: 从内容首个标题清洗, 截断长度, 无标题时回退值
 _AUTOGEN_MAX = 50
@@ -95,8 +99,23 @@ class ExportDocumentInput(QueryAliasModel):
             return v.lower()
         return v
 
+    @field_validator("style", mode="before")
+    @classmethod
+    def validate_style(cls, v: str) -> str:
+        """样式白名单校验, 防止路径穿越 (style 直接拼入模板文件路径)."""
+        if not isinstance(v, str):
+            return v
+        normalized = v.strip().lower()
+        if normalized not in _ALLOWED_STYLES:
+            allowed = ", ".join(sorted(_ALLOWED_STYLES))
+            raise ValueError(
+                f"不支持的样式: {v!r}, 可选: {allowed}",
+            )
+        return normalized
 
-class ExportDocumentTool(BaseExternalTool):
+
+@sync_runnable
+class ExportDocumentTool(BaseTool):
     """文档导出工具 - 将 Markdown 内容按模板渲染为 PDF/DOCX."""
 
     name: str = "export_document"
@@ -156,7 +175,7 @@ class ExportDocumentTool(BaseExternalTool):
 
         except Exception as e:
             logger.exception("ExportDocumentTool 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
 
 __all__ = ["ExportDocumentInput", "ExportDocumentTool"]

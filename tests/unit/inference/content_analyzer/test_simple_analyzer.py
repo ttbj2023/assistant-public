@@ -158,8 +158,10 @@ class TestFeatureFlags:
 
         asyncio.run(test_analyze())
 
+
 class TestConfiguration:
     """测试配置相关."""
+
 
 class TestNormalizeResponse:
     """测试响应标准化方法."""
@@ -252,5 +254,3 @@ class TestInvoke:
         ):
             with pytest.raises(Exception, match="failed"):
                 await analyzer._invoke("test prompt")
-
-

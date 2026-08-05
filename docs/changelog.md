@@ -1,6 +1,13 @@
 # 项目变更日志
 
-**版本**: v1.9.0 | **更新**: 2026-07-01
+**版本**: v1.9.0 | **更新**: 2026-07-17
+
+## CI quick 模式纳入 E2E 阻断门禁 (2026-07-17)
+- **问题**: 7/2 重构 `export_document` 移除 `summary` 参数后, `tests/e2e/test_tool_runtime_container_e2e.py` 未同步更新, 导致 full 模式 E2E 失败; 因 quick 模式跳过 E2E, 回归被遗漏约两周
+- **修复**: 同步更新两处 E2E 调用, 移除 `summary=None` 参数
+- **流程加固**: quick 模式不再跳过 E2E, `run_test_suite.py` 默认任务列表加入 `run_e2e_tests`, 结果纳入 `ci_passed` 阻断门禁
+- **数据隔离**: E2E 子进程注入 `TEST_PROCESS_PREFIX=e2e`, 避免与 unit/integration 共享 `test_data` 目录
+- **诊断改进**: `_extract_error_type` 优先读取 `test_details["timeout"]` 显式标记, 避免 pytest-timeout 插件 header 里的 "timeout" 字样导致所有失败被误报为 `TIMEOUT_ERROR`; E2E pytest 完整输出落盘 `reports/current/e2e_pytest_full.log`
 
 ## 股票监控架构重构 + 统一通知基础设施 (2026-07-01)
 - **容器瘦身 + 重命名**: market-monitor 容器瘦身为纯行情查询服务并重命名为 `quote-service`, 只保留 TDX 连接 + `/quote`(单只) + `/quotes`(批量) + `/health`; 删除容器内规则存储/轮询引擎/派发逻辑 (`store.py`/`monitor.py`)

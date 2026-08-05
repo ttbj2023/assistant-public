@@ -278,6 +278,39 @@ class TestGetOrCreateTool:
         assert "fail_int" not in manager._internal_cache["u:t:a"]
 
     @pytest.mark.asyncio
+    async def test_concurrent_create_same_tool_creates_only_once(
+        self, manager, fake_base_tool
+    ):
+        """并发创建同一内部工具应串行化, _create_internal_tool 仅调用一次."""
+        import asyncio
+
+        tool_cfg = _make_internal_tool_config(name="int_tool")
+        manager._mock_tools_config.list_enabled_internal_tools.return_value = [tool_cfg]
+        manager._internal_cache["u:t:a"] = {}
+
+        create_count = 0
+
+        async def slow_create(*args, **kwargs):
+            nonlocal create_count
+            create_count += 1
+            # 让出事件循环, 触发并发交错 (否则无法复现竞态)
+            await asyncio.sleep(0)
+            return fake_base_tool
+
+        manager._create_internal_tool = slow_create
+
+        await asyncio.gather(
+            manager._get_or_create_tool(
+                "int_tool", "u", "t", "u:t:a", agent_id="a"
+            ),
+            manager._get_or_create_tool(
+                "int_tool", "u", "t", "u:t:a", agent_id="a"
+            ),
+        )
+
+        assert create_count == 1
+
+    @pytest.mark.asyncio
     async def test_expert_tool_returns_from_cache(self, manager, fake_base_tool):
         """专家工具已缓存时直接返回"""
         manager._expert_tools_cache["web_research"] = fake_base_tool
@@ -414,7 +447,10 @@ class TestCreateInternalTool:
             )
 
         assert result is fake_base_tool
-        mock_tool_class.assert_called_once_with("u", "t", agent_id="a")
+        mock_tool_class.assert_called_once_with()
+        assert result.user_id == "u"
+        assert result.thread_id == "t"
+        assert result.agent_id == "a"
         mock_sanitizer.is_safe_class_path.assert_called_once_with(
             "src.tools.internal.good.GoodTool"
         )
@@ -497,6 +533,46 @@ class TestCreateInternalTool:
             await manager._create_internal_tool("bad_import", "u", "t", agent_id="a")
 
     @pytest.mark.asyncio
+    async def test_create_injects_catalog_name_when_class_default_empty(
+        self, manager
+    ):
+        """工具类默认 name="" 时, _create_internal_tool 应注入 catalog name.
+
+        Bug 背景: 8 个 health 工具类声明 ``name: str = ""``, 实例化后 name 为空,
+        被 LangChain ToolNode 按 name 去重时折叠成 1 个 (tools_by_name[""]),
+        导致 health_data_group 中 8 个子工具实际只 1 个到达 LLM.
+        修复: _create_internal_tool 实例化后强制注入 catalog name.
+        """
+        blank_tool = MagicMock()
+        blank_tool.name = ""
+
+        tool_cfg = _make_internal_tool_config(
+            name="view_health_snapshot",
+            class_path="src.tools.internal.health.ViewHealthSnapshotTool",
+        )
+        manager._mock_tools_config.get_internal_tool_config.return_value = tool_cfg
+
+        mock_tool_class = Mock(return_value=blank_tool)
+        mock_sanitizer = MagicMock()
+        mock_sanitizer.is_safe_class_path.return_value = True
+        mock_sanitizer.safe_import.return_value = mock_tool_class
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.core.validation.unified_sanitizer": MagicMock(
+                    UnifiedSanitizer=mock_sanitizer
+                )
+            },
+        ):
+            result = await manager._create_internal_tool(
+                "view_health_snapshot", "u", "t", agent_id="a"
+            )
+
+        assert result is not None
+        assert result.name == "view_health_snapshot"
+
+    @pytest.mark.asyncio
     async def test_create_passes_extra_config(self, manager, fake_base_tool):
         """工具配置中的额外参数应传递给工具构造函数"""
         tool_cfg = _make_internal_tool_config(
@@ -522,8 +598,11 @@ class TestCreateInternalTool:
             await manager._create_internal_tool("cfg_tool", "u", "t", agent_id="a")
 
         mock_tool_class.assert_called_once_with(
-            "u", "t", agent_id="a", max_items=50, debug=True
+            max_items=50, debug=True
         )
+        assert fake_base_tool.user_id == "u"
+        assert fake_base_tool.thread_id == "t"
+        assert fake_base_tool.agent_id == "a"
 
 
 # ===========================================================================

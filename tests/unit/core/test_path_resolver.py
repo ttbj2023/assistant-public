@@ -31,6 +31,17 @@ def reset_path_resolver_singleton():
     UserDataPathResolver._instance = None
 
 
+@pytest.fixture(autouse=True)
+def _isolate_cwd(tmp_path, monkeypatch):
+    """每个测试在独立临时目录运行.
+
+    UserDataPathResolver.__init__ 在测试模式下会 mkdir 创建 ./test_data_* 目录,
+    chdir 到 tmp_path 后这些目录落在临时目录内, 测试结束由 pytest 自动回收,
+    避免污染项目 CWD (历史曾因 mock 创建不合规 prefix 目录名导致残留).
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 class TestUserDataPathResolver:
     """UserDataPathResolver 主要测试类"""
 
@@ -68,6 +79,8 @@ class TestUserDataPathResolver:
         mock_getenv.side_effect = lambda key, default="": {
             "ENVIRONMENT": "testing",
             "PYTEST_XDIST_WORKER_ID": "gw0",
+            # 显式声明无进程前缀, 验证 prefix 为空时的目录命名
+            "TEST_PROCESS_PREFIX": "",
         }.get(key, default)
 
         resolver = UserDataPathResolver()
@@ -168,24 +181,28 @@ class TestUserDataPathResolver:
 
     def test_invalid_input_validation_should_raise_on_empty_or_wrong_type(self):
         """输入验证: 空字符串应抛出ValueError, 非字符串应抛出TypeError"""
-        with patch("src.core.path_resolver.os.getenv") as mock_getenv:
-            mock_getenv.return_value = "testing"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch("src.core.path_resolver.os.getenv") as mock_getenv:
+                # 用 production mode 规避 test_data 目录副作用, 该测试只关心参数校验
+                mock_getenv.side_effect = lambda key, default="": (
+                    temp_dir if key == "BASE_DATA_PATH" else "production"
+                )
 
-            resolver = UserDataPathResolver()
+                resolver = UserDataPathResolver()
 
-            # 测试空字符串
-            with pytest.raises(ValueError):
-                resolver.get_thread_base_path("", "main")
+                # 测试空字符串
+                with pytest.raises(ValueError):
+                    resolver.get_thread_base_path("", "main")
 
-            with pytest.raises(ValueError):
-                resolver.get_thread_base_path("alice", "")
+                with pytest.raises(ValueError):
+                    resolver.get_thread_base_path("alice", "")
 
-            # 测试非字符串类型
-            with pytest.raises(TypeError):
-                resolver.get_thread_base_path(123, "main")
+                # 测试非字符串类型
+                with pytest.raises(TypeError):
+                    resolver.get_thread_base_path(123, "main")
 
-            with pytest.raises(TypeError):
-                resolver.get_thread_base_path("alice", None)
+                with pytest.raises(TypeError):
+                    resolver.get_thread_base_path("alice", None)
 
 
 class TestGlobalFunctions:

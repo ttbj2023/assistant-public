@@ -59,6 +59,8 @@ _PANDOC_READER = (
     "+smart"
     "+definition_lists"
     "+attributes"
+    "+task_lists"
+    "+footnotes"
 )
 _PANDOC_WRITERS = {
     "html": "html5",

@@ -78,6 +78,18 @@ _KIMI_CHAT_PARAMS = {
     "stop": {"default": None},
 }
 
+# Kimi K3: 始终进行推理(不支持非思考模式), 经 reasoning_effort 控制思考力度.
+_KIMI_K3_CHAT_PARAMS = {
+    "temperature": {"default": 1.0},
+    "top_p": {"default": 0.95},
+    "max_tokens": {"default": 32768},
+    "reasoning_effort": {
+        "default": "max",
+        "options": ["low", "high", "max"],
+    },
+    "stop": {"default": None},
+}
+
 _GLM_CHAT_PARAMS = {
     "temperature": {"default": 0.7},
     "top_p": {"default": 0.95},
@@ -109,6 +121,17 @@ _DOUBAO_SEED_CHAT_PARAMS = {
     "temperature": {"default": 0.3},
     "top_p": {"default": 0.95},
     "max_tokens": {"default": 16384},
+    "reasoning_effort": {
+        "default": "minimal",
+        "options": ["minimal", "low", "medium", "high"],
+    },
+    "stop": {"default": None},
+}
+
+_DOUBAO_SEED_EVOLVING_CHAT_PARAMS = {
+    "temperature": {"default": 0.3},
+    "top_p": {"default": 0.95},
+    "max_tokens": {"default": 32768},
     "reasoning_effort": {
         "default": "minimal",
         "options": ["minimal", "low", "medium", "high"],
@@ -182,13 +205,27 @@ SHARED_MODELS: dict[str, SharedModel] = {
     "kimi-k2.6": SharedModel(
         name="Kimi K2.6",
         model_type=ModelType.CHAT,
-        description="Moonshot Kimi K2.6 推理模型. 支持文本输入、思考推理、工具调用、JSON 模式与流式输出.",
+        description="Moonshot Kimi K2.6 推理模型. 支持文本与图片输入、思考推理、工具调用、JSON 模式与流式输出.",
         model_params=_KIMI_CHAT_PARAMS,
-        capabilities=_CHAT_CAPS_STANDARD,
+        capabilities=_CHAT_CAPS_MULTIMODAL,
         default_endpoint_name="kimi-k2.6",
         # 来源: platform.kimi.ai 官方定价页(元/百万tokens). 262K 上下文窗口.
         pricing=ModelPricing(
             input=6.50, output=27.00, cached_input=1.10, currency="CNY"
+        ),
+    ),
+    "kimi-k3": SharedModel(
+        name="Kimi K3",
+        model_type=ModelType.CHAT,
+        description="Moonshot Kimi K3 旗舰推理模型(2.8T 参数). 1M token 上下文窗口, 原生视觉理解(图片输入), 面向长程编程与端到端知识工作."
+        "始终进行推理(不支持非思考模式), 经 reasoning_effort 控制思考力度(low/high/max, 默认 max)."
+        "支持工具调用、JSON 模式、结构化输出、流式输出与自动上下文缓存.",
+        model_params=_KIMI_K3_CHAT_PARAMS,
+        capabilities=_CHAT_CAPS_MULTIMODAL,
+        default_endpoint_name="kimi-k3",
+        # 来源: platform.kimi.com 官方定价页(元/百万tokens). 1M 上下文窗口.
+        pricing=ModelPricing(
+            input=20.0, output=100.0, cached_input=2.0, currency="CNY"
         ),
     ),
     "glm-5.2": SharedModel(
@@ -244,6 +281,17 @@ SHARED_MODELS: dict[str, SharedModel] = {
         # 来源: 火山引擎官方定价(元/百万tokens, 分段计费). 此处取 ≤32K 档作为模型级参考.
         # 完整分段(输入/输出/缓存): ≤32K 0.2/2/0.04; 32K-128K 0.4/4/0.08; 128K-256K 0.8/8/0.16.
         pricing=ModelPricing(input=0.2, output=2.0, cached_input=0.04, currency="CNY"),
+    ),
+    "doubao-seed-evolving": SharedModel(
+        name="Doubao Seed Evolving",
+        model_type=ModelType.CHAT,
+        description="字节跳动豆包 Seed Evolving 持续进化模型. 聚焦 Coding 与 Agent 场景, 支持 1M 上下文窗口、思考推理、多模态理解、工具调用、JSON 模式与流式输出."
+        "统一 Model ID, 周级迭代自动升级, 无需迁移.",
+        model_params=_DOUBAO_SEED_EVOLVING_CHAT_PARAMS,
+        capabilities=_CHAT_CAPS_MULTIMODAL,
+        default_endpoint_name="doubao-seed-evolving",
+        # 来源: 火山引擎官方定价(元/百万tokens). 输入/输出: 6/30.
+        pricing=ModelPricing(input=6.0, output=30.0, currency="CNY"),
     ),
     "doubao-seedream-5.0": SharedModel(
         name="Doubao Seedream 5.0",

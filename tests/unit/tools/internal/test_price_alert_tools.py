@@ -22,6 +22,7 @@ from src.tools.internal.query_stock_price_tool import (
     QueryStockPriceTool,
     format_quote_text,
 )
+from src.tools.shared.tool_runtime import inject_identity
 
 DELIVERY = DeliverySpec(
     method="wechat",
@@ -59,17 +60,23 @@ def _rule(**overrides) -> PriceAlertRule:
 
 @pytest.fixture
 def create_tool():
-    return CreatePriceAlertTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = CreatePriceAlertTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 @pytest.fixture
 def list_tool():
-    return ListPriceAlertsTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = ListPriceAlertsTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 @pytest.fixture
 def cancel_tool():
-    return CancelPriceAlertTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = CancelPriceAlertTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 # ========== infer_market ==========
@@ -327,7 +334,8 @@ class TestCancelPriceAlert:
 class TestIsAvailable:
     @pytest.mark.asyncio
     async def test_available_with_wechat(self):
-        t = CreatePriceAlertTool(user_id="u1", thread_id="t1", agent_id="a1")
+        t = CreatePriceAlertTool()
+        inject_identity(t, "u1", "t1", "a1")
         with patch(
             "src.tools.internal.create_price_alert_tool.resolve_delivery",
             new=AsyncMock(return_value=DELIVERY),
@@ -336,7 +344,8 @@ class TestIsAvailable:
 
     @pytest.mark.asyncio
     async def test_unavailable_without_any_channel(self):
-        t = CreatePriceAlertTool(user_id="u1", thread_id="t1", agent_id="a1")
+        t = CreatePriceAlertTool()
+        inject_identity(t, "u1", "t1", "a1")
         with (
             patch(
                 "src.tools.internal.create_price_alert_tool.resolve_delivery",
@@ -349,7 +358,8 @@ class TestIsAvailable:
     @pytest.mark.asyncio
     async def test_available_with_email_only(self):
         """无微信但 SMTP 已配置也可用."""
-        t = CreatePriceAlertTool(user_id="u1", thread_id="t1", agent_id="a1")
+        t = CreatePriceAlertTool()
+        inject_identity(t, "u1", "t1", "a1")
         with (
             patch(
                 "src.tools.internal.create_price_alert_tool.resolve_delivery",
@@ -433,7 +443,8 @@ class TestFormatQuoteText:
 
 @pytest.fixture
 def query_tool():
-    t = QueryStockPriceTool(user_id="u1", thread_id="t1", agent_id="a1")
+    t = QueryStockPriceTool()
+    inject_identity(t, "u1", "t1", "a1")
     t._request = AsyncMock()
     return t
 
@@ -488,5 +499,6 @@ class TestQueryStockPrice:
 
     @pytest.mark.asyncio
     async def test_is_available_always_true_without_channel(self):
-        t = QueryStockPriceTool(user_id="u1", thread_id="t1", agent_id="a1")
+        t = QueryStockPriceTool()
+        inject_identity(t, "u1", "t1", "a1")
         assert await t.is_available() is True

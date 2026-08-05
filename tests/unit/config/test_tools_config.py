@@ -361,7 +361,7 @@ class TestToolsConfigDeepMerge:
         assert sm.config["openclaw_defaults"]["weixin"]["channel"] == "test-channel"
         # 默认 config 其余字段保留(deep merge 而非整体替换)
         assert sm.config["max_pending_messages"] == 50
-        assert sm.config["default_channel"] == "wechat"
+        assert sm.config["max_schedule_ahead_hours"] == 168
 
 
 class TestNoneDefenseForDictCategories:

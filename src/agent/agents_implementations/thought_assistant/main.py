@@ -5,15 +5,12 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.config.agent_config import AgentConfig
 
 from src.agent.agents_implementations.base_orchestrator_agent import OrchestratorAgent
-
-logger = logging.getLogger(__name__)
 
 
 class ThoughtAssistantAgent(OrchestratorAgent):

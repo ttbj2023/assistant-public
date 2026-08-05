@@ -1,8 +1,9 @@
 """SimpleMemoryCore - Simple 模式对话记忆核心.
 
-对话完成后统一触发点, 仅执行两件事:
+对话完成后统一触发点, 仅执行一件事:
 1. 存储当前轮(用户消息 + 助手回复, 复用 conversation_index 表, 跳过索引/向量/弧短语)
-2. fire-and-forget 触发 Stage 1 长期记忆提取
+
+长期记忆(经验洞察)由 DomainDataDispatcher 调度, 不再由此处管理.
 
 与 ConversationMemoryCore 的区别:
 - 不做向量存储 / 索引生成 / 缓存更新 / run 检测
@@ -17,8 +18,6 @@ from typing import TYPE_CHECKING, override
 
 from src.storage.service import create_conversation_service
 
-from .service import SimpleMemoryService
-
 if TYPE_CHECKING:
     from src.config.agent_config import AgentConfig
     from src.storage.models.conversation import ConversationData
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 class SimpleMemoryCore:
     """Simple 模式对话记忆核心.
 
-    职责: 存当前轮 + 触发长期记忆 Stage 1 提取. 不管理 prompt 历史(前端透传).
+    职责: 存当前轮. 不管理 prompt 历史(前端透传), 不管理长期记忆(domain_data).
     """
 
     def __init__(
@@ -48,15 +47,8 @@ class SimpleMemoryCore:
             )
         self.agent_id: str = agent_config.agent_id
 
-        self._memory_svc = SimpleMemoryService(
-            self.user_id,
-            self.thread_id,
-            self.agent_id,
-            agent_config=agent_config,
-        )
-
     async def add_conversation_round(self, conversation_data: ConversationData) -> None:
-        """对话完成后的统一触发点: 存当前轮 + 触发 Stage 1 提取.
+        """对话完成后的统一触发点: 存当前轮.
 
         Args:
             conversation_data: 统一对话数据(含预分配 round_number)
@@ -67,15 +59,8 @@ class SimpleMemoryCore:
         )
 
         try:
-            # 1. 存当前轮(复用 conversation_index 表, 仅原始内容, 跳过索引/向量)
+            # 存当前轮(复用 conversation_index 表, 仅原始内容, 跳过索引/向量)
             await self._store_round(conversation_data)
-
-            # 2. fire-and-forget 触发主模型覆写
-            messages_snapshot = conversation_data.metadata.get("_messages_snapshot")
-            self._memory_svc.on_conversation_round(
-                conversation_data,
-                messages_snapshot=messages_snapshot,
-            )
 
             logger.debug(
                 f"✅ SimpleMemoryCore 完成: {self.user_id}:{self.thread_id}:{conversation_data.round_number}",

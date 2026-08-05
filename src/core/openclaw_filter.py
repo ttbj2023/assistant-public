@@ -249,9 +249,6 @@ def filter_openclaw_request(body: dict[str, Any]) -> tuple[dict[str, Any], bool]
         if role in REMOVED_ROLES:
             continue
 
-        if role == "custom" and msg.get("customType") == "openclaw.runtime-context":
-            continue
-
         if role == "user":
             content = msg.get("content")
             if isinstance(content, str):

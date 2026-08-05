@@ -141,14 +141,13 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 
 **第一性原理的延伸**: 不把所有工具一次性塞进上下文 (浪费 token + 选择困难), 而是按需发现注入. Agent 启动只加载**核心工具** + `search_available_tools` + `load_skill`.
 
-**四类工具源**:
+**三类工具源**:
 
 | 类型 | 隔离 | 说明 |
 |------|------|------|
 | 内部工具 | user/thread/agent 三级 | 需数据安全, 如记忆检索 / TODO / 用户要求记事本 |
-| 外部工具 | 无状态全局 | 封装外部 API, 如天气 / 图表 / Python 执行 |
+| 外部工具 | 无状态全局 | 封装外部 API 或经 MCP 协议接入, 如天气 / 图表 / MCP 搜索 |
 | 专家工具 | 全局共享 | 独立 Agent 编排多源工具, 如网络调研 / 地图导航 (subagent 包装, 见对话模型) |
-| MCP 工具 | 全局共享 | McpBridge 集成, 支持 streamable_http / sse / stdio |
 
 **休眠工具发现 + 注入** (两套同构中间件, 基于 LangChain v1.0 `AgentMiddleware`):
 

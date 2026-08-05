@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
 from html import unescape
 
 import markdown
@@ -23,15 +22,14 @@ _FONT_FAMILY = (
 )
 
 
-def md_to_wechat_html(
-    content: str, summary: str | None = None, author: str = ""
-) -> str:
+def md_to_wechat_html(content: str, author: str = "", title: str = "") -> str:
     """将 Markdown 转为微信兼容 HTML.
 
     Args:
-        content: Markdown 正文 (不含标题, 标题由调用方单独处理)
-        summary: 可选摘要, 显示在正文开头的引用框中
-        author: 可选作者, 显示在文末分隔线后
+        content: Markdown 正文
+        author: 可选作者, 显示在文末署名行
+        title: 文章标题, 用于去重 (微信会用 title 字段渲染正文顶部标题,
+            正文中与 title 相同的首元素会被移除, 避免重复)
 
     """
     md = markdown.Markdown(extensions=["extra", "sane_lists", "fenced_code"])
@@ -40,6 +38,7 @@ def md_to_wechat_html(
     soup = BeautifulSoup(html, "lxml")
 
     _remove_first_h1(soup)
+    _remove_duplicate_title(soup, title)
     _style_headings(soup)
     _style_paragraphs(soup)
     _style_lists(soup)
@@ -52,45 +51,28 @@ def md_to_wechat_html(
 
     content_html = str(soup).strip()
 
-    summary_section = ""
-    if summary:
-        summary_section = (
-            '<section style="width: 100%; padding: 0px 16px;">'
-            '<section style="width: 100%; text-align: center; margin: 24px 0;">'
-            '<section style="display: inline-block; max-width: 100%; text-align: left; '
-            "background-color: rgba(96, 125, 139, 0.15); padding: 20px 24px; "
-            'border-radius: 12px; border-left: 4px solid #607D8B;">'
-            f'<p style="font-size: 15px; color: #455A64; line-height: 1.8; '
-            f"margin: 0; font-weight: 500; letter-spacing: 0.5px; "
-            f'font-family: {_FONT_FAMILY};">{summary}</p>'
-            "</section></section></section>"
-        )
-
-    now = datetime.now()
-    date_str = f"{now.year} 年 {now.month} 月"
-
     author_line = ""
     if author:
         author_line = (
             '<p style="font-size: 14px; color: #666666; line-height: 1.6; '
-            f'text-align: right; margin: 16px 0 4px 0;">文/ {author}</p>'
+            f'text-align: right; margin: 24px 0 16px 0;">文/ {author}</p>'
         )
+
+    disclaimer = (
+        '<p style="font-size: 12px; color: #999999; line-height: 1.6; '
+        'text-align: center; margin: 16px 0 0 0;">'
+        "本文观点与框架来自作者本人，资料核查与文字整理由AI辅助生成。</p>"
+    )
 
     return (
         f'<section style="padding: 0px 8px; font-family: {_FONT_FAMILY};">\n'
-        f"  {summary_section}\n"
         f'  <div style="font-size: 15px; margin-bottom: 16px; color: rgb(51, 51, 51); '
         f'margin-top: 16px; letter-spacing: 1px; font-family: {_FONT_FAMILY};">\n'
         f"    {content_html}\n"
         "  </div>"
-        '<section style="margin-top: 32px;">'
-        '<hr style="height: 1px; background-color: #e5e7eb; border: none;" />'
         f"{author_line}"
-        f'<p style="font-size: 14px; color: #999999; line-height: 1.6; '
-        f'text-align: right; margin: 4px 0 16px 0;">{date_str}</p>'
-        '<p style="font-size: 14px; color: #666666; line-height: 1.6; '
-        'text-align: center; margin: 16px 0;">感谢阅读</p>'
-        "</section></section>"
+        f"{disclaimer}"
+        "</section>"
     )
 
 
@@ -98,6 +80,20 @@ def _remove_first_h1(soup: BeautifulSoup) -> None:
     first_h1 = soup.find("h1")
     if first_h1:
         first_h1.decompose()
+
+
+def _remove_duplicate_title(soup: BeautifulSoup, title: str) -> None:
+    """移除正文中与文章标题重复的首元素 (H2/加粗/纯文本等)."""
+    if not title:
+        return
+    normalized_title = title.strip().lstrip("#").strip()
+    if not normalized_title:
+        return
+    for tag in ("h2", "h3", "h4", "p"):
+        el = soup.find(tag)
+        if el and el.get_text().strip() == normalized_title:
+            el.decompose()
+            return
 
 
 def _style_headings(soup: BeautifulSoup) -> None:

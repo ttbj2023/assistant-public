@@ -17,6 +17,8 @@ from pydantic import Field, field_validator
 from sqlmodel import Column, DateTime, SQLModel, text
 from sqlmodel import Field as SQLField
 
+from src.core.datetime_utils import now_utc
+
 
 class AlertDirection(StrEnum):
     """触发方向."""
@@ -84,12 +86,12 @@ class PriceAlertRule(PriceAlertRuleBase, table=True):
         default=None, description="触发结束时间 (一次性触发后填充)"
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),

@@ -42,7 +42,6 @@ class TestVectorService:
         mock_store.add_conversation_round = AsyncMock(return_value="doc_123")
         mock_store.similarity_search = AsyncMock(return_value=[])
         mock_store.search_rounds_only = AsyncMock(return_value=[])
-        mock_store.search_rounds_mmr_only = AsyncMock(return_value=[])
         mock_store.get_collection_stats = MagicMock(return_value={"document_count": 0})
         mock_store.close = MagicMock()
         return mock_store

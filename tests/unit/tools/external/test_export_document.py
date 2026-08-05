@@ -176,6 +176,31 @@ class TestExportDocumentToolAttributes:
         with pytest.raises(Exception):
             ExportDocumentInput(content="# Test", format="txt", filename="test")
 
+    def test_input_model_should_accept_builtin_styles(self):
+        for style in ["default", "academic", "business", "technical"]:
+            inp = ExportDocumentInput(content="# Test", style=style, filename="t")
+            assert inp.style == style
+
+    def test_input_model_should_normalize_style_case_insensitive(self):
+        inp = ExportDocumentInput(content="# Test", style="Academic", filename="t")
+        assert inp.style == "academic"
+
+    def test_input_model_should_reject_path_traversal_in_style(self):
+        for malicious in [
+            "../../../tmp/exploit",
+            "default.yaml",
+            ".../secret",
+            "default/../academic",
+        ]:
+            with pytest.raises(Exception):
+                ExportDocumentInput(
+                    content="# Test", style=malicious, filename="t"
+                )
+
+    def test_input_model_should_reject_unknown_style(self):
+        with pytest.raises(Exception):
+            ExportDocumentInput(content="# Test", style="custom", filename="t")
+
     def test_input_model_should_support_query_alias(self):
         inp = ExportDocumentInput(query="# Test", filename="test")
         assert inp.content == "# Test"

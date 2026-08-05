@@ -3,7 +3,6 @@
 轻量记忆架构, 适配"前端管历史"的对接方式(如 Open WebUI):
 - 对话历史: 前端透传(processor_config["chat_messages"]), 本处理器过滤 system
   消息后转为 history_messages, 直接交给 LLM, 不从后端 DB 重组
-- 置顶记忆: 统一单一块, 注入 system_prompt_extension 的 <pinned_memory> 标签
 - 轮次记录: 由 SimpleMemoryCore 在对话完成后存储(不进 prompt)
 
 与 LocalMemoryProcessor 的区别:
@@ -85,7 +84,7 @@ def _convert_chat_messages(
 
 
 class SimpleMemoryProcessor(BaseProcessor):
-    """Simple 模式记忆处理器 - 前端历史透传 + 长期记忆注入."""
+    """Simple 模式记忆处理器 - 前端历史透传."""
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         super().__init__(config)
@@ -98,11 +97,7 @@ class SimpleMemoryProcessor(BaseProcessor):
     @override
     def get_prompt_hint(self, agent_config: Any = None) -> str:
         """返回 simple 记忆系统的格式描述, 注入系统提示词."""
-        return (
-            "系统提示词中可能包含 <pinned_memory> 标签, 是跨会话积累的用户偏好"
-            "与经验洞察, 在相关时遵循其中的稳定偏好.\n"
-            "本轮指令在最后一条 <user_input> 标签中."
-        )
+        return "本轮指令在最后一条 <user_input> 标签中."
 
     @override
     async def build_messages_context(
@@ -114,12 +109,7 @@ class SimpleMemoryProcessor(BaseProcessor):
         processor_config: dict | None = None,
         timezone: str = "Asia/Shanghai",
     ) -> MessageContext:
-        """构建消息上下文: 前端历史透传 + 置顶记忆 extension.
-
-        流程:
-        1. 从 processor_config["chat_messages"] 取前端透传历史, 过滤 system, 转 BaseMessage
-        2. 读置顶记忆单一块, 格式化为 <pinned_memory> extension
-        3. current_content = 时间 + user_input
+        """构建消息上下文: 前端历史透传.
 
         Args:
             user_input: 当前轮用户输入
@@ -130,7 +120,7 @@ class SimpleMemoryProcessor(BaseProcessor):
             timezone: 时区
 
         Returns:
-            MessageContext: 含 history_messages / current_content / system_prompt_extension
+            MessageContext: 含 history_messages / current_content
 
         """
         if not user_id or not thread_id:
@@ -159,26 +149,7 @@ class SimpleMemoryProcessor(BaseProcessor):
             chat_messages = processor_config.get("chat_messages")
         history_messages = _convert_chat_messages(chat_messages)
 
-        # 2. 长期记忆 extension (统一单一块, 标签 <pinned_memory>)
-        system_prompt_extension = ""
-        try:
-            from src.storage.service import create_pinned_memory_block_service
-
-            block_service = await create_pinned_memory_block_service(
-                user_id,
-                thread_id,
-                agent_id=agent_id,
-            )
-            content = await block_service.get_formatted(user_id, thread_id)
-            if content and content.strip():
-                system_prompt_extension = (
-                    "以下是你需要长期记住的关键信息:\n"
-                    f"<pinned_memory>\n{content}\n</pinned_memory>"
-                )
-        except Exception as e:
-            logger.warning("读取长期记忆失败(非致命): %s", e)
-
-        # 3. current_content: 时间 + user_input
+        # 2. current_content: 时间 + user_input
         now = datetime.now(ZoneInfo(timezone))
         time_str = now.strftime("%Y-%m-%d %H:%M:%S %Z")
         current_content = (
@@ -187,16 +158,15 @@ class SimpleMemoryProcessor(BaseProcessor):
         )
 
         logger.info(
-            "simple 上下文组装: history=%d messages, extension=%d chars, current=%d chars",
+            "simple 上下文组装: history=%d messages, current=%d chars",
             len(history_messages),
-            len(system_prompt_extension),
             len(current_content),
         )
 
         return MessageContext(
             history_messages=history_messages,
             current_content=current_content,
-            system_prompt_extension=system_prompt_extension,
+            system_prompt_extension="",
         )
 
     async def get_or_create_conversation_memory(

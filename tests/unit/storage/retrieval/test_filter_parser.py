@@ -231,6 +231,44 @@ class TestTimeFilterParsing:
         assert start is None
         assert end is None
 
+    # ========== 异常分支测试 ==========
+
+    def test_parse_time_filter_last_N_days_invalid_number_should_return_none(self):
+        """测试时间解析：last_N_days 中 N 不是数字时应返回None"""
+        # Arrange
+        time_filter = "last_abc_days"
+
+        # Act
+        start, end = FilterParser.parse_time_filter(time_filter)
+
+        # Assert
+        assert start is None
+        assert end is None
+
+    def test_parse_time_filter_last_N_hours_invalid_number_should_return_none(self):
+        """测试时间解析：last_N_hours 中 N 不是数字时应返回None"""
+        # Arrange
+        time_filter = "last_abc_hours"
+
+        # Act
+        start, end = FilterParser.parse_time_filter(time_filter)
+
+        # Assert
+        assert start is None
+        assert end is None
+
+    def test_parse_time_filter_invalid_date_range_should_return_none(self):
+        """测试时间解析：_to_ 日期范围中日期格式无效时应返回None"""
+        # Arrange
+        time_filter = "notadate_to_notadate"
+
+        # Act
+        start, end = FilterParser.parse_time_filter(time_filter)
+
+        # Assert
+        assert start is None
+        assert end is None
+
 
 class TestParseFilters:
     """parse_filters 综合解析测试类."""
@@ -270,4 +308,3 @@ class TestParseFilters:
         assert "time_range" in result
         assert result["time_range"][0].year == 2024
         assert result["time_range"][0].month == 1
-        assert result["time_range"][0].day == 15

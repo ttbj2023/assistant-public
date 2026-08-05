@@ -5,8 +5,8 @@ name: "Health Assistant Agent"
 description: "个人健康助手Agent，支持饮食推荐、健康数据管理、体检报告分析"
 
 # 模型配置
-# 使用OpenAI GPT-5.5旗舰模型, 1.05M上下文, 128K输出, 支持工具调用和多模态
-model_id: "openai:gpt-5.5"
+# 使用OpenAI GPT-5.6 Sol旗舰模型, 1.05M上下文, 128K输出, 支持工具调用和多模态
+model_id: "openai:gpt-5.6-sol"
 
 # 系统提示词
 system_prompt: |
@@ -30,18 +30,20 @@ system_prompt: |
   你的回答应该专业、准确，并基于用户提供的数据进行分析。
 
 # 工具配置
-# health_data_recorder 已转为后台静默任务，不再作为对话工具
-# nutrition_calculator 已移除，主对话模型已具备营养计算知识
 tools:
-  - "health_data_manager"
+  - "health_data_group"
   - "memory_recall_group"
   - "search_available_tools"
+
+# 领域数据子系统: 对话后自动提取健康数据(常规提取 + 每10轮审计) + 用户画像(主模型覆写)
+domain_data:
+  - "health"
+  - "user_profile"
 
 # 可选工具: 休眠状态, Agent通过search_available_tools按需发现后由中间件动态注入
 optional_tools:
   - "scheduled_messenger_group"
   - "web_research"
-  - "geo_navigator"
 
 # 记忆配置（简化结构）
 memory:

@@ -68,3 +68,53 @@ class TestTimeFormatter:
         assert format_timestamp("2024-01-15T14:30:45Z") == "2024-01-15 14:30"
         assert format_timestamp(datetime(2024, 1, 15, 14, 30, 45)) == "2024-01-15 14:30"
         assert format_date_short("2024-01-15T14:30:45Z") == "2024-01-15"
+
+
+class TestUserTimezoneConversion:
+    """UserContext 设置时, format_* 应换算到用户时区; 无 context 返回 UTC."""
+
+    def test_format_date_short_converts_to_user_tz(self):
+        from src.core.context import (
+            UserContext,
+            reset_user_context,
+            set_user_context,
+        )
+
+        # UTC 2024-01-15 02:00 -> America/New_York (UTC-5) = 2024-01-14 21:00
+        token = set_user_context(
+            UserContext(
+                user_id="u",
+                thread_id="t",
+                agent_id="a",
+                timezone="America/New_York",
+            ),
+        )
+        try:
+            assert format_date_short(datetime(2024, 1, 15, 2, 0, tzinfo=UTC)) == "2024-01-14"
+        finally:
+            reset_user_context(token)
+
+    def test_format_date_short_no_context_returns_utc(self):
+        # 无 context -> 不换算, 返回 UTC 原值
+        assert format_date_short(datetime(2024, 1, 15, 2, 0, tzinfo=UTC)) == "2024-01-15"
+
+    def test_format_timestamp_converts_to_user_tz(self):
+        from src.core.context import (
+            UserContext,
+            reset_user_context,
+            set_user_context,
+        )
+
+        token = set_user_context(
+            UserContext(
+                user_id="u",
+                thread_id="t",
+                agent_id="a",
+                timezone="America/New_York",
+            ),
+        )
+        try:
+            # UTC 14:30 -> New_York 09:30
+            assert format_timestamp(datetime(2024, 1, 15, 14, 30, tzinfo=UTC)) == "2024-01-15 09:30"
+        finally:
+            reset_user_context(token)

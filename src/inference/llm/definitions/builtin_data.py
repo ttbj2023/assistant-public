@@ -535,6 +535,14 @@ def create_builtin_models() -> list[ModelMetadata]:
         ),
     )
 
+    models.append(
+        bind_shared(
+            "doubao",
+            "doubao-seed-evolving",
+            endpoint_name="doubao-seed-evolving",
+        ),
+    )
+
     # ═══════════════════════════════════════════════════════════════════
     # MiniMax M2.7 (230B MoE, OpenAI兼容API, 使用Anthropic SDK)
     # SDK: langchain_anthropic.ChatAnthropic
@@ -615,6 +623,10 @@ def create_ark_agent_plan_models() -> list[ModelMetadata]:
         bind_shared("ark-agent-plan", "doubao-seed-2.0-mini"),
     )
 
+    models.append(
+        bind_shared("ark-agent-plan", "doubao-seed-evolving"),
+    )
+
     # ═══════════════════════════════════════════════════════════════════
     # Doubao Seed 2.0 Lite (Agent Plan, 仅订阅节点提供)
     # 全模态理解模型, 支持视频/图像/音频/文本.
@@ -667,7 +679,7 @@ def create_ark_agent_plan_models() -> list[ModelMetadata]:
     )
 
     # ═══════════════════════════════════════════════════════════════════
-    # Kimi K2.6 (Agent Plan, 共享定义)
+    # Kimi K2.6 / K3 (Agent Plan, 共享定义)
     # ═══════════════════════════════════════════════════════════════════
 
     models.append(
@@ -675,6 +687,14 @@ def create_ark_agent_plan_models() -> list[ModelMetadata]:
             "ark-agent-plan",
             "kimi-k2.6",
             endpoint_name="kimi-k2.6",
+        ),
+    )
+
+    models.append(
+        bind_shared(
+            "ark-agent-plan",
+            "kimi-k3",
+            endpoint_name="kimi-k3",
         ),
     )
 
@@ -761,6 +781,36 @@ def create_aliyun_token_plan_models() -> list[ModelMetadata]:
             pricing=ModelPricing(
                 input=2.0, output=8.0, cached_input=0.4, currency="CNY"
             ),
+        ),
+    )
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Qwen3.8-Max Preview (Token Plan 专属预览模型)
+    # 阿里云百炼 Token Plan 订阅用户独享, 不在按量计费 DashScope 模型列表中.
+    # 实测约束: 服务端强制 enable_thinking=True (预览期不可关闭, 报错
+    #   "The value of the enable_thinking parameter is restricted to True.").
+    # ═══════════════════════════════════════════════════════════════════
+
+    models.append(
+        ModelMetadata(
+            id="aliyun-token-plan:qwen3.8-max-preview",
+            name="Qwen3.8-Max Preview",
+            provider="aliyun-token-plan",
+            model_type=ModelType.CHAT,
+            description="阿里云百炼 Qwen3.8-Max Preview 旗舰预览模型(Token Plan 订阅独享)."
+            "面向智能体时代, 支持文本与图像输入, 思考推理, 工具调用, JSON 模式与流式输出."
+            "预览期间模型能力持续迭代, 后续会被下线或替换为正式版本."
+            "注意(实测约束): 服务端强制 enable_thinking=True, 预览期不可关闭思考模式."
+            "thinking_budget 仍可调节. 经 extra_body 透传与 Qwen3.7 系列一致.",
+            model_params=qwen37_chat_params,
+            capabilities=[
+                ModelCapability.TEXT_INPUT,
+                ModelCapability.IMAGE_INPUT,
+                ModelCapability.REASONING,
+                ModelCapability.STREAMING,
+                ModelCapability.JSON_MODE,
+                ModelCapability.TOOL_CALLING,
+            ],
         ),
     )
 

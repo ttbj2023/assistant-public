@@ -127,6 +127,8 @@ class TestAgentImportPathCheck:
 
         assert result["main_module_available"] is False
         assert "导入路径检查异常" in result["error"]
+        # 异常回退路径应用转换后的目录名(下划线), 而非原始 agent_id(连字符)
+        assert "error_agent.main" in result["main_module_path"]
 
 
 class TestAgentDirectoryStructureCheck:
@@ -243,7 +245,7 @@ class TestAgentYamlConfigEdgeCases:
         with patch("src.agent.agent_health_checker.Path") as mock_path:
             mock_path.return_value.exists.return_value = True
             mock_path.return_value.is_file.return_value = True
-            mock_path.return_value.open.side_effect = IOError("Permission denied")
+            mock_path.return_value.open.side_effect = OSError("Permission denied")
             result = check_agent_yaml_config("personal-assistant")
 
         assert result["available"] is False
@@ -418,5 +420,5 @@ class TestLightweightHealthCheckEdgeCases:
                             }
                             result = lightweight_agent_health_check()
 
-        assert "personal_assistant" in result["agent_system"]["agent_ids"]
+        assert "personal-assistant" in result["agent_system"]["agent_ids"]
         assert result["agents_checked"] >= 1

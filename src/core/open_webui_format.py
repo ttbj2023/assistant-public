@@ -17,6 +17,9 @@ def _escape_attr(value: str) -> str:
     return html.escape(str(value), quote=True)
 
 
+MAX_RESULT_LENGTH = 2000
+
+
 def format_tool_call_done(name: str, result: str, arguments: dict | None = None) -> str:
     """格式化工具调用完成标签 (done=true).
 
@@ -59,9 +62,7 @@ def format_tool_call_done(name: str, result: str, arguments: dict | None = None)
     )
 
 
-MAX_RESULT_LENGTH = 2000
-
-
 __all__ = [
+    "MAX_RESULT_LENGTH",
     "format_tool_call_done",
 ]

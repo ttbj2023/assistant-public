@@ -13,6 +13,8 @@ from pydantic import Field, field_validator
 from sqlmodel import Column, DateTime, SQLModel, text
 from sqlmodel import Field as SQLField
 
+from src.core.datetime_utils import now_utc
+
 
 class UserChannelConfigBase(SQLModel):
     """用户渠道配置基础模型."""
@@ -51,12 +53,12 @@ class UserChannelConfig(UserChannelConfigBase, table=True):
 
     id: int | None = SQLField(default=None, primary_key=True, description="记录ID")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),

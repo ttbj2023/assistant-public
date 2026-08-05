@@ -117,8 +117,6 @@ inference:
       max_tokens: 2048
     # arc_model: <your-model-id>    # 索引弧短语蒸馏
     # arc_model_params: {}
-    dedup_enabled: true
-    dedup_threshold: 0.90
 
   image_description:
     model: <your-model-id>
@@ -151,8 +149,8 @@ inference:
     # web_research_synthesis_model_params: {}
     geo_research_model: ""
     # geo_research_model_params: {}
-    professional_database_model: ""
-    # professional_database_model_params: {}
+    datapro_model: ""
+    # datapro_model_params: {}
     grounding_model: <your-gemini-model-id>
     grounding_model_params:
       temperature: 0.1

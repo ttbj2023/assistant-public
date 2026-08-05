@@ -83,7 +83,8 @@ services:
     mem_limit: 4g
     cpus: 2.0
     networks:
-      - executor-internal
+      executor-internal:
+        ipv4_address: 172.26.0.2
     volumes:
       - tool-runtime-workspace:/workspace
     tmpfs:
@@ -154,6 +155,10 @@ networks:
   executor-internal:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
 
 volumes:
   tool-runtime-workspace:

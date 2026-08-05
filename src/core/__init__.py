@@ -4,7 +4,7 @@
 - cache: 高性能缓存系统
 - validation: 输入验证和安全防护
 - path_resolver: 用户隔离的文件系统路径管理
-- client_manager: HTTP客户端和模型管理
+- http_pool: 共享 HTTP 连接池
 - types: 通用数据类型
 - streaming: 流式响应类型定义和工具函数
 """

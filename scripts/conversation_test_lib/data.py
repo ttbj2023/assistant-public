@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 CONVERSATIONS_QUICK: list[dict[str, Any]] = [
-    # ===== Phase 1: R1-R10 上下文构建 =====
+    # ===== Phase 1: R1-R11 上下文构建 =====
     {
         "tag": "身份+生活",
         "hint": None,
@@ -38,8 +38,8 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
     },
     {
         "tag": "Web研究",
-        "hint": "web_research可能较慢",
-        "input": "我想在项目里引入一个新的时序数据库做监控指标存储, 你觉得InfluxDB和TimescaleDB哪个更合适? 考虑到我现有的技术栈",
+        "hint": "web_research可能较慢, 验证: 时效性问法(2026最新版本号/changelog)强制检索",
+        "input": "我想给监控指标存储选型, 帮我查一下 TimescaleDB 和 InfluxDB 3.0 在 2026 年的最新情况: 各自最新的稳定版本号、最近一次大版本的主要变化, 以及当前的社区活跃度对比。请基于联网检索的最新信息回答, 我要用它做技术选型决定",
     },
     {
         "tag": "地理研究",
@@ -48,7 +48,7 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
     },
     {
         "tag": "专业数据检索-金融指标",
-        "hint": "professional_database (external, 独立fastmcp.Client). 反幻觉: 单维度(盈利能力)一次命中, ROE多口径精确小数(加权1.65/平均1.6464/TTM 11.88), web仅散文. 需ARK_AGENT_PLAN_API_KEY",
+        "hint": "finance_data (external, 独立fastmcp.Client). 反幻觉: 单维度(盈利能力)一次命中, ROE多口径精确小数(加权1.65/平均1.6464/TTM 11.88), web仅散文. 需ARK_AGENT_PLAN_API_KEY",
         "input": "我最近在研究比亚迪(股票代码002594)的基本面, 帮我用专业数据检索查一下它的净资产收益率ROE和盈利水平",
     },
     {
@@ -58,10 +58,10 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
     },
     {
         "tag": "Python执行",
-        "hint": "python_executor依赖 tool-runtime 容器",
-        "input": "帮我用Python算一下: Nemo去年体重4.2kg今年4.8kg, 算一下增长百分比和月均增长率",
+        "hint": "python_executor依赖 tool-runtime 容器, 验证: 蒙特卡洛10000次模拟强制代码执行",
+        "input": "帮我用Python做个蒙特卡洛模拟: 假设Nemo以后每月体重在当前4.8kg基础上按正态分布随机波动(均值0, 标准差0.15kg), 模拟10000次未来12个月的体重变化路径, 算出一年后体重的均值、标准差和95%置信区间, 并简要解读",
     },
-    # ===== Phase 2: R11-R15 TODO生命周期 + 记忆召回 =====
+    # ===== Phase 2: R12-R14 TODO生命周期 + scheduled闭环 =====
     {
         "tag": "TODO删除",
         "hint": None,
@@ -73,9 +73,9 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
         "input": "再帮我看看现在的完整待办列表",
     },
     {
-        "tag": "跨轮次召回",
-        "hint": None,
-        "input": "对了, 如果我要带Nemo去打疫苗, 你还记得之前推荐的宠物医院吗? 叫什么名字在哪条路?",
+        "tag": "定时消息查询",
+        "hint": "scheduled_messenger查询, 验证R10是否真写入(闭环反幻觉)",
+        "input": "对了, 我之前设的那个检查对话测试结果的提醒还在吗? 帮我从系统里查一下我当前所有待发送的提醒",
     },
     {
         "tag": "技术讨论+项目",
@@ -92,17 +92,17 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
         "hint": "新置顶记忆体系: 验证用户风格要求被主模型写入置顶记忆并在后续回复中体现",
         "input": "对了, 定个小规矩: 以后你回复我都尽量简洁直接, 少用emoji, 重点放最前面, 我看着省事",
     },
-    # ===== Phase 3: 图片 + 多工具 + 图表 + 终极验证 =====
+    # ===== Phase 3: R15-R23 风格记录 + 图片 + 多工具 + 产出 =====
     {
-        "tag": "图片上传+召回",
+        "tag": "图片上传",
         "hint": "图片上传需要视觉模型描述",
-        "input": "给你看看我家Nemo的照片, 之前讨论过的InfluxDB和TimescaleDB对比结论你还记得吗? 最后推荐的是哪个?",
+        "input": "给你看看我家Nemo的照片, 帮我描述一下它的毛色和长相特征, 看看能不能判断它的品种",
         "image": "tests/fixtures/images/nemo_simple.jpg",
     },
     {
         "tag": "多工具串联",
-        "hint": "图片上传+web_research可能较慢",
-        "input": "翻到了一张之前的收据, 帮我看看上面具体写了什么内容, 另外帮我搜一下K8s NetworkPolicy最佳实践, 总结3个要点, 然后建一个待办",
+        "hint": "图片上传+web_research可能较慢, 验证: web子问题加2026时效性",
+        "input": "翻到了一张之前的收据, 帮我看看上面具体写了什么内容, 另外帮我搜一下2026年K8s NetworkPolicy的最新最佳实践和常见踩坑案例, 总结3个要点, 然后建一个待办",
         "image": "tests/fixtures/images/vet_receipt.jpg",
     },
     {
@@ -125,11 +125,6 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
         "tag": "Excel报表生成",
         "hint": "load_skill激活xlsx + skill_executor生成Excel, 验证: skills段L1清单+load_skill调用+skill_executor注入+产物[file:file_id]. 需tool-runtime容器运行",
         "input": "帮我做个Q3销售汇总Excel表: 两列(产品名/销售额), 产品A 15000元, 产品B 23000元, 末行加合计公式, 做成xlsx文件给我",
-    },
-    {
-        "tag": "终极验证",
-        "hint": None,
-        "input": "最后考考你: 我养了什么宠物? 做什么工作? 住在哪? 技术栈是什么? 当前有什么待办? 最喜欢的书和游戏是什么?",
     },
 ]
 
@@ -187,7 +182,7 @@ CONVERSATIONS_FULL: list[dict[str, Any]] = [
     },
     {
         "tag": "专业数据检索-企业风险",
-        "hint": "professional_database (external), 风险大类. 反幻觉: 具体案号/处罚日期/当事人 均权威聚合结构化, web仅零散新闻. 需ARK_AGENT_PLAN_API_KEY",
+        "hint": "enterprise_risk (external), 风险大类. 反幻觉: 具体案号/处罚日期/当事人 均权威聚合结构化, web仅零散新闻. 需ARK_AGENT_PLAN_API_KEY",
         "input": "我们公司在评估继续用阿里云做基础设施, 选型前想摸一下底. 帮我用专业数据检索查一下阿里巴巴（中国）有限公司的司法诉讼和行政处罚记录",
     },
     {
@@ -202,7 +197,7 @@ CONVERSATIONS_FULL: list[dict[str, Any]] = [
     },
     {
         "tag": "专业数据检索-企业工商",
-        "hint": "professional_database (external), 工商大类. 反幻觉锚点(搜索时值,可能已变更): 法人王朝阳/信用代码91320691MA1W3E4N6N/注册资本84000万美元(美元计价罕见). 需ARK_AGENT_PLAN_API_KEY",
+        "hint": "business_registry (external), 工商大类. 反幻觉锚点(搜索时值,可能已变更): 法人王朝阳/信用代码91320691MA1W3E4N6N/注册资本84000万美元(美元计价罕见). 需ARK_AGENT_PLAN_API_KEY",
         "input": '我们公司也在规划异地容灾, 想参考阿里基础设施的布局主体. 帮我用专业数据检索查一下"阿里巴巴信息港（江苏）有限公司"的企业工商信息, 看看法定代表人、注册资本和统一社会信用代码',
     },
     {
@@ -402,7 +397,7 @@ CONVERSATIONS_FULL: list[dict[str, Any]] = [
     },
     {
         "tag": "专业数据检索-金融数据",
-        "hint": "professional_database (external), 金融大类(2标的). 验证: 工具调用+有效返回. 需ARK_AGENT_PLAN_API_KEY",
+        "hint": "finance_data (external), 金融大类(2标的). 验证: 工具调用+有效返回. 需ARK_AGENT_PLAN_API_KEY",
         "input": "对了, 帮我用专业数据检索查一下阿里巴巴和腾讯最近的股票数据, 我想对比一下这两家公司的市值情况",
     },
     {

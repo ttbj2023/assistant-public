@@ -18,6 +18,7 @@ import json
 import pytest
 
 from src.tools.internal.search_available_tools import SearchAvailableTools
+from src.tools.shared.tool_runtime import inject_identity
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -77,8 +78,9 @@ def tool_with_catalog() -> SearchAvailableTools:
 
 
 class TestSearchAvailableToolsInit:
-    def test_init_should_accept_default_user_thread(self):
-        t = SearchAvailableTools(agent_id="test")
+    def test_init_should_work_without_identity(self):
+        t = SearchAvailableTools()
+        inject_identity(t, "", "", "test")
         assert t.user_id == ""
         assert t.thread_id == ""
 

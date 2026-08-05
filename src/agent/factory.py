@@ -258,8 +258,6 @@ class AgentFactory:
             raise RuntimeError(
                 f"Agent类 '{class_name}' 在模块 '{module_path}' 中不存在 (Agent: {agent_id}): {e}",
             ) from e
-        except RuntimeError:
-            raise
         except Exception as e:
             raise RuntimeError(f"加载Agent '{agent_id}' 失败: {e}") from e
 

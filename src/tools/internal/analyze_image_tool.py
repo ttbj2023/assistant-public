@@ -8,12 +8,17 @@ import logging
 from pathlib import Path
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
 from src.files import AttachmentDTO
 from src.inference.llm.response_utils import content_to_text
-from src.tools.shared.base_internal_tool import BaseInternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import (
+    format_tool_error,
+    format_tool_success,
+    sync_runnable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,8 @@ class AnalyzeImageInput(QueryAliasModel):
     _field_aliases: ClassVar[dict[str, str]] = {
         "image_id": "attachment_id",
         "file_id": "attachment_id",
+        "requirement": "prompt",
+        "description": "prompt",
     }
 
     model_config = ConfigDict(
@@ -61,7 +68,8 @@ class AnalyzeImageInput(QueryAliasModel):
     )
 
 
-class AnalyzeImageTool(BaseInternalTool):
+@sync_runnable
+class AnalyzeImageTool(BaseTool):
     """图片分析工具."""
 
     name: str = "analyze_image"
@@ -99,15 +107,15 @@ class AnalyzeImageTool(BaseInternalTool):
         try:
             entry = await self._resolve_entry(attachment_id, recent_index)
             if not entry:
-                return self._format_error(ValueError("未找到可读取的图片附件"))
+                return format_tool_error(ValueError("未找到可读取的图片附件"))
             if entry.file_type != "image":
-                return self._format_error(
+                return format_tool_error(
                     ValueError(f"附件 {entry.file_id} 不是图片"),
                 )
 
             image_path = self._resolve_image_path(entry)
             if not image_path.exists():
-                return self._format_error(
+                return format_tool_error(
                     FileNotFoundError(f"图片文件已不存在: {entry.filename}"),
                 )
 
@@ -118,10 +126,10 @@ class AnalyzeImageTool(BaseInternalTool):
                 prompt,
             )
             if not result.strip():
-                return self._format_error(RuntimeError("视觉模型未返回有效结果"))
+                return format_tool_error(RuntimeError("视觉模型未返回有效结果"))
 
             result = result[:max_chars]
-            return self._format_success(
+            return format_tool_success(
                 {
                     "attachment_id": entry.file_id,
                     "round_number": entry.round_number,
@@ -135,7 +143,7 @@ class AnalyzeImageTool(BaseInternalTool):
 
         except Exception as e:
             logger.exception("analyze_image 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     async def _resolve_entry(
         self,

@@ -23,13 +23,17 @@ system_prompt: |
 
 tools:
   - "search_available_tools"
-  - "export_document"
   - "wechat_publish"
   - "web_research"
 
 # Skills: 领域知识+定向能力, 通过load_skill按需加载(渐进式披露)
 skills:
   - "chart_maker"
+  - "export_document"
 
 memory:
   type: "simple"
+
+# 领域数据子系统: 经验洞察(主模型每轮覆写)
+domain_data:
+  - "insights"

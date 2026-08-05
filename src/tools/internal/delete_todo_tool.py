@@ -5,9 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.internal.todo_manager_base import TodoManagerBase
+from src.tools.internal.todo_helpers import (
+    TodoServiceAccessor,
+    json_result,
+)
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +28,8 @@ class DeleteTodoRequest(BaseModel):
     todo_id: int = Field(..., description="要删除的任务ID(必填)")
 
 
-class DeleteTodoTool(TodoManagerBase):
+@sync_runnable
+class DeleteTodoTool(BaseTool):
     """删除一条TODO任务."""
 
     name: str = "delete_todo"
@@ -39,24 +45,28 @@ class DeleteTodoTool(TodoManagerBase):
     )
     args_schema: type[DeleteTodoRequest] = DeleteTodoRequest
 
+    def _get_accessor(self) -> TodoServiceAccessor:
+        if not hasattr(self, "_todo_acc"):
+            acc = TodoServiceAccessor(self.user_id, self.thread_id, self.agent_id)
+            object.__setattr__(self, "_todo_acc", acc)
+        return self._todo_acc
+
     @override
     async def _arun(self, **kwargs: Any) -> str:
         try:
             request = DeleteTodoRequest(**kwargs)
-            service = await self._get_todo_service()
+            service = await self._get_accessor().get_service()
             deleted = await service.delete_todo(request.todo_id, self.user_id)
 
             if deleted:
-                current_todos = await self._get_fresh_todolist()
+                current_todos = await self._get_accessor().get_fresh_todolist()
                 extra: dict[str, Any] = {
                     "action": "deleted",
                     "affected_todo_id": request.todo_id,
                     "current_todos": current_todos,
                 }
-                return self._json_result(
-                    True, f"成功删除任务ID: {request.todo_id}", **extra
-                )
-            return self._json_result(
+                return json_result(True, f"成功删除任务ID: {request.todo_id}", **extra)
+            return json_result(
                 False,
                 f"任务ID {request.todo_id} 不存在或删除失败",
                 action=None,
@@ -64,9 +74,7 @@ class DeleteTodoTool(TodoManagerBase):
             )
         except Exception as e:
             logger.error("删除任务失败: %s", e)
-            return self._json_result(
-                False, f"删除任务失败: {e!s}", action=None, error=str(e)
-            )
+            return json_result(False, f"删除任务失败: {e!s}", action=None, error=str(e))
 
 
 __all__ = ["DeleteTodoTool"]

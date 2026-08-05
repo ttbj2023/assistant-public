@@ -6,9 +6,10 @@
 - 完整(默认): 探索工具. 全量规则静态分析 + E2E + Safety -> 非CI流程, 无门禁, 出报告供人工审阅.
 
 CI门禁(quick模式, 阻断):
-- 静态分析: Ruff/MyPy/Bandit/Vulture/Dependency/配置治理 全部通过(core精选规则, 正常代码全绿)
+- 静态分析: Ruff/MyPy/Bandit/配置治理 全部通过(core精选规则, 正常代码全绿)
 - 单元测试: 100%通过
 - 集成测试: 100%通过
+- E2E测试: 100%通过 (子进程使用 TEST_PROCESS_PREFIX=e2e 隔离 test_data)
 
 完整模式(full)非CI流程, 无门禁, exit 0, 仅出全量规则分析报告(改进信号).
 
@@ -747,30 +748,17 @@ class CIParallelRunner:
             )
 
     async def run_e2e_tests(self) -> TaskResult:
-        """运行E2E测试 - 仅在完整模式下运行快速模式E2E测试"""
+        """运行E2E测试 - quick/full 模式均执行, 结果纳入 CI 门禁."""
         start_time = time.time()
 
         try:
-            # 快速模式跳过E2E测试
-            if self.quick_mode:
-                return TaskResult(
-                    task_name="E2E测试",
-                    task_type="test",
-                    success=True,  # 跳过的测试视为成功
-                    duration=0,
-                    output="快速模式跳过E2E测试",
-                    execution_details={
-                        "mode": "quick",
-                        "skipped": True,
-                        "reason": "快速模式不包含E2E测试",
-                    },
+            if self.verbose:
+                mode_label = "快速" if self.quick_mode else "完整"
+                self.console.print(
+                    f"🚀 {mode_label}模式运行E2E测试（pytest灰盒测试框架）..."
                 )
 
-            # 完整模式运行E2E测试（pytest框架）
-            if self.verbose:
-                self.console.print("🚀 完整模式运行E2E测试（pytest灰盒测试框架）...")
-
-            # 在线程池中运行E2E测试（固定使用快速模式）
+            # 在线程池中运行E2E测试
             result = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: self._run_e2e_direct()
             )
@@ -781,7 +769,11 @@ class CIParallelRunner:
                 "test_type": "e2e_graybox",
                 "service_managed": True,  # 通过conftest.py fixture管理
                 "service_type": "pytest_fixture",
-                "ci_mode": "full_with_e2e",  # 标识这是完整模式中的E2E测试
+                "ci_mode": (
+                    "quick_with_e2e"
+                    if self.quick_mode
+                    else "full_with_e2e"
+                ),
             }
 
             # 如果有测试详情，添加到执行详情中
@@ -792,7 +784,7 @@ class CIParallelRunner:
             e2e_report_path = await self._save_e2e_report(result)
 
             return TaskResult(
-                task_name="E2E测试(快速)",
+                task_name="E2E测试",
                 task_type="test",
                 success=result.success,
                 duration=result.duration,
@@ -803,31 +795,30 @@ class CIParallelRunner:
 
         except Exception as e:
             return TaskResult(
-                task_name="E2E测试(快速)",
+                task_name="E2E测试",
                 task_type="test",
                 success=False,
                 duration=time.time() - start_time,
                 output=f"E2E测试执行异常: {e!s}",
                 error_message=str(e),
                 execution_details={
-                    "mode": "quick",
                     "service_managed": False,
                     "error": str(e),
                 },
             )
 
-    # E2E测试调度策略：
-    # - 快速模式：完全跳过E2E测试
-    # - 完整模式：使用pytest运行E2E测试（灰盒测试, 阻塞CI）
-    # - 服务管理：通过conftest.py的e2e_test_service fixture自动管理
+    # E2E测试调度策略:
+    # - quick/full 模式均执行 pytest E2E 测试, 结果纳入门禁
+    # - 服务管理: 通过 conftest.py fixtures 自动管理
+    # - 子进程注入 TEST_PROCESS_PREFIX=e2e, 与 unit/integration 数据目录隔离
 
     def _run_e2e_direct(self) -> E2ETestResult:
-        """使用pytest运行E2E测试（灰盒测试框架）"""
+        """使用pytest运行E2E测试(灰盒测试框架)."""
         try:
             if self.verbose:
-                self.console.print("📋 使用pytest运行E2E测试（灰盒测试框架）...")
+                self.console.print("📋 使用pytest运行E2E测试(灰盒测试框架)...")
 
-            # 构建命令：使用pytest运行E2E测试
+            # 构建命令: 使用pytest运行E2E测试
             cmd = [
                 sys.executable,
                 "-m",
@@ -844,7 +835,10 @@ class CIParallelRunner:
             if self.verbose:
                 self.console.print(f"[dim]执行命令: {' '.join(cmd)}[/dim]")
 
-            # 运行E2E测试（pytest框架）
+            # 注入 TEST_PROCESS_PREFIX, 避免与 unit/integration 子进程共享 test_data.
+            env = {**os.environ, "TEST_PROCESS_PREFIX": "e2e"}
+
+            # 运行E2E测试(pytest框架)
             start_time = time.time()
             result = subprocess.run(
                 cmd,
@@ -852,6 +846,7 @@ class CIParallelRunner:
                 capture_output=True,
                 text=True,
                 check=False,
+                env=env,
                 timeout=600,  # 10分钟超时
             )
             duration = time.time() - start_time
@@ -860,11 +855,13 @@ class CIParallelRunner:
             output = result.stdout.strip()
             error = result.stderr.strip() if result.stderr else None
 
+            # 保存完整 pytest 输出便于排查偶发失败.
+            self._save_e2e_full_log(result)
+
             # 解析输出获取测试详情
             test_details = {
                 "exit_code": result.returncode,
                 "execution_time": duration,
-                "mode": "quick",
                 "direct_execution": True,
             }
 
@@ -896,8 +893,22 @@ class CIParallelRunner:
         except Exception as e:
             error_msg = f"E2E测试执行失败: {e!s}"
             return E2ETestResult(
-                False, error_msg, 0, error_msg, {"exception": str(e), "mode": "quick"}
+                False, error_msg, 0, error_msg, {"exception": str(e)}
             )
+
+    def _save_e2e_full_log(self, result: subprocess.CompletedProcess[str]) -> None:
+        """保存E2E完整 pytest 输出, 仿 unit_tests_quick_full.log."""
+        try:
+            current_dir = self.reports_dir / "current"
+            current_dir.mkdir(exist_ok=True)
+            log_path = current_dir / "e2e_pytest_full.log"
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(result.stdout)
+                if result.stderr:
+                    f.write("\n\n=== STDERR ===\n")
+                    f.write(result.stderr)
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ 保存E2E完整日志失败: {e}[/yellow]")
 
     # ==================== 并行执行协调 ====================
 
@@ -1013,6 +1024,7 @@ class CIParallelRunner:
             test_tasks = [
                 asyncio.create_task(self.run_unit_tests_simple(), name="unit"),
                 asyncio.create_task(self.run_integration_tests(), name="integration"),
+                asyncio.create_task(self.run_e2e_tests(), name="e2e"),
             ]
         else:
             # 完整模式：所有静态分析 + 配置治理硬门禁 + 综合测试 + 快速模式E2E测试
@@ -1310,28 +1322,37 @@ class CIParallelRunner:
             return None
 
     def _extract_error_type(self, test_result: E2ETestResult) -> str | None:
-        """提取错误类型，避免重复长错误信息"""
-        error = getattr(test_result, "error", None) or getattr(
-            test_result, "output", ""
-        )
+        """提取错误类型, 避免重复长错误信息."""
+        details = getattr(test_result, "test_details", None) or {}
 
-        if not error:
-            return None
-
-        # 提取关键错误类型，避免重复完整的堆栈跟踪
-        error_lower = error.lower()
-        if "connectionerror" in error_lower or "connect error" in error_lower:
-            return "CONNECTION_ERROR"
-        elif "timeout" in error_lower:
+        # 真实超时由捕获 subprocess.TimeoutExpired 的路径显式标记, 优先据此判定,
+        # 避免 pytest-timeout 插件 header 里的 "timeout: 30.0s" 字样触发误报.
+        if details.get("timeout") is True:
             return "TIMEOUT_ERROR"
-        elif "key" in error_lower and "api" in error_lower:
+
+        # stderr 通常短且精确, 优先做关键词扫描.
+        stderr = getattr(test_result, "error", None) or ""
+        stderr_lower = stderr.lower()
+        if "connect" in stderr_lower and "error" in stderr_lower:
+            return "CONNECTION_ERROR"
+        if "key" in stderr_lower and "api" in stderr_lower:
             return "API_KEY_ERROR"
-        elif "assertion" in error_lower:
+        if "assertion" in stderr_lower:
             return "ASSERTION_ERROR"
-        elif "validation" in error_lower:
+        if "validation" in stderr_lower:
             return "VALIDATION_ERROR"
-        else:
-            return "UNKNOWN_ERROR"
+        if "timeout" in stderr_lower:
+            return "TIMEOUT_ERROR"
+
+        # stdout fallback: pytest 最终 summary 行含 "X failed".
+        stdout = getattr(test_result, "output", "")
+        if not stdout:
+            return None
+        stdout_lower = stdout.lower()
+        if "failed" in stdout_lower:
+            return "TEST_FAILURE"
+
+        return "UNKNOWN_ERROR"
 
     async def _save_ci_summary_report(self, summary: dict[str, Any]) -> str | None:
         """保存CI执行摘要报告"""

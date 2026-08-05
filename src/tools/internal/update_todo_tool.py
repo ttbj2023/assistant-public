@@ -5,9 +5,18 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.internal.todo_manager_base import TodoManagerBase
+from src.tools.internal.todo_helpers import (
+    TodoServiceAccessor,
+    json_result,
+    parse_due_date,
+    parse_priority,
+    parse_status,
+    todo_to_dict,
+)
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +40,8 @@ class UpdateTodoRequest(BaseModel):
     due_date: str | None = Field(None, description="新截止日期, ISO格式")
 
 
-class UpdateTodoTool(TodoManagerBase):
+@sync_runnable
+class UpdateTodoTool(BaseTool):
     """更新一条TODO任务, 只更新提供的字段."""
 
     name: str = "update_todo"
@@ -48,11 +58,17 @@ class UpdateTodoTool(TodoManagerBase):
     )
     args_schema: type[UpdateTodoRequest] = UpdateTodoRequest
 
+    def _get_accessor(self) -> TodoServiceAccessor:
+        if not hasattr(self, "_todo_acc"):
+            acc = TodoServiceAccessor(self.user_id, self.thread_id, self.agent_id)
+            object.__setattr__(self, "_todo_acc", acc)
+        return self._todo_acc
+
     @override
     async def _arun(self, **kwargs: Any) -> str:
         try:
             request = UpdateTodoRequest(**kwargs)
-            service = await self._get_todo_service()
+            service = await self._get_accessor().get_service()
 
             update_kwargs: dict[str, Any] = {
                 "todo_id": request.todo_id,
@@ -61,6 +77,9 @@ class UpdateTodoTool(TodoManagerBase):
 
             provided = request.model_fields_set
 
+            # 设计意图: update 只更新显式提供的字段, 允许仅传 todo_id(标题不变);
+            # 标题强制要求仅在 create_todo. 显式传入空标题时静默忽略(视为未提供),
+            # 避免把任务标题改成空串产生无效记录.
             if "title" in provided and request.title:
                 update_kwargs["title"] = request.title.strip()
 
@@ -68,32 +87,30 @@ class UpdateTodoTool(TodoManagerBase):
                 update_kwargs["description"] = request.description.strip()
 
             if "priority" in provided and request.priority is not None:
-                update_kwargs["priority"] = self._parse_priority(request.priority)
+                update_kwargs["priority"] = parse_priority(request.priority)
 
             if "status" in provided and request.status is not None:
-                update_kwargs["status"] = self._parse_status(request.status)
+                update_kwargs["status"] = parse_status(request.status)
 
             if "due_date" in provided and request.due_date is not None:
-                update_kwargs["due_date"] = self._parse_due_date(request.due_date)
+                update_kwargs["due_date"] = parse_due_date(request.due_date)
 
             updated = await service.update_todo(**update_kwargs)
-            todo_dict = self._todo_to_dict(updated)
-            current_todos = await self._get_fresh_todolist()
+            todo_dict = todo_to_dict(updated)
+            current_todos = await self._get_accessor().get_fresh_todolist()
             extra: dict[str, Any] = {
                 "action": "updated",
                 "affected_todo_id": updated.id,
                 "todo": todo_dict,
                 "current_todos": current_todos,
             }
-            return self._json_result(True, f"成功更新任务: {updated.title}", **extra)
+            return json_result(True, f"成功更新任务: {updated.title}", **extra)
         except ValueError as e:
             logger.error("更新任务失败(验证错误): %s", e)
-            return self._json_result(False, str(e), action=None, error=str(e))
+            return json_result(False, str(e), action=None, error=str(e))
         except Exception as e:
             logger.error("更新任务失败: %s", e)
-            return self._json_result(
-                False, f"更新任务失败: {e!s}", action=None, error=str(e)
-            )
+            return json_result(False, f"更新任务失败: {e!s}", action=None, error=str(e))
 
 
 __all__ = ["UpdateTodoTool"]

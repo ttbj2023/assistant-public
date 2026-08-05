@@ -1,6 +1,6 @@
 # 健康数据统一提取 Prompt
 # 单次调用完成: 检测 + 分类 + 转录
-# 使用 DeepSeek V4 Flash + JSON Mode
+# 模型经 model_loader 按配置调用, 启用 JSON Mode
 
 unified_extraction: |
   分析以下用户对话内容, 提取所有健康相关数据.

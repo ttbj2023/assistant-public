@@ -7,23 +7,30 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, override
+
+from sqlalchemy import text
+
+from src.inference.content_analyzer.pinned_memory_rewriter import (
+    MAX_LINES,
+    MAX_TOTAL_LENGTH,
+)
 
 from ..dao.async_pinned_memory_block_dao import AsyncPinnedMemoryBlockDAO
+from .health_check_mixin import ServiceHealthCheckMixin
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
-MAX_LINES = 20
-MAX_TOTAL_LENGTH = 800
 
-
-class PinnedMemoryBlockService:
+class PinnedMemoryBlockService(ServiceHealthCheckMixin):
     """统一置顶记忆单一块服务."""
 
     def __init__(self, session_factory: async_sessionmaker) -> None:
+        ServiceHealthCheckMixin.__init__(self)
+        self._session_factory = session_factory
         self._dao = AsyncPinnedMemoryBlockDAO(session_factory)
 
     @staticmethod
@@ -73,13 +80,82 @@ class PinnedMemoryBlockService:
         await self._dao.upsert(user_id, thread_id, content)
         return content
 
-    async def clear(self, user_id: str, thread_id: str) -> bool:
-        """清空记忆块."""
-        return await self._dao.delete(user_id, thread_id)
-
     async def get_formatted(self, user_id: str, thread_id: str) -> str:
         """供注入 system prompt 用的格式化文本 (空则空串, 由调用方决定是否注入)."""
         return await self.get_content(user_id, thread_id)
+
+    @override
+    async def _check_service_health(self) -> dict[str, Any]:
+        """置顶记忆块健康检查 (统计 pinned_memory_block 表)."""
+        try:
+            statistics = await self._get_statistics()
+            return {
+                "status": "healthy",
+                "database_connected": True,
+                "statistics": statistics,
+                "error": None,
+                "additional_info": {"dao_accessible": True},
+            }
+        except Exception as e:
+            self.logger.error("❌ 置顶记忆块健康检查失败: %s", e, exc_info=True)
+            return {
+                "status": "unhealthy" if "connection" in str(e).lower() else "degraded",
+                "database_connected": False,
+                "statistics": {},
+                "error": str(e),
+                "additional_info": {"dao_accessible": False},
+            }
+
+    async def _get_statistics(self) -> dict[str, Any]:
+        """获取置顶记忆块统计信息."""
+        try:
+            async with self._session_factory() as session:
+                count_result = await session.execute(
+                    text("SELECT COUNT(*) FROM pinned_memory_block"),
+                )
+                total_records = count_result.scalar() or 0
+
+                nonempty_result = await session.execute(
+                    text(
+                        "SELECT COUNT(*) FROM pinned_memory_block "
+                        "WHERE content IS NOT NULL AND content != ''"
+                    ),
+                )
+                nonempty_records = nonempty_result.scalar() or 0
+
+                latest_result = await session.execute(
+                    text("SELECT MAX(updated_at) FROM pinned_memory_block"),
+                )
+                latest_time = latest_result.scalar()
+
+                user_result = await session.execute(
+                    text("SELECT COUNT(DISTINCT user_id) FROM pinned_memory_block"),
+                )
+                total_users = user_result.scalar() or 0
+
+                thread_result = await session.execute(
+                    text("SELECT COUNT(DISTINCT thread_id) FROM pinned_memory_block"),
+                )
+                total_threads = thread_result.scalar() or 0
+
+                return {
+                    "total_records": total_records,
+                    "nonempty_records": nonempty_records,
+                    "latest_memory_time": latest_time.isoformat()
+                    if latest_time
+                    else None,
+                    "total_users": total_users,
+                    "total_threads": total_threads,
+                }
+        except Exception as e:
+            logger.warning("获取置顶记忆块统计信息失败: %s", e)
+            return {
+                "total_records": 0,
+                "nonempty_records": 0,
+                "latest_memory_time": None,
+                "total_users": 0,
+                "total_threads": 0,
+            }
 
 
 __all__ = ["PinnedMemoryBlockService"]

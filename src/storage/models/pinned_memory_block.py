@@ -1,8 +1,7 @@
 """统一置顶记忆单一块数据模型.
 
 主模型每轮全文覆写的存储载体. 每 user/thread/agent 单行, content 为完整
-记忆文本 (一行一条). 与 simple_pinned_memory 表共存于 pinned_memory.db
-(迁移期间), 迁移完成后旧表停用.
+记忆文本 (一行一条).
 """
 
 from __future__ import annotations

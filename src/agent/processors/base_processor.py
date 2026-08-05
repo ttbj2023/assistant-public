@@ -24,12 +24,14 @@ class MessageContext:
         current_content: 当前轮 HumanMessage 的文本内容(含 XML 标签).
         system_prompt_extension: 追加到 system_prompt 尾部的额外内容,
             例如置顶记忆. 为空字符串时不拼接.
+        earliest_round: Push 上下文窗口最早轮次号 (检索工具用于过滤已在上下文中的轮次).
 
     """
 
     history_messages: list[BaseMessage] = field(default_factory=list)
     current_content: str = ""
     system_prompt_extension: str = ""
+    earliest_round: int | None = None
 
 
 class BaseProcessor(ABC):

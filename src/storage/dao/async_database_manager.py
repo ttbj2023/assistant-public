@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +44,6 @@ from src.storage.models.health_data import (
 from src.storage.models.pinned_memory_block import PinnedMemoryBlock
 from src.storage.models.price_alert import PriceAlertRule
 from src.storage.models.scheduled_message import ScheduledMessage
-from src.storage.models.simple_pinned_memory import SimplePinnedMemory
 from src.storage.models.todo import TodoItem
 from src.storage.models.usage import UsageRecord
 from src.storage.models.user_channel_config import UserChannelConfig
@@ -60,6 +60,8 @@ _db_cache_lock = asyncio.Lock()
 async def _get_or_create_db_manager(
     database_url: str,
     tables: list[type[SQLModel]] | None = None,
+    *,
+    post_create: Callable[[AsyncDatabaseManager], Awaitable[None]] | None = None,
 ) -> AsyncDatabaseManager:
     cached = _db_manager_cache.get(database_url)
     if cached is not None:
@@ -71,6 +73,8 @@ async def _get_or_create_db_manager(
         manager = AsyncDatabaseManager(database_url)
         if tables:
             await manager.create_tables(tables)
+        if post_create is not None:
+            await post_create(manager)
         _db_manager_cache[database_url] = manager
         return manager
 
@@ -375,30 +379,10 @@ async def create_async_pinned_memory_db_manager(
 
     """
     db_path = get_database_path(user_id, thread_id, "pinned_memory", agent_id=agent_id)
-    database_url = f"sqlite+aiosqlite:///{db_path}"
-
-    if database_url in _db_manager_cache:
-        return _db_manager_cache[database_url]
-
-    async with _db_cache_lock:
-        if database_url in _db_manager_cache:
-            return _db_manager_cache[database_url]
-
-        manager = AsyncDatabaseManager(database_url)
-        await manager.create_tables([SimplePinnedMemory, PinnedMemoryBlock])
-
-        # 数据迁移: 清理已移除的 OTHER_INFO 枚举值 (f59c162e 重命名为 ADDRESSING)
-        async with manager.engine.begin() as conn:
-            result = await conn.execute(
-                text(
-                    "DELETE FROM simple_pinned_memory WHERE memory_type = 'OTHER_INFO'"
-                ),
-            )
-            if result.rowcount > 0:
-                logger.info("✅ 迁移: 清理 %d 条 OTHER_INFO 记忆", result.rowcount)
-
-        _db_manager_cache[database_url] = manager
-        return manager
+    return await _get_or_create_db_manager(
+        f"sqlite+aiosqlite:///{db_path}",
+        tables=[PinnedMemoryBlock],
+    )
 
 
 async def create_async_conversation_history_db_manager(
@@ -475,59 +459,51 @@ async def create_async_health_data_db_manager(
 
     """
     db_path = get_database_path(user_id, thread_id, "health_data", agent_id=agent_id)
-    database_url = f"sqlite+aiosqlite:///{db_path}"
 
-    if database_url in _db_manager_cache:
-        return _db_manager_cache[database_url]
+    health_tables = [
+        MedicalReport,
+        DailyHealthSummary,
+        WeeklyHealthSummary,
+        ShoppingItem,
+        FoodProduct,
+        WorkoutRecord,
+        MealRecord,
+        WeightRecord,
+        WorkoutSample,
+        ECGRecord,
+    ]
 
-    async with _db_cache_lock:
-        if database_url in _db_manager_cache:
-            return _db_manager_cache[database_url]
+    return await _get_or_create_db_manager(
+        f"sqlite+aiosqlite:///{db_path}",
+        tables=health_tables,
+        post_create=_run_health_migrations,
+    )
 
-        manager = AsyncDatabaseManager(database_url)
 
-        health_tables = [
-            MedicalReport,
-            DailyHealthSummary,
-            WeeklyHealthSummary,
-            ShoppingItem,
-            FoodProduct,
-            WorkoutRecord,
-            MealRecord,
-            WeightRecord,
-            WorkoutSample,
-            ECGRecord,
-        ]
+async def _run_health_migrations(manager: AsyncDatabaseManager) -> None:
+    """健康数据库建表后的幂等迁移 (仅新建 manager 时执行一次)."""
+    migration_columns = {
+        "meal_records": [
+            ("source", "VARCHAR DEFAULT 'conversation_extraction'"),
+        ],
+    }
 
-        await manager.create_tables(health_tables)
-        logger.info(f"✅ 创建健康数据数据库表: {len(health_tables)}个表")
-
-        migration_columns = {
-            "meal_records": [
-                ("source", "VARCHAR DEFAULT 'conversation_extraction'"),
-            ],
-        }
-
-        async with manager.engine.begin() as conn:
-            for table_name, columns in migration_columns.items():
-                for col_name, col_type in columns:
-                    try:
-                        await conn.execute(
-                            text(
-                                f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}",
-                            ),
-                        )
-                        logger.info("✅ 迁移: %s.%s", table_name, col_name)
-                    except Exception as e:
-                        if "duplicate column name" in str(e).lower():
-                            logger.debug("列已存在, 跳过: %s.%s", table_name, col_name)
-                        else:
-                            logger.warning(
-                                "迁移失败 %s.%s: %s", table_name, col_name, e
-                            )
-
-        _db_manager_cache[database_url] = manager
-        return manager
+    async with manager.engine.begin() as conn:
+        for table_name, columns in migration_columns.items():
+            for col_name, col_type in columns:
+                try:
+                    await conn.execute(
+                        text(
+                            f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}",
+                        ),
+                    )
+                    logger.info("✅ 迁移: %s.%s", table_name, col_name)
+                except Exception as e:
+                    if "duplicate column name" in str(e).lower():
+                        logger.debug("列已存在, 跳过: %s.%s", table_name, col_name)
+                    else:
+                        logger.warning("迁移失败 %s.%s: %s", table_name, col_name, e)
+    logger.info("✅ 创建健康数据数据库表完成, 含迁移检查")
 
 
 async def create_async_scheduled_message_db_manager(
@@ -562,6 +538,7 @@ async def create_async_scheduled_message_db_manager(
 async def create_async_channel_config_db_manager(
     user_id: str,
     thread_id: str,
+    *,
     agent_id: str,
 ) -> AsyncDatabaseManager:
     """创建异步渠道配置数据库管理器实例 (Agent级, 全局缓存复用Engine).

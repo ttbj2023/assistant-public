@@ -42,6 +42,7 @@ from src.tools.internal.create_todo_tool import CreateTodoTool
 from src.tools.internal.delete_todo_tool import DeleteTodoTool
 from src.tools.internal.list_todos_tool import ListTodosTool
 from src.tools.internal.update_todo_tool import UpdateTodoTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.mark.integration
@@ -68,18 +69,14 @@ class TestInternalToolsIntegration:
         业务价值: 确保TodoTool能正确管理用户任务并持久化存储
         """
         # Arrange - 创建 4 个子工具实例(拆分后每个操作对应独立工具)
-        create_tool = CreateTodoTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
-        list_tool = ListTodosTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
-        update_tool = UpdateTodoTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
-        delete_tool = DeleteTodoTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
+        create_tool = CreateTodoTool()
+        inject_identity(create_tool, test_user, test_thread_id, "test-agent")
+        list_tool = ListTodosTool()
+        inject_identity(list_tool, test_user, test_thread_id, "test-agent")
+        update_tool = UpdateTodoTool()
+        inject_identity(update_tool, test_user, test_thread_id, "test-agent")
+        delete_tool = DeleteTodoTool()
+        inject_identity(delete_tool, test_user, test_thread_id, "test-agent")
 
         # Act & Assert - 测试任务创建
         create_result = create_tool._run(
@@ -154,18 +151,14 @@ class TestInternalToolsIntegration:
         业务价值: 确保工具系统的数据安全性和一致性
         """
         # Arrange - 为两个线程分别创建 create/list 子工具实例
-        create_tool_thread1 = CreateTodoTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
-        create_tool_thread2 = CreateTodoTool(
-            user_id=test_user, thread_id="different_thread", agent_id="test-agent"
-        )
-        list_tool_thread1 = ListTodosTool(
-            user_id=test_user, thread_id=test_thread_id, agent_id="test-agent"
-        )
-        list_tool_thread2 = ListTodosTool(
-            user_id=test_user, thread_id="different_thread", agent_id="test-agent"
-        )
+        create_tool_thread1 = CreateTodoTool()
+        inject_identity(create_tool_thread1, test_user, test_thread_id, "test-agent")
+        create_tool_thread2 = CreateTodoTool()
+        inject_identity(create_tool_thread2, test_user, "different_thread", "test-agent")
+        list_tool_thread1 = ListTodosTool()
+        inject_identity(list_tool_thread1, test_user, test_thread_id, "test-agent")
+        list_tool_thread2 = ListTodosTool()
+        inject_identity(list_tool_thread2, test_user, "different_thread", "test-agent")
 
         # Act - 在不同线程创建任务
         task1_result = create_tool_thread1._run(
@@ -352,15 +345,12 @@ class TestToolManagerIntegration:
         user2_t1_tool = user2_thread1_tools[0]
 
         # 为每个上下文创建对应的 ListTodosTool(list 与 create 已拆分为独立子工具)
-        user1_t1_list = ListTodosTool(
-            user_id=user1, thread_id=thread_variants["thread1"], agent_id="test-agent"
-        )
-        user1_t2_list = ListTodosTool(
-            user_id=user1, thread_id=thread_variants["thread2"], agent_id="test-agent"
-        )
-        user2_t1_list = ListTodosTool(
-            user_id=user2, thread_id=thread_variants["thread3"], agent_id="test-agent"
-        )
+        user1_t1_list = ListTodosTool()
+        inject_identity(user1_t1_list, user1, thread_variants["thread1"], "test-agent")
+        user1_t2_list = ListTodosTool()
+        inject_identity(user1_t2_list, user1, thread_variants["thread2"], "test-agent")
+        user2_t1_list = ListTodosTool()
+        inject_identity(user2_t1_list, user2, thread_variants["thread3"], "test-agent")
 
         # Test 4: 在不同上下文中创建任务
         user1_t1_task = user1_t1_tool._run(

@@ -105,7 +105,7 @@ async def get_user_channel_config_service(
     db_manager = await create_async_channel_config_db_manager(
         user_id,
         thread_id,
-        agent_id,
+        agent_id=agent_id,
     )
 
     return UserChannelConfigService(

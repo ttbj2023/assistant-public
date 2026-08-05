@@ -69,6 +69,26 @@ class TestSyncDecorator:
             with pytest.raises(ValueError, match="SECURITY_CHECK_FAILED"):
                 target(query="<script>alert(1)</script>")
 
+    def test_security_check_failure_message_is_single_string(self) -> None:
+        """异常消息应是单个字符串, 而非 ValueError(msg, code) 的元组字面量."""
+
+        @secure_tool_params()
+        def target(**kwargs):
+            return "should not reach"
+
+        with patch(
+            "src.core.validation.security_decorators.UnifiedSanitizer"
+        ) as mock_cls:
+            mock_cls.return_value.sanitize_tool_params.side_effect = ValueError(
+                "dangerous input"
+            )
+            with pytest.raises(ValueError) as exc_info:
+                target(query="<script>alert(1)</script>")
+            msg = str(exc_info.value)
+            assert "SECURITY_CHECK_FAILED" in msg
+            assert "dangerous input" in msg
+            assert not msg.startswith("(")
+
     def test_output_sanitized_when_dict(self) -> None:
         @secure_tool_params()
         def target(**kwargs):

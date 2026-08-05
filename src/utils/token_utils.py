@@ -10,7 +10,7 @@ import math
 import re
 from typing import Any
 
-from src.core.cache import get_token_cache, is_token_cache_enabled
+from src.core.cache import get_token_cache
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +36,8 @@ class TokenEstimator:
 
         if self.enable_cache:
             try:
-                if is_token_cache_enabled():
-                    self._cache = get_token_cache()
-                    logger.debug("Token估算器缓存已启用: model=%s", model_name)
-                else:
-                    logger.debug("Token缓存已全局禁用")
+                self._cache = get_token_cache()
+                logger.debug("Token估算器缓存已启用: model=%s", model_name)
             except Exception as e:
                 logger.warning("Token缓存初始化失败,降级到无缓存模式: %s", e)
                 self.enable_cache = False

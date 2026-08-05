@@ -9,8 +9,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -125,7 +123,6 @@ class TestSimpleMemoryProcessor:
         self, processor: SimpleMemoryProcessor
     ) -> None:
         hint = processor.get_prompt_hint()
-        assert "pinned_memory" in hint
         assert "user_input" in hint
 
     @pytest.mark.asyncio
@@ -148,27 +145,17 @@ class TestSimpleMemoryProcessor:
             ],
         }
 
-        mock_block_service = AsyncMock()
-        mock_block_service.get_formatted.return_value = "测试记忆内容"
-        with patch(
-            "src.storage.service.create_pinned_memory_block_service",
-            new_callable=AsyncMock,
-            return_value=mock_block_service,
-        ):
-            ctx = await processor.build_messages_context(
-                user_input="当前输入",
-                user_id=test_user,
-                thread_id=test_thread_id,
-                processor_config=processor_config,
-            )
+        ctx = await processor.build_messages_context(
+            user_input="当前输入",
+            user_id=test_user,
+            thread_id=test_thread_id,
+            processor_config=processor_config,
+        )
 
         # system 被过滤, 历史剩 2 条
         assert len(ctx.history_messages) == 2
         assert isinstance(ctx.history_messages[0], HumanMessage)
         assert isinstance(ctx.history_messages[1], AIMessage)
-        # extension 注入 (统一 <pinned_memory> 标签)
-        assert "pinned_memory" in ctx.system_prompt_extension
-        assert "测试记忆内容" in ctx.system_prompt_extension
         # current_content 含 user_input
         assert "当前输入" in ctx.current_content
         assert "<user_input>" in ctx.current_content
@@ -184,19 +171,12 @@ class TestSimpleMemoryProcessor:
         agent_config = type("C", (), {"agent_id": "ta", "id": "ta"})()
         processor_config = {"agent_config": agent_config, "chat_messages": None}
 
-        mock_block_service = AsyncMock()
-        mock_block_service.get_formatted.return_value = ""
-        with patch(
-            "src.storage.service.create_pinned_memory_block_service",
-            new_callable=AsyncMock,
-            return_value=mock_block_service,
-        ):
-            ctx = await processor.build_messages_context(
-                user_input="第一条",
-                user_id=test_user,
-                thread_id=test_thread_id,
-                processor_config=processor_config,
-            )
+        ctx = await processor.build_messages_context(
+            user_input="第一条",
+            user_id=test_user,
+            thread_id=test_thread_id,
+            processor_config=processor_config,
+        )
 
         assert ctx.history_messages == []
         assert ctx.system_prompt_extension == ""

@@ -1,7 +1,7 @@
 """后台健康数据自动提取器 - 对话结束后静默提取健康数据.
 
 设计原则:
-- 单次 LLM 调用完成检测+分类+转录 (DeepSeek V4 Flash + JSON Mode)
+- 单次 LLM 调用完成检测+分类+转录 (JSON Mode, 模型经 model_loader 按配置调用)
 - 不传图片, 依赖主流程的图片描述文本
 - Fire-and-forget: 不阻塞主对话流程, 失败仅记录日志
 - 不推断营养数据, 只精确转录用户提供的数值
@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from src.core.datetime_utils import now_utc, to_user_tz
 from src.storage.service.health_data_extraction_service import (
     get_health_data_extraction_service,
 )
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 class HealthDataBackgroundExtractor:
     """后台健康数据自动提取器.
 
-    单次 DeepSeek Flash 调用提取所有健康数据, 不做推断.
+    单次 LLM 调用提取所有健康数据, 不做推断.
     纯粹从用户输入转录数据, 不查重不去重.
     """
 
@@ -69,7 +70,17 @@ class HealthDataBackgroundExtractor:
 
             combined_text = "\n\n".join(parts)
 
-            results = await extractor.extract(combined_text)
+            # 提取上下文的"今天"按用户时区, 避免非 CN 用户日期错位
+            tz = "Asia/Shanghai"
+            try:
+                from src.auth.auth_manager import get_auth_manager
+
+                tz = get_auth_manager().get_user_timezone(self.user_id)
+            except Exception as e:
+                logger.debug("用户时区获取失败, 使用默认 Asia/Shanghai: %s", e)
+            current_date = to_user_tz(now_utc(), tz).strftime("%Y-%m-%d")
+
+            results = await extractor.extract(combined_text, current_date=current_date)
 
             if not results:
                 logger.debug(

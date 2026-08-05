@@ -196,3 +196,47 @@ class TestSessionMessageQueueMergeIntegration:
             test_user, test_thread_id, limit=5
         )
         assert len(round_numbers) == 1, "合并批次应落库为 1 轮, 而非 2 轮"
+
+    @pytest.mark.asyncio
+    async def test_integration_exception_path_still_resets_user_context(
+        self, test_user, test_thread_id
+    ):
+        """推理异常时 _execute_agent 的 finally 仍重置用户上下文, 异常正确传播.
+
+        协作场景: SessionMessageQueue._execute_agent 的 try/finally 上下文清理
+        Mock 边界: Mock LLM (process_with_agent) 抛异常, reset_user_context 监听调用
+        验证重点:
+            1. 异常经 future 正确传播 (pytest.raises 捕获)
+            2. finally 中 reset_user_context 仍被调用 (异常路径不泄漏上下文)
+        业务价值: 确保推理失败不残留用户上下文 ContextVar, 补齐现有用例仅覆盖
+            正常路径的缺口.
+        """
+        from src.agent.manager import get_agent_manager
+        from src.session.session_queue import SessionMessageQueue
+
+        agent_manager = get_agent_manager()
+        agent = await agent_manager.get_agent("personal-assistant")
+        await agent.initialize()
+
+        original_llm = agent._orchestrator.inference_coordinator
+        queue = SessionMessageQueue.get(test_user, test_thread_id, "personal-assistant")
+
+        with (
+            patch("src.core.context.reset_user_context") as mock_reset,
+            patch.object(
+                original_llm,
+                "process_with_agent",
+                side_effect=ValueError("模拟推理失败"),
+            ),
+        ):
+            future = await queue.submit(
+                user_input="触发异常的消息",
+                image_datas=[],
+                timezone="Asia/Shanghai",
+                agent=agent,
+            )
+            # orchestrator 会包装原始异常为 RuntimeError, 但信息透传
+            with pytest.raises(RuntimeError, match="模拟推理失败"):
+                await asyncio.wait_for(future, timeout=5.0)
+
+        mock_reset.assert_called_once()

@@ -87,13 +87,10 @@ class SimpleContentAnalyzer:
             "enable_conversation_index",
             True,
         )
-        self.enable_pinned_memory_update = self.config.get(
-            "enable_pinned_memory_update",
-            True,
-        )
 
         logger.info(
-            f"📊 初始化SimpleContentAnalyzer,模型: {self.model_id}",
+            "📊 初始化SimpleContentAnalyzer, 模型: %s",
+            self.model_id,
         )
 
     async def _invoke(
@@ -254,10 +251,4 @@ def get_content_analyzer(
     return _analyzer_instance
 
 
-def clear_analyzer_cache() -> None:
-    """清空分析器缓存."""
-    global _analyzer_instance
-    _analyzer_instance = None
-
-
-__all__ = ["SimpleContentAnalyzer", "clear_analyzer_cache", "get_content_analyzer"]
+__all__ = ["SimpleContentAnalyzer", "get_content_analyzer"]

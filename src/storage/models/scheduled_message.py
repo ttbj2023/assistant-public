@@ -11,6 +11,8 @@ from pydantic import Field, field_validator
 from sqlmodel import Column, DateTime, SQLModel, text
 from sqlmodel import Field as SQLField
 
+from src.core.datetime_utils import now_utc
+
 
 class MessageStatus(StrEnum):
     """定时消息状态枚举."""
@@ -65,12 +67,12 @@ class ScheduledMessage(ScheduledMessageBase, table=True):
     thread_id: str = Field(..., description="线程ID")
     agent_id: str = Field(..., description="Agent ID")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),

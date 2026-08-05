@@ -12,11 +12,12 @@ import logging
 from typing import Any, ClassVar, override
 
 import httpx
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.storage.service.price_alert_service import get_quote_service_url
 from src.tools.internal.create_price_alert_tool import infer_market
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,8 @@ class QueryStockPriceRequest(BaseModel):
     )
 
 
-class QueryStockPriceTool(BaseInternalTool):
+@sync_runnable
+class QueryStockPriceTool(BaseTool):
     """查询A股个股实时行情."""
 
     name: str = "query_stock_price"
@@ -67,7 +69,6 @@ class QueryStockPriceTool(BaseInternalTool):
 - 沪深市场按代码前缀自动推断(6开头=沪, 0/3开头=深)"""
     args_schema: type[QueryStockPriceRequest] = QueryStockPriceRequest
 
-    @override
     async def is_available(self) -> bool:
         """只读查询工具, 无条件可用 (不受微信/邮件渠道配置限制).
 
@@ -103,12 +104,12 @@ class QueryStockPriceTool(BaseInternalTool):
         try:
             req = QueryStockPriceRequest(**kwargs)
         except Exception as e:
-            return self._format_error(e)
+            return format_tool_error(e)
 
         try:
             market = infer_market(req.stock_code)
         except ValueError as e:
-            return self._format_error(e)
+            return format_tool_error(e)
 
         try:
             resp = await self._request(

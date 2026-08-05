@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.storage.service.price_alert_service import get_price_alert_engine
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,8 @@ class CancelPriceAlertRequest(BaseModel):
     )
 
 
-class CancelPriceAlertTool(BaseInternalTool):
+@sync_runnable
+class CancelPriceAlertTool(BaseTool):
     """取消一条价格监控规则."""
 
     name: str = "cancel_price_alert"
@@ -49,7 +51,7 @@ class CancelPriceAlertTool(BaseInternalTool):
         try:
             req = CancelPriceAlertRequest(**kwargs)
         except Exception as e:
-            return self._format_error(e)
+            return format_tool_error(e)
 
         owner = (self.user_id, self.thread_id, self.agent_id)
         try:

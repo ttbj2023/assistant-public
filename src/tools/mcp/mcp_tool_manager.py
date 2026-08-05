@@ -14,8 +14,6 @@ import asyncio
 import copy
 import json
 import logging
-import os
-import re
 from typing import Any
 
 from langchain_core.tools import BaseTool, StructuredTool
@@ -25,20 +23,17 @@ from src.config.tools_config import McpServerConfig
 
 logger = logging.getLogger(__name__)
 
+
 _MCP_SEMAPHORE = asyncio.Semaphore(5)
 
 
 def _resolve_env_vars(text: str) -> str:
-    """替换字符串中的 ${ENV_VAR} 环境变量占位符."""
+    """替换字符串中的 ${ENV_VAR} 环境变量占位符.
 
-    def replacer(match: re.Match[str]) -> str:
-        var_name = match.group(1)
-        value = os.getenv(var_name, "")
-        if not value:
-            logger.warning("环境变量 %s 未设置", var_name)
-        return value
-
-    return re.sub(r"\$\{(\w+)\}", replacer, text)
+    复用 config 层 McpServerConfig 的占位符解析器, 避免在工具层裸用 os.getenv
+    (违反配置治理: 环境变量读取须集中在 src/config).
+    """
+    return McpServerConfig._resolve_env_vars(text)
 
 
 def _resolve_dict_env(d: dict[str, str]) -> dict[str, str]:
@@ -176,7 +171,11 @@ class McpBridge:
         self._server_configs = mcp_servers
         self._tools: dict[str, StructuredTool] = {}
         self._clients: list[Any] = []
+        # server_name → 当前可用 Client, 重连后更新; 工具调用据此动态解析, 避免闭包持有失效 client
+        self._server_clients: dict[str, Any] = {}
         self._loaded = False
+        # 串行化 加载/重载/关闭, 防并发重复创建 Client
+        self._lock = asyncio.Lock()
 
         self._server_semaphores: dict[str, asyncio.Semaphore] = {}
         for name, config in mcp_servers.items():
@@ -191,6 +190,15 @@ class McpBridge:
         if self._loaded:
             return
 
+        # 双重检查锁: 串行化加载, 防并发重复创建 Client
+        async with self._lock:
+            if self._loaded:
+                return
+            await self._do_load()
+            self._loaded = True
+
+    async def _do_load(self) -> None:
+        """实际加载逻辑 (调用方已持有 _lock)."""
         try:
             from fastmcp.client import Client
             from fastmcp.client.transports import (  # noqa: F401
@@ -200,7 +208,6 @@ class McpBridge:
             )
         except ImportError:
             logger.error("fastmcp未安装, 请运行: pip install fastmcp>=3.0.0")
-            self._loaded = True
             return
 
         enabled_servers = {
@@ -211,7 +218,6 @@ class McpBridge:
 
         if not enabled_servers:
             logger.info("没有启用的MCP服务器")
-            self._loaded = True
             return
 
         for server_name, config in enabled_servers.items():
@@ -224,6 +230,7 @@ class McpBridge:
                 client = Client(transport, timeout=timeout)
                 await client.__aenter__()
                 self._clients.append(client)
+                self._server_clients[server_name] = client
 
                 mcp_tools = await client.list_tools()
                 for mcp_tool in mcp_tools:
@@ -252,11 +259,25 @@ class McpBridge:
             except Exception as e:
                 logger.error("MCP服务器 %s 加载失败: %s", server_name, e)
 
-        self._loaded = True
         logger.info(
             f"MCP桥接器加载完成: {len(self._tools)}个工具 "
             f"来自{len(enabled_servers)}个服务器",
         )
+
+    def _get_active_client(
+        self,
+        server_name: str,
+        *,
+        fallback: Any = None,
+    ) -> Any:
+        """获取 server 当前可用的 Client (重连后自动指向新连接).
+
+        Args:
+            server_name: 服务器名
+            fallback: 映射缺失时的回退值 (兼容未走 _server_clients 的场景)
+
+        """
+        return self._server_clients.get(server_name, fallback)
 
     def _create_transport(self, config: McpServerConfig) -> Any:
         """根据配置创建fastmcp Transport实例."""
@@ -354,8 +375,10 @@ class McpBridge:
                 )
 
         async def arun(**kwargs: Any) -> str:
+            # 每次调用动态解析当前 client, 避免闭包持有重连前的失效连接
+            active = self._get_active_client(server_name, fallback=client)
             return await _call_with_retry(
-                client=client,
+                client=active,
                 tool_name=original_tool_name,
                 kwargs=kwargs,
                 formatter=formatter,
@@ -384,12 +407,16 @@ class McpBridge:
 
     async def close(self) -> None:
         """关闭所有Client连接."""
-        for client in self._clients:
+        # 先快照再清空映射, 避免与 _try_reconnect 并发修改列表时的迭代异常
+        async with self._lock:
+            clients = list(self._clients)
+            self._clients.clear()
+            self._server_clients.clear()
+        for client in clients:
             try:
                 await client.__aexit__(None, None, None)
             except Exception as e:
                 logger.debug("关闭MCP Client时出错: %s", e)
-        self._clients.clear()
         logger.info("MCP桥接器已关闭所有连接")
 
     async def health_check(self) -> dict[str, Any]:
@@ -591,6 +618,7 @@ async def _try_reconnect(
         new_client = Client(transport, timeout=timeout)
         await new_client.__aenter__()
         bridge._clients.append(new_client)
+        bridge._server_clients[server_name] = new_client
         logger.info("MCP重连成功: %s", server_name)
 
         if old_client is not None:

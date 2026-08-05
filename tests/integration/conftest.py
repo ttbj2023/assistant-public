@@ -2,6 +2,7 @@
 
 遵循灰盒测试原则，只Mock真正的外部依赖，使用真实的内部组件协作。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -218,26 +219,6 @@ async def pinned_memory_db(test_user, test_thread_id):
     await conn.execute("PRAGMA foreign_keys=ON")
     await conn.execute("PRAGMA synchronous=NORMAL")
 
-    # 创建simple_pinned_memory表
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS simple_pinned_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            thread_id TEXT NOT NULL,
-            memory_type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority INTEGER DEFAULT 50,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # 创建索引
-    await conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_pinned_memory_user_thread
-        ON simple_pinned_memory(user_id, thread_id, memory_type)
-    """)
-
     await conn.commit()
 
     print(f"[DEBUG] pinned_memory数据库: {db_path}")
@@ -316,28 +297,10 @@ async def db_session(test_user, test_thread_id):
         )
     """)
 
-    # 创建simple_pinned_memory表（置顶记忆表 - conversation_history数据库内）
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS simple_pinned_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            thread_id TEXT NOT NULL,
-            memory_type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority INTEGER DEFAULT 50,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
     # 创建索引
     await conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_conversation_user_thread
         ON conversation_index(user_id, thread_id)
-    """)
-    await conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_pinned_memory_user_thread
-        ON simple_pinned_memory(user_id, thread_id, memory_type)
     """)
 
     # 提交DDL语句（确保表结构持久化）

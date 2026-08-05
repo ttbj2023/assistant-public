@@ -7,7 +7,7 @@
 - AsyncDatabaseManager: 异步数据库管理器
 - AsyncTodoDAO: 异步TODO数据访问
 - AsyncConversationIndexDAO: 异步对话索引数据访问
-- AsyncSimplePinnedMemoryDAO: 异步置顶记忆数据访问
+- AsyncPinnedMemoryBlockDAO: 异步统一置顶记忆块数据访问
 """
 
 from __future__ import annotations
@@ -23,7 +23,6 @@ from .async_database_manager import (
     create_async_usage_db_manager,
 )
 from .async_pinned_memory_block_dao import AsyncPinnedMemoryBlockDAO
-from .async_simple_pinned_memory_dao import AsyncSimplePinnedMemoryDAO
 from .async_todo_dao import AsyncTodoDAO
 from .async_usage_dao import AsyncUsageDAO
 from .async_user_channel_config_dao import AsyncUserChannelConfigDAO
@@ -34,7 +33,6 @@ __all__ = [
     "AsyncDatabaseManager",
     "AsyncDatabaseOperations",
     "AsyncPinnedMemoryBlockDAO",
-    "AsyncSimplePinnedMemoryDAO",
     "AsyncTodoDAO",
     "AsyncUsageDAO",
     "AsyncUserChannelConfigDAO",

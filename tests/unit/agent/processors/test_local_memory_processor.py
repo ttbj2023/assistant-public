@@ -26,7 +26,7 @@ def _make_agent_config(
     """构造一个最小可用的 agent_config mock."""
     cfg = Mock()
     cfg.first_turn_prompt = first_turn_prompt
-    cfg.id = "personal-assistant"
+    cfg.agent_id = "personal-assistant"
     cfg.memory = Mock()
     cfg.memory.total_char_budget = total_char_budget
     cfg.tools = tools if tools is not None else []
@@ -227,6 +227,40 @@ class TestLocalMemoryProcessor:
                 thread_id="t1",
                 processor_config={},
             )
+
+    @pytest.mark.asyncio
+    async def test_resolves_agent_id_from_config_agent_id_attr(
+        self,
+        processor: LocalMemoryProcessor,
+        test_user: str,
+    ) -> None:
+        """未显式传 agent_id 时, 应从 agent_config.agent_id 解析 (而非 .id)."""
+        from types import SimpleNamespace
+
+        cfg = SimpleNamespace(
+            agent_id="health-assistant",
+            first_turn_prompt="引导",
+            memory=SimpleNamespace(total_char_budget=20000),
+            tools=[],
+            optional_tools=[],
+        )
+
+        mock_conv_service = AsyncMock()
+        mock_conv_service.get_latest_round_number.return_value = 0
+
+        with patch(
+            "src.agent.processors.local_memory_processor.create_conversation_service",
+            return_value=mock_conv_service,
+        ) as m:
+            ctx = await processor.build_messages_context(
+                user_input="hi",
+                user_id=test_user,
+                thread_id="t1",
+                processor_config={"agent_config": cfg},
+            )
+
+        assert m.call_args.kwargs["agent_id"] == "health-assistant"
+        assert "<first_turn_guidance>" in ctx.current_content
 
     @pytest.mark.asyncio
     async def test_first_turn_disabled_when_prompt_empty(

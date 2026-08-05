@@ -10,11 +10,12 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.core.notification import resolve_delivery
 from src.storage.service.price_alert_service import get_price_alert_engine
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,8 @@ class CreatePriceAlertRequest(BaseModel):
         return v
 
 
-class CreatePriceAlertTool(BaseInternalTool):
+@sync_runnable
+class CreatePriceAlertTool(BaseTool):
     """创建A股个股价格监控, 突破阈值时提醒一次."""
 
     name: str = "create_price_alert"
@@ -115,7 +117,6 @@ class CreatePriceAlertTool(BaseInternalTool):
 - 微信渠道需已配置接收凭证; 邮件需提供 email_address"""
     args_schema: type[CreatePriceAlertRequest] = CreatePriceAlertRequest
 
-    @override
     async def is_available(self) -> bool:
         """有微信渠道或邮件配置其一即注册."""
         if await resolve_delivery(
@@ -131,12 +132,12 @@ class CreatePriceAlertTool(BaseInternalTool):
         try:
             req = CreatePriceAlertRequest(**kwargs)
         except Exception as e:
-            return self._format_error(e)
+            return format_tool_error(e)
 
         try:
             market = infer_market(req.stock_code)
         except ValueError as e:
-            return self._format_error(e)
+            return format_tool_error(e)
 
         owner = (self.user_id, self.thread_id, self.agent_id)
         fields: dict[str, Any] = {
@@ -150,7 +151,7 @@ class CreatePriceAlertTool(BaseInternalTool):
 
         if req.delivery_method == "email":
             if not req.email_address:
-                return self._format_error(
+                return format_tool_error(
                     ValueError("email 投递需要 email_address 参数")
                 )
             fields["email_address"] = req.email_address

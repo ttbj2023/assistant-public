@@ -7,6 +7,7 @@
 - 每个测试独立 user+thread 数据隔离
 - 串行执行 (-n 0) 避免共享 test_data 目录竞态
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -60,13 +61,18 @@ def _reset_e2e_mock() -> Iterator[None]:
 def e2e_session_cleanup():
     """E2E测试会话级数据清理.
 
-    在 session 启动和结束时都清理 ./test_data:
+    在 session 启动和结束时都清理当前进程的 test_data 目录:
     - 启动时清理: 防止上一次 pytest 进程 teardown 不完整(文件被占用导致 rmtree
       部分失败)遗留损坏的 SQLite/ChromaDB 文件, 本次运行开头就报 disk I/O
       或 unable to open database file。
     - 结束时清理: 保持本地整洁。
+
+    目录名经 runtime_env.test_data_dir_name 解析, 适配 TEST_PROCESS_PREFIX
+    (如 e2e 子进程的 ./test_data_e2e), 避免硬编码 ./test_data 清不到。
     """
-    test_data_dir = Path("./test_data")
+    from src.config import runtime_env
+
+    test_data_dir = Path(runtime_env.test_data_dir_name(None))
     if test_data_dir.exists():
         shutil.rmtree(test_data_dir, ignore_errors=True)
     yield
@@ -191,20 +197,14 @@ def _force_nullpool_for_tests():
 @pytest_asyncio.fixture(autouse=True, loop_scope="session")
 async def _e2e_reset_state() -> AsyncIterator[None]:
     """每个测试前后: drain 后台任务 + dispose engine + 清缓存, 消除跨测试污染."""
-    from src.agent.memory.local_memory import (
-        index_run_service,
-        pinned_memory_service,
-    )
-    from src.agent.memory.simple_memory import service as simple_memory_service
+    from src.agent.memory.local_memory import index_run_service
     from src.storage.dao import async_database_manager as adm
     from src.storage.service.service_factory import clear_vector_cache
     from src.utils import async_utils
 
     async def _drain() -> None:
         tasks = [
-            *pinned_memory_service.get_bg_tasks(),
             *index_run_service.get_bg_tasks(),
-            *simple_memory_service.get_bg_tasks(),
             *set(async_utils._background_tasks),
         ]
         if not tasks:
@@ -214,7 +214,7 @@ async def _e2e_reset_state() -> AsyncIterator[None]:
                 asyncio.gather(*tasks, return_exceptions=True),
                 timeout=5.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             for t in tasks:
                 if not t.done():
                     t.cancel()
@@ -230,9 +230,7 @@ async def _e2e_reset_state() -> AsyncIterator[None]:
     await _drain()
     await adm.close_all_db_managers()
     clear_vector_cache()
-    pinned_memory_service.clear_module_state()
     index_run_service.clear_module_state()
-    simple_memory_service.clear_module_state()
 
 
 # =============================================================================

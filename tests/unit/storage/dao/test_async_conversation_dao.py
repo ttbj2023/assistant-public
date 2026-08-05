@@ -6,10 +6,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
-from datetime import UTC, datetime
 
 from src.storage.dao.async_conversation_dao import AsyncConversationIndexDAO
 from src.storage.models.conversation import ConversationIndex
@@ -381,6 +381,35 @@ class TestStoreIndexDataWithUpsert:
         # Assert
         assert result is not None
         mock_session.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_upsert_uses_external_session_when_provided(
+        self, conversation_dao, test_user
+    ):
+        """传入外部 session 时应直接使用, 不开新 transaction_scope (统一事务边界 C1)."""
+        external_session = MagicMock()
+        external_session.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=Mock(return_value=None))
+        )
+        external_session.add = Mock()
+        external_session.flush = AsyncMock()
+        external_session.refresh = AsyncMock()
+
+        mock_transaction = MagicMock()
+        conversation_dao.db_ops.transaction_scope = mock_transaction
+
+        await conversation_dao.store_index_data_with_upsert(
+            round_number=1,
+            user_message="test",
+            assistant_response="response",
+            user_id=test_user,
+            thread_id="test_thread_id",
+            agent_id="personal-assistant",
+            session=external_session,
+        )
+
+        external_session.add.assert_called_once()
+        mock_transaction.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_upsert_should_update_existing_record_when_exists(

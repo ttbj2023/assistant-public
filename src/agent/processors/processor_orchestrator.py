@@ -36,6 +36,7 @@ class _RequestContext(NamedTuple):
     prompt_sections: dict[str, str]
     llm_config: dict[str, Any]
     history_messages: list[Any] | None
+    earliest_round: int | None = None
 
 
 class ProcessorOrchestrator:
@@ -229,6 +230,7 @@ class ProcessorOrchestrator:
                 attachment_infos=attachment_infos,
                 history_messages=ctx.history_messages,
                 prompt_sections=ctx.prompt_sections,
+                earliest_round=ctx.earliest_round,
             )
             logger.info("✅ 推理协调器调用成功: %s:%s", user_id, thread_id)
 
@@ -634,6 +636,7 @@ class ProcessorOrchestrator:
                 attachment_infos=attachment_infos,
                 history_messages=ctx.history_messages,
                 prompt_sections=ctx.prompt_sections,
+                earliest_round=ctx.earliest_round,
             ):
                 yield content_chunk
 
@@ -660,7 +663,7 @@ class ProcessorOrchestrator:
         agent_id: str | None = None,
         attachment_infos: list[Any] | None = None,
         timezone: str = "Asia/Shanghai",
-        round_number: int | None = None,  # noqa: ARG002
+        round_number: int | None = None,
     ) -> ConversationData | None:
         """完成对话处理 - 记忆存储(流式响应专用).
 
@@ -732,6 +735,7 @@ class ProcessorOrchestrator:
                 ),
                 attachment_infos=attachment_infos,
                 timezone=timezone,
+                round_number=round_number,
             )
 
             # 从实例缓存取 messages 快照 (process_stream 时存入)
@@ -799,6 +803,11 @@ class ProcessorOrchestrator:
         if memory_parts:
             prompt_sections["memory"] = "\n\n".join(memory_parts)
 
+        # 领域数据注入 (由 OrchestratorAgent 收集, 通过 processor_config 传递)
+        domain_injection = processor_config.get("domain_injection", "")
+        if domain_injection:
+            prompt_sections["domain_data"] = domain_injection
+
         user_content = msg_ctx.current_content
         logger.debug(
             "📝 最终用户输入长度: %s 字符, 历史消息数: %s",
@@ -821,6 +830,7 @@ class ProcessorOrchestrator:
             prompt_sections=prompt_sections,
             llm_config=llm_config,
             history_messages=msg_ctx.history_messages or None,
+            earliest_round=msg_ctx.earliest_round,
         )
 
     async def _confirm_round_number(

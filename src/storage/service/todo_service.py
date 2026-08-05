@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, override
 
 from src.storage.dao.async_todo_dao import AsyncTodoDAO
@@ -671,31 +671,27 @@ class TodoService(ServiceHealthCheckMixin):
                 )
                 completed_todos = completed_result.scalar() or 0
 
-                # 获取过期TODO数
+                # 单次时间快照, 保证 overdue / due_today 用同一基准 (互斥)
+                now = datetime.now(UTC)
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                today_end = today_start + timedelta(days=1)
+
+                # 过期TODO: 严格早于今日零点 (与 due_today 互斥, 避免今日已过时刻的任务
+                # 同时计入 overdue)
                 overdue_result = await session.execute(
                     text(
-                        "SELECT COUNT(*) FROM todo_items WHERE due_date < :now AND status != :status",
+                        "SELECT COUNT(*) FROM todo_items "
+                        "WHERE due_date < :today_start AND status != :status",
                     ),
-                    {"now": datetime.now(UTC), "status": TodoStatus.COMPLETED.name},
+                    {"today_start": today_start, "status": TodoStatus.COMPLETED.name},
                 )
                 overdue_todos = overdue_result.scalar() or 0
 
-                # 获取今日到期TODO数
-                today_start = datetime.now(UTC).replace(
-                    hour=0,
-                    minute=0,
-                    second=0,
-                    microsecond=0,
-                )
-                today_end = today_start.replace(
-                    hour=23,
-                    minute=59,
-                    second=59,
-                    microsecond=999999,
-                )
+                # 今日到期TODO: half-open [today_start, today_end)
                 due_today_result = await session.execute(
                     text(
-                        "SELECT COUNT(*) FROM todo_items WHERE due_date BETWEEN :start AND :end",
+                        "SELECT COUNT(*) FROM todo_items "
+                        "WHERE due_date >= :start AND due_date < :end",
                     ),
                     {"start": today_start, "end": today_end},
                 )
@@ -711,7 +707,13 @@ class TodoService(ServiceHealthCheckMixin):
                 latest_result = await session.execute(
                     text("SELECT MAX(updated_at) FROM todo_items"),
                 )
-                latest_time = latest_result.scalar()
+                raw_latest = latest_result.scalar()
+                # SQLite 经 text() 查询返回字符串而非 datetime, 归一化以便 isoformat
+                latest_time = (
+                    datetime.fromisoformat(raw_latest)
+                    if isinstance(raw_latest, str)
+                    else raw_latest
+                )
 
                 return {
                     "total_todos": total_todos,

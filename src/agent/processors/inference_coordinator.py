@@ -9,7 +9,6 @@ import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any, NamedTuple
 
 from langchain.agents import create_agent
@@ -26,9 +25,13 @@ from langchain_core.messages import (
 )
 from langchain_core.runnables import RunnableConfig
 
-from src.agent.processors.system_prompt_assembler import assemble_system_prompt
+from src.agent.processors.system_prompt_assembler import (
+    SYSTEM_PROMPT_SECTION_ORDER,
+    assemble_system_prompt,
+)
 from src.config.inference_config import get_config as get_inference_config
 from src.config.tools_config import get_config as get_tools_config
+from src.core.datetime_utils import now_utc
 from src.core.open_webui_format import format_tool_call_done
 from src.core.streaming import StreamContent
 from src.inference.llm.model_loader import create_llm
@@ -530,7 +533,7 @@ class InferenceCoordinator:
                     from src.tools.skills.skill_executor_tool import SkillExecutorTool
 
                     special_tools.append(
-                        SkillExecutorTool(
+                        SkillExecutorTool(  # type: ignore[abstract]
                             user_id=user_id,
                             thread_id=thread_id,
                             agent_id=agent_id,
@@ -674,6 +677,7 @@ class InferenceCoordinator:
         prompt_sections: dict[str, str] | None,
         *,
         streaming: bool,
+        earliest_round: int | None = None,
     ) -> _AgentSetup:
         """构建同步/流式共享的 Agent 与执行配置 (前奏统一).
 
@@ -714,6 +718,12 @@ class InferenceCoordinator:
             llm_model=llm_model,
         )
 
+        if earliest_round is not None:
+            for tool in tools:
+                if getattr(tool, "name", None) == "search_memories":
+                    object.__setattr__(tool, "context_earliest_round", earliest_round)
+                    break
+
         sections: dict[str, str] = {"base": system_prompt}
         if prompt_hints:
             sections["tools"] = f"## 工具使用策略\n\n{prompt_hints}"
@@ -722,6 +732,10 @@ class InferenceCoordinator:
         if prompt_sections:
             sections.update(prompt_sections)
         system_prompt = assemble_system_prompt(sections)
+        logger.debug(
+            "system_prompt 装配完成, 段: %s",
+            [n for n in SYSTEM_PROMPT_SECTION_ORDER if (sections.get(n) or "").strip()],
+        )
 
         callbacks: list[Any] = []
         middleware: list[Any] = []
@@ -843,6 +857,7 @@ class InferenceCoordinator:
         attachment_infos: list[Any] | None = None,
         history_messages: list[BaseMessage] | None = None,
         prompt_sections: dict[str, str] | None = None,
+        earliest_round: int | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """使用LangChain Agent处理请求.
 
@@ -867,7 +882,7 @@ class InferenceCoordinator:
             f"🤖 AI推理协调器处理请求: {user_content[:50]}... (用户ID: {user_id}, 线程ID: {thread_id})",
         )
 
-        start_time = datetime.now()
+        start_time = now_utc()
         stats: dict[str, Any] = {}
 
         try:
@@ -884,10 +899,13 @@ class InferenceCoordinator:
                 history_messages,
                 prompt_sections,
                 streaming=False,
+                earliest_round=earliest_round,
             )
             stats["tool_stats"] = setup.tool_stats
 
             logger.debug("🚀 执行LangChain agent...")
+            total_tokens = 0
+            response_tokens = 0
             try:
                 logger.info("🚀 使用LangChain Agent处理请求")
 
@@ -914,6 +932,7 @@ class InferenceCoordinator:
                 logger.debug(
                     f"🔧 执行配置包含callbacks: {setup.callback_count}",
                 )
+                # UNIT_TEST_EXEMPT: 内部启动 LangChain Agent, 工具选择/多轮决策/LangGraph 事件协议无法干净 mock. 集成测试: tests/integration/memory/test_processor_orchestrator_integration.py
                 agent_result = await asyncio.wait_for(
                     setup.agent.ainvoke(
                         setup.agent_input, config=setup.runnable_config
@@ -938,24 +957,18 @@ class InferenceCoordinator:
                 total_tokens, response_tokens = self._extract_token_usage(agent_result)
 
             except TimeoutError:
-                # TimeoutError应该传播到外层,让调用者处理
+                # TimeoutError 传播到外层, 由调用者处理
                 raise
-            except Exception as e:
-                logger.error("❌ 处理失败: %s", e)
-                # 最终降级到简单响应
-                result = f"处理请求时遇到问题: {e!s}"
 
             # 更新统计信息
-            processing_time = (datetime.now() - start_time).total_seconds()
+            processing_time = (now_utc() - start_time).total_seconds()
             stats.update({
                 "processing_time": processing_time,
                 "agent_id": agent_id,
                 "user_id": user_id,
                 "thread_id": thread_id,
-                "total_tokens": total_tokens if "total_tokens" in locals() else 0,
-                "response_tokens": response_tokens
-                if "response_tokens" in locals()
-                else 0,
+                "total_tokens": total_tokens,
+                "response_tokens": response_tokens,
             })
 
             logger.info("✅ AI推理协调器完成, 耗时 %.2fs", processing_time)
@@ -1469,7 +1482,8 @@ class InferenceCoordinator:
 
         # 工具特定处理
         if tool_name in (
-            "schedule_message",
+            "schedule_message_wechat",
+            "schedule_message_email",
             "list_scheduled_messages",
             "cancel_scheduled_message",
         ):
@@ -1600,6 +1614,7 @@ class InferenceCoordinator:
         attachment_infos: list[Any] | None = None,
         history_messages: list[BaseMessage] | None = None,
         prompt_sections: dict[str, str] | None = None,
+        earliest_round: int | None = None,
     ) -> AsyncIterator[str | StreamContent]:
         """使用LangChain Agent处理请求(流式响应).
 
@@ -1627,7 +1642,7 @@ class InferenceCoordinator:
             f"🌊 AI推理协调器流式处理请求: {user_content[:50]}... (用户ID: {user_id}, 线程ID: {thread_id})",
         )
 
-        start_time = datetime.now()
+        start_time = now_utc()
 
         try:
             setup = await self._build_agent_and_config(
@@ -1643,6 +1658,7 @@ class InferenceCoordinator:
                 history_messages,
                 prompt_sections,
                 streaming=True,
+                earliest_round=earliest_round,
             )
 
             # 捕获prompt内容(与非流式相同)
@@ -1673,6 +1689,7 @@ class InferenceCoordinator:
                     tool_display = self._is_tool_call_display_enabled()
                     state = _StreamState()
 
+                    # UNIT_TEST_EXEMPT: 依赖 LangGraph stream_mode="messages" 协议, 工具调用/来源过滤/多轮状态机无法干净 mock. 集成测试: tests/integration/test_streaming_flow.py
                     # 使用 astream() + stream_mode="messages" 进行token级流式处理
                     async for chunk in setup.agent.astream(
                         setup.agent_input,
@@ -1689,7 +1706,7 @@ class InferenceCoordinator:
                             yield item
 
                     # 记录完成时间
-                    processing_time = (datetime.now() - start_time).total_seconds()
+                    processing_time = (now_utc() - start_time).total_seconds()
                     logger.info(
                         f"✅ AI推理协调器流式处理完成, 耗时 {processing_time:.2f}s"
                     )
@@ -1701,7 +1718,7 @@ class InferenceCoordinator:
                     raise RuntimeError(f"流式处理失败: {e}") from e
 
         except Exception as e:
-            processing_time = (datetime.now() - start_time).total_seconds()
+            processing_time = (now_utc() - start_time).total_seconds()
             logger.error(
                 f"❌ AI推理协调器流式处理失败: {e}, 耗时 {processing_time:.2f}s",
             )
@@ -1719,6 +1736,10 @@ class InferenceCoordinator:
         主循环解包 (message, metadata) 元组后调用本方法. 涵盖: ToolMessage →
         done HTML / 来源过滤 / tool_call_chunks 累积 / tool_calls 后备 /
         文本提取 + think 标签过滤. 返回空列表表示该 chunk 无输出.
+
+        # UNIT_TEST_EXEMPT: 处理 LangGraph stream_mode="messages" 协议事件,
+        # tool_call_chunks 累积/来源过滤等状态机行为与 LangGraph 运行时强耦合,
+        # 无法在不引入脆弱性的前提下干净 mock. 集成测试: tests/integration/test_streaming_flow.py
 
         Args:
             message: 已解包的 chunk message (AIMessageChunk/ToolMessage/其他).

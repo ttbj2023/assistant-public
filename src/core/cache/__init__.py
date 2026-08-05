@@ -10,7 +10,6 @@ from .simple_cache import (
     get_cache,
     get_client_cache,
     get_token_cache,
-    is_token_cache_enabled,
 )
 
 __all__ = [
@@ -18,5 +17,4 @@ __all__ = [
     "get_cache",
     "get_client_cache",
     "get_token_cache",
-    "is_token_cache_enabled",
 ]

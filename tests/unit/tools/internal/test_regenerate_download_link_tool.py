@@ -12,11 +12,14 @@ import pytest
 
 from src.files import AttachmentDTO
 from src.tools.internal.regenerate_download_link_tool import RegenerateDownloadLinkTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool():
-    return RegenerateDownloadLinkTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = RegenerateDownloadLinkTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 def make_entry(**overrides) -> AttachmentDTO:

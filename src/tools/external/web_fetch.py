@@ -10,10 +10,12 @@ from typing import Any, ClassVar, override
 from urllib.parse import urlparse
 
 import httpx
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.cache import ExpertCache, get_expert_cache
+from src.tools.shared.tool_runtime import sync_runnable
+from src.tools.shared.url_safety import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +115,8 @@ class WebFetchInput(BaseModel):
     url: str = Field(description="要抓取的网页URL")
 
 
-class WebFetchTool(BaseExternalTool):
+@sync_runnable
+class WebFetchTool(BaseTool):
     """HTTP网页抓取工具 - 提取网页正文内容."""
 
     name: str = "fetch_webpage"
@@ -140,6 +143,10 @@ class WebFetchTool(BaseExternalTool):
         skipped = self._check_anti_crawl(url)
         if skipped is not None:
             return skipped
+
+        blocked = self._check_ssrf(url)
+        if blocked is not None:
+            return blocked
 
         result = await self._execute(url)
 
@@ -172,6 +179,24 @@ class WebFetchTool(BaseExternalTool):
                 ensure_ascii=False,
             )
         return None
+
+    @staticmethod
+    def _check_ssrf(url: str) -> str | None:
+        """SSRF 校验: 拦截私网/回环/链路本地/元数据等不安全目标."""
+        safe, reason = is_safe_url(url)
+        if safe:
+            return None
+        logger.warning("SSRF 拦截: %s → %s", url, reason)
+        return json.dumps(
+            {
+                "url": url,
+                "content": "",
+                "status": "blocked",
+                "error": f"URL 不安全已拦截: {reason}",
+                "source": "fetch_webpage",
+            },
+            ensure_ascii=False,
+        )
 
     async def _execute(self, url: str) -> str:
         try:

@@ -183,7 +183,11 @@ class LocalMemoryProcessor(BaseProcessor):
                 raise ValueError("LocalMemoryProcessor 需要有效的 agent_config")
 
             if not agent_id:
-                agent_id = getattr(agent_config, "id", None)
+                agent_id = getattr(agent_config, "agent_id", None) or getattr(
+                    agent_config,
+                    "id",
+                    None,
+                )
             if not agent_id:
                 raise ValueError("agent_id 不能为空, 调用方必须显式传递")
 
@@ -262,6 +266,7 @@ class LocalMemoryProcessor(BaseProcessor):
                 history_messages=history_messages,
                 current_content=current_content,
                 system_prompt_extension=system_prompt_extension,
+                earliest_round=ctx.earliest_round,
             )
 
         except Exception as e:

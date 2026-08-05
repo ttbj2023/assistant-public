@@ -6,11 +6,12 @@
 from __future__ import annotations
 
 import json
+import secrets
 import time
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 @dataclass
@@ -24,15 +25,14 @@ class StreamContent:
 class StreamChunk(BaseModel):
     """流式响应数据块 - OpenAI兼容格式."""
 
+    model_config = ConfigDict()
+
     id: str
     object: str = Field(default="chat.completion.chunk", description="对象类型")
     created: int = Field(description="创建时间戳")
     model: str = Field(description="模型名称")
     choices: list[dict[str, Any]] = Field(description="选择列表")
     index: int = Field(default=0, description="选择索引")
-
-    class Config:
-        json_encoders: ClassVar[dict[type, Any]] = {int: lambda v: v}
 
 
 def format_sse_chunk(chunk: StreamChunk) -> str:
@@ -92,8 +92,11 @@ def create_stream_error_chunk(
 
 
 def generate_completion_id() -> str:
-    """生成完成ID."""
-    return f"chatcmpl-{int(time.time() * 1000)}"
+    """生成完成ID.
+
+    时间戳 + 随机后缀, 避免同毫秒并发请求产生重复 id.
+    """
+    return f"chatcmpl-{int(time.time() * 1000)}{secrets.token_hex(6)}"
 
 
 __all__ = [

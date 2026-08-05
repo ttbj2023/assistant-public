@@ -3,7 +3,6 @@
 测试各个存储服务的健康检查功能，包括：
 - ConversationService 健康检查
 - TodoService 健康检查
-- MemoryService 健康检查
 - VectorService 健康检查
 
 遵循单元测试设计规范：
@@ -20,7 +19,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.storage.service.conversation_service import ConversationService
-from src.storage.service.memory_service import MemoryService
 from src.storage.service.todo_service import TodoService
 from src.storage.service.vector_service import VectorService
 
@@ -157,58 +155,6 @@ class TestTodoServiceHealthCheck:
         # 非连接数据库错误返回 "degraded" 状态
         assert result["status"] == "degraded"
         assert "TODO数据库错误" in result["error"]
-        assert result["database_connected"] is False
-
-
-class TestMemoryServiceHealthCheck:
-    """MemoryService 健康检查测试."""
-
-    @pytest.fixture
-    def mock_session_factory(self) -> MagicMock:
-        """创建模拟会话工厂."""
-        session_factory = MagicMock()
-        session = MagicMock()
-        # 模拟记忆类型计数
-        memory_counts = [3, 2, 1]  # action, character, knowledge
-        session.execute = AsyncMock(
-            side_effect=[
-                MagicMock(scalar_one_or_none=lambda: count) for count in memory_counts
-            ]
-        )
-        session_factory.return_value.__aenter__.return_value = session
-        session_factory.return_value.__aexit__.return_value = None
-        return session_factory
-
-    @pytest.fixture
-    def memory_service(self, mock_session_factory: MagicMock) -> MemoryService:
-        """创建MemoryService实例."""
-        return MemoryService(mock_session_factory)
-
-    @pytest.mark.asyncio
-    async def test_memory_service_healthy(self, memory_service: MemoryService) -> None:
-        """测试MemoryService健康状态."""
-        result = await memory_service.health_check()
-
-        assert result["status"] == "healthy"
-        # 注意: 实际实现不返回 "message" key
-        assert result["service_name"] == "MemoryService"
-        # 统计键名: memory_types_supported 等
-        assert "memory_types_supported" in result["statistics"]
-
-    @pytest.mark.asyncio
-    async def test_memory_service_database_error(self) -> None:
-        """测试MemoryService数据库错误."""
-        mock_session_factory = MagicMock()
-        mock_session_factory.return_value.__aenter__.side_effect = Exception(
-            "记忆数据库错误"
-        )
-
-        service = MemoryService(mock_session_factory)
-        result = await service.health_check()
-
-        # 非连接数据库错误返回 "degraded" 状态
-        assert result["status"] == "degraded"
-        assert "记忆数据库错误" in result["error"]
         assert result["database_connected"] is False
 
 

@@ -364,6 +364,7 @@ class AsyncConversationIndexDAO:
         metadata: dict[str, Any] | None = None,
         *,
         agent_id: str,
+        session: Any | None = None,
     ) -> ConversationIndex:
         """异步存储对话索引数据.
 
@@ -374,6 +375,7 @@ class AsyncConversationIndexDAO:
             thread_id: 线程ID
             metadata: 元数据
             agent_id: Agent ID
+            session: 外部事务 session (统一事务边界用), 为 None 时内部自开事务
 
         Returns:
             存储的对话索引
@@ -393,6 +395,7 @@ class AsyncConversationIndexDAO:
                 topic=None,
                 summary=None,
                 agent_id=agent_id,
+                session=session,
             )
         except Exception as e:
             logger.error("异步存储对话索引数据失败: %s", e)
@@ -565,6 +568,7 @@ class AsyncConversationIndexDAO:
         summary: str | None = None,
         *,
         agent_id: str,
+        session: Any | None = None,
     ) -> ConversationIndex:
         """使用UPSERT操作存储对话索引数据,避免UNIQUE约束冲突.
 
@@ -578,6 +582,9 @@ class AsyncConversationIndexDAO:
             topic: 对话主题
             summary: 对话摘要
             agent_id: Agent ID
+            session: 外部已开启事务的 session; 传入时直接复用 (统一事务边界,
+                使 "分配轮次号 + 写入" 在同一事务内原子完成, 防并发竞态).
+                为 None 时内部开启独立 transaction_scope.
 
         Returns:
             存储的对话索引
@@ -600,64 +607,103 @@ class AsyncConversationIndexDAO:
             extracted_summary = metadata["summary"]
 
         try:
-            async with self.db_ops.transaction_scope() as session:
-                # 首先尝试查找现有记录
-                stmt = select(ConversationIndex).where(
-                    ConversationIndex.user_id == user_id,
-                    ConversationIndex.thread_id == thread_id,
-                    ConversationIndex.round_number == round_number,
-                )
-                result = await session.execute(stmt)
-                existing = result.scalar_one_or_none()
-
-                if existing:
-                    # 更新现有记录 - 使用提取出的字段
-                    existing.user_message = user_message
-                    existing.assistant_response = assistant_response
-                    if extracted_topic is not None:
-                        existing.topic = extracted_topic
-                    if extracted_summary is not None:
-                        existing.summary = extracted_summary
-                    existing.updated_at = datetime.now(UTC)
-
-                    await session.flush()
-                    await session.refresh(existing)
-                    logger.debug(
-                        "更新现有对话索引: %s:%s:%s",
-                        user_id,
-                        thread_id,
-                        round_number,
-                    )
-
-                    return existing
-
-                # 创建新记录 - 使用提取出的字段
-                new_index = ConversationIndex(
+            if session is not None:
+                return await self._upsert_in_session(
+                    session,
                     round_number=round_number,
                     user_message=user_message,
                     assistant_response=assistant_response,
-                    topic=extracted_topic,
-                    summary=extracted_summary,
                     user_id=user_id,
                     thread_id=thread_id,
                     agent_id=agent_id,
+                    extracted_topic=extracted_topic,
+                    extracted_summary=extracted_summary,
                 )
 
-                session.add(new_index)
-                await session.flush()
-                await session.refresh(new_index)
-                logger.debug(
-                    "创建新对话索引: %s:%s:%s",
-                    user_id,
-                    thread_id,
-                    round_number,
+            async with self.db_ops.transaction_scope() as session:
+                return await self._upsert_in_session(
+                    session,
+                    round_number=round_number,
+                    user_message=user_message,
+                    assistant_response=assistant_response,
+                    user_id=user_id,
+                    thread_id=thread_id,
+                    agent_id=agent_id,
+                    extracted_topic=extracted_topic,
+                    extracted_summary=extracted_summary,
                 )
-
-                return new_index
 
         except Exception as e:
             logger.error("UPSERT存储对话索引数据失败: %s", e)
             raise
+
+    async def _upsert_in_session(
+        self,
+        session: Any,
+        *,
+        round_number: int,
+        user_message: str,
+        assistant_response: str,
+        user_id: str,
+        thread_id: str,
+        agent_id: str,
+        extracted_topic: str | None,
+        extracted_summary: str | None,
+    ) -> ConversationIndex:
+        """在给定 session 上执行 upsert (调用方负责事务边界)."""
+        # 首先尝试查找现有记录
+        stmt = select(ConversationIndex).where(
+            ConversationIndex.user_id == user_id,
+            ConversationIndex.thread_id == thread_id,
+            ConversationIndex.round_number == round_number,
+        )
+        result = await session.execute(stmt)
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            # 更新现有记录 - 使用提取出的字段
+            existing.user_message = user_message
+            existing.assistant_response = assistant_response
+            if extracted_topic is not None:
+                existing.topic = extracted_topic
+            if extracted_summary is not None:
+                existing.summary = extracted_summary
+            existing.updated_at = datetime.now(UTC)
+
+            await session.flush()
+            await session.refresh(existing)
+            logger.debug(
+                "更新现有对话索引: %s:%s:%s",
+                user_id,
+                thread_id,
+                round_number,
+            )
+
+            return existing
+
+        # 创建新记录 - 使用提取出的字段
+        new_index = ConversationIndex(
+            round_number=round_number,
+            user_message=user_message,
+            assistant_response=assistant_response,
+            topic=extracted_topic,
+            summary=extracted_summary,
+            user_id=user_id,
+            thread_id=thread_id,
+            agent_id=agent_id,
+        )
+
+        session.add(new_index)
+        await session.flush()
+        await session.refresh(new_index)
+        logger.debug(
+            "创建新对话索引: %s:%s:%s",
+            user_id,
+            thread_id,
+            round_number,
+        )
+
+        return new_index
 
     # ==================== 格式化接口 - 将格式化逻辑从应用层下沉到存储层 ====================
 

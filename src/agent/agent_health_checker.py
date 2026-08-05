@@ -161,7 +161,7 @@ def check_agent_import_path(agent_id: str) -> dict[str, Any]:
             "main_module_available": False,
             "error": f"导入路径检查异常: {e}",
             "error_details": str(type(e).__name__),
-            "main_module_path": f"src.agent.agents_implementations.{agent_id}.main",
+            "main_module_path": f"src.agent.agents_implementations.{directory_name}.main",
             "directory_name": agent_id.replace("-", "_"),
         }
 
@@ -296,7 +296,7 @@ def lightweight_agent_health_check() -> dict[str, Any]:
             available_agent_ids = get_available_agents()
         except Exception as e:
             logger.error("获取Agent列表失败: %s", e)
-            available_agent_ids = ["personal_assistant"]  # 回退到默认Agent
+            available_agent_ids = ["personal-assistant"]  # 回退到默认Agent
 
         health_results = {
             "agent_system": {

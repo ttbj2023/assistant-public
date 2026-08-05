@@ -17,6 +17,11 @@
 # 推理模块配置 (仅覆盖与默认不同的项)
 # ===========================================
 inference:
+  # Reranker 重排序 (Qwen3-Reranker-0.6B, 本地 CPU 推理)
+  reranker:
+    enabled: true
+    base_url: "http://localhost:8768"
+
   # 全局 fallback: 关闭 deepseek-flash 默认 high 思考(对简单任务纯浪费;
   # 判断类任务由 content_analyzer.fallback_model_params 覆盖保留思考)
   fallback:
@@ -52,10 +57,11 @@ inference:
       temperature: 0.1
 
   # 健康数据提取 (模型参数 + 审计模型覆盖; 审计用 deepseek, 非默认 doubao-pro)
+  # 注意: doubao-seed-2.0-mini 的 reasoning_effort 仅支持 minimal/low/medium/high
   health_data_extraction:
     model_params:
       max_tokens: 32768
-      reasoning_effort: "max"
+      reasoning_effort: "high"
     audit_model: "deepseek:deepseek-v4-pro"
     audit_model_params:
       max_tokens: 16384
@@ -107,6 +113,10 @@ tools:
       name: "chart_maker"
       source: "./skills/chart_maker/"
       associated_tools: ["mermaid_chart", "vega_chart", "markmap_chart"]
+    export_document:
+      name: "export_document"
+      source: "./skills/export_document/"
+      associated_tools: ["export_document"]
 
 # ===========================================
 # OpenClaw Gateway (主动发消息: 超长回复补发/定时消息/价格监控派发)

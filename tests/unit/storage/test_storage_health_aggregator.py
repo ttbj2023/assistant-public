@@ -114,6 +114,34 @@ class TestStorageHealthAggregator:
         )
 
     @pytest.mark.asyncio
+    async def test_extra_services_are_included_in_health_check(
+        self,
+        mock_conversation_service: MockService,
+        mock_todo_service: MockService,
+        mock_memory_service: MockService,
+        mock_vector_service: MockService,
+    ) -> None:
+        """extra_services 中的额外服务应纳入聚合健康检查."""
+        extra = {
+            "usage_service": MockService("usage_service", "healthy"),
+            "file_registry_service": MockService("file_registry_service", "degraded"),
+        }
+        aggregator = StorageHealthAggregator(
+            conversation_service=mock_conversation_service,
+            todo_service=mock_todo_service,
+            memory_service=mock_memory_service,
+            vector_service=mock_vector_service,
+            extra_services=extra,
+        )
+
+        result = await aggregator.check_all_services_health()
+
+        assert "usage_service" in result["services"]
+        assert "file_registry_service" in result["services"]
+        assert result["services"]["file_registry_service"]["status"] == "degraded"
+        assert result["summary"]["total_services"] == 6
+
+    @pytest.mark.asyncio
     async def test_check_all_services_health_should_return_healthy_when_all_services_healthy(
         self, health_aggregator: StorageHealthAggregator
     ) -> None:

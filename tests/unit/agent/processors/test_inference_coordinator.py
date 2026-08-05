@@ -412,6 +412,79 @@ class TestBuildHumanMessage:
         assert "测试图片描述" in result.content
 
 
+class TestBuildAgentAndConfig:
+    """测试 _build_agent_and_config 装配 system prompt."""
+
+    @pytest.mark.asyncio
+    @quick_test
+    async def test_domain_data_injection_reaches_final_system_prompt(self):
+        """domain_data 段应完整拼入最终传给 create_agent 的 system_prompt."""
+        coordinator = InferenceCoordinator(config=None)
+        mock_llm = AsyncMock()
+        mock_agent = AsyncMock()
+        captured_system_prompt = None
+
+        def capture_create_agent(llm, tools, *, system_prompt, middleware=None):
+            nonlocal captured_system_prompt
+            captured_system_prompt = system_prompt
+            return mock_agent
+
+        with (
+            patch(
+                "src.agent.processors.inference_coordinator.create_llm",
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.processors.inference_coordinator.create_agent",
+                side_effect=capture_create_agent,
+            ) as mock_create_agent,
+            patch.object(
+                InferenceCoordinator,
+                "create_toolset",
+                new_callable=AsyncMock,
+            ) as mock_create_toolset,
+        ):
+            mock_create_toolset.return_value = (
+                [],
+                {"total_tools": 0},
+                None,
+                "",
+                None,
+                "",
+            )
+            await coordinator._build_agent_and_config(
+                user_content="hi",
+                system_prompt="你是健康助手",
+                llm_config={"model": "openai:gpt-5.5"},
+                user_id="u1",
+                thread_id="t1",
+                agent_id="health-assistant",
+                agent_config=None,
+                image_datas=None,
+                attachment_infos=None,
+                history_messages=None,
+                prompt_sections={
+                    "memory": "<current_context>上下文</current_context>",
+                    "domain_data": (
+                        "以下是你需要长期记住的关键信息:\n"
+                        "<pinned_memory>\n用户吃素\n</pinned_memory>"
+                    ),
+                },
+                streaming=False,
+            )
+
+        mock_create_agent.assert_called_once()
+        assert captured_system_prompt is not None
+        assert "你是健康助手" in captured_system_prompt
+        assert "<current_context>上下文</current_context>" in captured_system_prompt
+        assert "以下是你需要长期记住的关键信息:" in captured_system_prompt
+        assert "<pinned_memory>" in captured_system_prompt
+        assert "用户吃素" in captured_system_prompt
+        assert captured_system_prompt.index(
+            "以下是你需要长期记住的关键信息:"
+        ) > captured_system_prompt.index("</current_context>")
+
+
 class TestProcessWithAgentDebugBranch:
     """process_with_agent 的 DEBUG-only 插桩分支回归测试.
 
@@ -473,3 +546,39 @@ class TestProcessWithAgentDebugBranch:
         assert fake_tracker in callbacks, (
             "tool_tracker 应进入 ainvoke 的 config.callbacks"
         )
+
+
+class TestProcessWithAgentErrorPropagation:
+    """process_with_agent 异常传播测试.
+
+    非超时异常必须向上抛出(由中间件统一处理), 不得吞为兜底文案,
+    保证与流式路径一致且监控/告警链路有效.
+    """
+
+    @pytest.mark.asyncio
+    async def test_agent_failure_should_raise_not_return_fallback(self):
+        """agent ainvoke 抛非超时异常时, 应抛 RuntimeError 而非返回兜底串."""
+        coordinator = InferenceCoordinator(config=None)
+        mock_llm = AsyncMock()
+        mock_agent = AsyncMock()
+        mock_agent.ainvoke = AsyncMock(side_effect=RuntimeError("LLM 故障"))
+
+        with (
+            patch(
+                "src.agent.processors.inference_coordinator.create_llm",
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.processors.inference_coordinator.create_agent",
+                return_value=mock_agent,
+            ),
+            patch.object(InferenceCoordinator, "_capture_prompt"),
+        ):
+            with pytest.raises(RuntimeError, match="AI推理协调器执行失败"):
+                await coordinator.process_with_agent(
+                    user_content="hi",
+                    system_prompt="You are helpful",
+                    llm_config={"model": "gpt-3.5-turbo"},
+                    user_id="test_user",
+                    thread_id="test_thread",
+                )

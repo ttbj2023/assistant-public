@@ -14,10 +14,11 @@ import logging
 import math
 from typing import Any, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.tools.internal._search_synonyms import BUILTIN_SYNONYMS
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,8 @@ class SearchAvailableToolsRequest(BaseModel):
     )
 
 
-class SearchAvailableTools(BaseInternalTool):
+@sync_runnable
+class SearchAvailableTools(BaseTool):
     """搜索可用工具 - 帮助Agent发现休眠工具.
 
     当Agent需要使用某个功能但当前没有对应工具时,
@@ -61,8 +63,8 @@ class SearchAvailableTools(BaseInternalTool):
 """
     args_schema: type[SearchAvailableToolsRequest] = SearchAvailableToolsRequest
 
-    def __init__(self, user_id: str = "", thread_id: str = "", **kwargs: Any) -> None:
-        super().__init__(user_id, thread_id, **kwargs)
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self._catalog: dict[str, dict[str, str]] = {}
 
     def set_catalog(self, catalog: dict[str, dict[str, str]]) -> None:

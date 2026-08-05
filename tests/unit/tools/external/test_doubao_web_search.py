@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.tools.external.doubao_web_search import (
     DoubaoSearchTool,
+    _execute_search,
     _format_search_results,
     doubao_web_search,
 )
@@ -181,6 +182,132 @@ class TestDoubaoWebSearchFunction:
 
         assert "error" in result
         mock_cache.set_search.assert_not_called()
+
+
+class TestExecuteSearchRetry:
+    """豆包搜索 200-body 业务错误重试测试."""
+
+    @staticmethod
+    def _make_response(error_message: str | None = None, results: list | None = None) -> dict:
+        if error_message:
+            return {
+                "ResponseMetadata": {
+                    "Error": {"Message": error_message},
+                },
+            }
+        return {
+            "ResponseMetadata": {},
+            "Result": {"WebResults": results or []},
+        }
+
+    @staticmethod
+    def _make_fake_response(data: dict):
+        """构造同步 json() 返回的 httpx Response Mock."""
+        mock = Mock()
+        mock.status_code = 200
+        mock.json = Mock(return_value=data)
+        mock.raise_for_status = Mock()
+        return mock
+
+    @pytest.mark.asyncio
+    async def test_should_retry_internal_error_then_succeed(self):
+        """Internal Error 业务错误应重试, 重试成功后返回结果."""
+        responses = [
+            self._make_response("Internal Error"),
+            self._make_response(results=[{"Title": "OK", "Url": "https://example.com"}]),
+        ]
+        call_index = 0
+
+        async def _fake_post(*args, **kwargs):
+            nonlocal call_index
+            resp_data = responses[call_index]
+            call_index += 1
+            return self._make_fake_response(resp_data)
+
+        with (
+            patch(
+                "src.tools.external.doubao_web_search._get_api_key",
+                return_value="key",
+            ),
+            patch("src.tools.external.doubao_web_search._get_retry_params") as mock_retry,
+            patch("httpx.AsyncClient.post", side_effect=_fake_post) as mock_post,
+            patch("asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
+            mock_retry.return_value = {
+                "max_retries": 2,
+                "base_delay": 1.0,
+                "rate_limit_delay": 3.0,
+                "retryable_status": {429, 500, 502, 503, 504},
+            }
+
+            result = await _execute_search("key", "test", count=5, timeout=30.0)
+
+        assert "error" not in result
+        assert result["search_results"][0]["title"] == "OK"
+        assert mock_post.call_count == 2
+        mock_sleep.assert_awaited_once_with(1.0)
+
+    @pytest.mark.asyncio
+    async def test_should_return_error_after_max_retries(self):
+        """Internal Error 持续存在时, 耗尽重试后返回错误."""
+        resp = self._make_response("Internal Error")
+
+        async def _fake_post(*args, **kwargs):
+            return self._make_fake_response(resp)
+
+        with (
+            patch(
+                "src.tools.external.doubao_web_search._get_api_key",
+                return_value="key",
+            ),
+            patch("src.tools.external.doubao_web_search._get_retry_params") as mock_retry,
+            patch("httpx.AsyncClient.post", side_effect=_fake_post) as mock_post,
+            patch("asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
+            mock_retry.return_value = {
+                "max_retries": 2,
+                "base_delay": 1.0,
+                "rate_limit_delay": 3.0,
+                "retryable_status": {429, 500, 502, 503, 504},
+            }
+
+            result = await _execute_search("key", "test", count=5, timeout=30.0)
+
+        assert "error" in result
+        assert "Internal Error" in result["error"]
+        assert mock_post.call_count == 2
+        assert mock_sleep.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_should_not_retry_non_internal_business_error(self):
+        """非 internal 类业务错误不应重试, 直接返回错误."""
+        resp = self._make_response("Authentication failed")
+
+        async def _fake_post(*args, **kwargs):
+            return self._make_fake_response(resp)
+
+        with (
+            patch(
+                "src.tools.external.doubao_web_search._get_api_key",
+                return_value="key",
+            ),
+            patch("src.tools.external.doubao_web_search._get_retry_params") as mock_retry,
+            patch("httpx.AsyncClient.post", side_effect=_fake_post) as mock_post,
+            patch("asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
+            mock_retry.return_value = {
+                "max_retries": 2,
+                "base_delay": 1.0,
+                "rate_limit_delay": 3.0,
+                "retryable_status": {429, 500, 502, 503, 504},
+            }
+
+            result = await _execute_search("key", "test", count=5, timeout=30.0)
+
+        assert "error" in result
+        assert "Authentication failed" in result["error"]
+        assert mock_post.call_count == 1
+        mock_sleep.assert_not_awaited()
 
 
 class TestFormatSearchResults:

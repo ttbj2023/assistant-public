@@ -119,6 +119,11 @@ class AgentConfig(BaseModel):
         description="启用的skill列表(领域知识+定向能力, 通过load_skill按需加载)",
     )
 
+    domain_data: list[str] = Field(
+        default_factory=list,
+        description="领域数据子系统列表(对话后自动提取结构化数据, 如 health)",
+    )
+
     memory: AgentMemoryConfig = Field(
         default_factory=AgentMemoryConfig,
         description="记忆配置",

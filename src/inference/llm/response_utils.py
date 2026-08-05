@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -60,8 +61,6 @@ def content_to_text(content: Any) -> str:
         return "".join(parts)
 
     try:
-        import json
-
         return json.dumps(content, ensure_ascii=False)
     except (TypeError, ValueError):
         return str(content)

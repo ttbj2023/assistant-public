@@ -127,7 +127,7 @@ class TestEnrichSearchToolsDescription:
         """组成员应跳过独立catalog条目, 改由组条目代表检索."""
         search = _make_tool("search_available_tools")
         dormant = [
-            _make_tool("schedule_message", summary="发送", description="创建定时消息"),
+            _make_tool("schedule_message_wechat", summary="发送", description="创建定时消息"),
             _make_tool("list_scheduled", summary="查看", description="查看消息"),
             _make_tool("weather", summary="天气", description="天气查询"),
         ]
@@ -136,7 +136,7 @@ class TestEnrichSearchToolsDescription:
                 name="scheduled_messenger_group",
                 summary="定时消息管理",
                 keywords=["定时", "提醒"],
-                members=["schedule_message", "list_scheduled"],
+                members=["schedule_message_wechat", "list_scheduled"],
             ),
         }
         coordinator._enrich_search_tools_description(
@@ -144,7 +144,7 @@ class TestEnrichSearchToolsDescription:
         )
         catalog = search.set_catalog.call_args[0][0]
         # 组成员不单独出现(由组条目代表检索)
-        assert "schedule_message" not in catalog
+        assert "schedule_message_wechat" not in catalog
         assert "list_scheduled" not in catalog
         # 组条目存在(组名仅作内部catalog key), 用组summary/keywords
         assert "scheduled_messenger_group" in catalog
@@ -156,7 +156,7 @@ class TestEnrichSearchToolsDescription:
         # display_label + _members: 组命中后由search展开为成员工具名(组名对模型透明)
         assert group_entry["display_label"] == "scheduled_messenger"
         assert {m["name"] for m in group_entry["_members"]} == {
-            "schedule_message",
+            "schedule_message_wechat",
             "list_scheduled",
         }
         # 非组工具正常出现

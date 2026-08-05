@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import Callable
@@ -42,6 +43,12 @@ class ConversationService(ServiceHealthCheckMixin):
 
         # 组合DAO
         self.conversation_dao = AsyncConversationIndexDAO(session_factory)
+
+        # 串行化 create_conversation 的 allocate+store:
+        # SQLite 快照隔离下, 即使同一事务内 SELECT MAX 与 INSERT 也无法
+        # 防并发 "读后读" 竞态 (两并发都读到旧 MAX 都插同号撞唯一约束).
+        # Service 按 (user,thread,agent) 缓存单例, per-instance 锁串行化同作用域并发.
+        self._create_lock = asyncio.Lock()
 
     async def create_conversation(
         self,
@@ -88,19 +95,26 @@ class ConversationService(ServiceHealthCheckMixin):
             if not assistant_response.strip():
                 raise ValueError("助手回复不能为空")
 
-            # 分配轮次号:如果提供了预分配的round_number则使用,否则自动分配
-            if round_number is None:
-                round_number = await self.allocate_round_number(user_id, thread_id)
-                self.logger.debug("自动分配轮次号: %s", round_number)
-            else:
-                self.logger.debug("使用预分配轮次号: %s", round_number)
-
-            async with self.session_factory() as session, session.begin():
-                # 使用传入的 metadata (调用方应包含 timestamp)
+            # 分配轮次号 + 写入在同一事务内原子完成, 防并发竞态:
+            # SQLite 单写锁串行化, allocate(SELECT MAX) 与 store(INSERT) 共用 session 时
+            # 第二个并发请求的事务会阻塞至本事务提交, 消除 MAX 读后读竞态.
+            async with (
+                self._create_lock,
+                self.session_factory() as session,
+                session.begin(),
+            ):
                 if metadata is None:
                     metadata = {}
                 metadata.setdefault("timestamp", datetime.now(UTC).isoformat())
                 metadata.setdefault("message_count", 2)
+
+                if round_number is None:
+                    round_number = await self._allocate_round_number_in_session(
+                        session, user_id, thread_id
+                    )
+                    self.logger.debug("自动分配轮次号: %s", round_number)
+                else:
+                    self.logger.debug("使用预分配轮次号: %s", round_number)
 
                 conversation = await self.conversation_dao.store_index_data(
                     round_number=round_number,
@@ -112,6 +126,7 @@ class ConversationService(ServiceHealthCheckMixin):
                     thread_id=thread_id,
                     agent_id=agent_id,
                     metadata=metadata,
+                    session=session,
                 )
 
             duration = (time.time() - start_time) * 1000
@@ -155,18 +170,10 @@ class ConversationService(ServiceHealthCheckMixin):
                 self.session_factory() as session,
                 session.begin(),
             ):
-                from sqlalchemy import func, select
-
-                stmt = select(
-                    func.coalesce(func.max(ConversationIndex.round_number), 0),
-                ).where(
-                    ConversationIndex.user_id == user_id,
-                    ConversationIndex.thread_id == thread_id,
+                new_round_number = await self._allocate_round_number_in_session(
+                    session, user_id, thread_id
                 )
-                result = await session.execute(stmt)
-                current_max = result.scalar() or 0
-                new_round_number = current_max + 1
-
+                current_max = new_round_number - 1
                 self.logger.debug(
                     "🔍 轮次号分配成功 - user_id: %s, thread_id: %s, current_max: %s, new_round: %s",
                     user_id,
@@ -188,6 +195,29 @@ class ConversationService(ServiceHealthCheckMixin):
                 exc_info=True,
             )
             raise
+
+    async def _allocate_round_number_in_session(
+        self,
+        session: Any,
+        user_id: str,
+        thread_id: str,
+    ) -> int:
+        """在给定 session 上 SELECT MAX(round_number)+1 (调用方负责事务边界).
+
+        统一事务边界: 与 store_index_data 共用同一 session/事务时,
+        SQLite 写锁串行化使 "分配+写入" 原子完成, 防并发竞态.
+        """
+        from sqlalchemy import func, select
+
+        stmt = select(
+            func.coalesce(func.max(ConversationIndex.round_number), 0),
+        ).where(
+            ConversationIndex.user_id == user_id,
+            ConversationIndex.thread_id == thread_id,
+        )
+        result = await session.execute(stmt)
+        current_max = result.scalar() or 0
+        return current_max + 1
 
     async def get_latest_round_number(self, user_id: str, thread_id: str) -> int:
         """获取最新轮次号.

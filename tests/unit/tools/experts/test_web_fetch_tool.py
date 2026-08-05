@@ -229,6 +229,10 @@ class TestWebFetchToolArun:
                 "src.tools.external.web_fetch.get_expert_cache",
                 return_value=mock_cache,
             ),
+            patch(
+                "src.tools.external.web_fetch.is_safe_url",
+                return_value=(True, "ok"),
+            ),
             patch.object(tool, "_execute", return_value=fetch_result),
         ):
             result = await tool._arun("https://example.com")
@@ -253,6 +257,10 @@ class TestWebFetchToolArun:
             patch(
                 "src.tools.external.web_fetch.get_expert_cache",
                 return_value=mock_cache,
+            ),
+            patch(
+                "src.tools.external.web_fetch.is_safe_url",
+                return_value=(True, "ok"),
             ),
             patch.object(tool, "_execute", return_value=fetch_result),
         ):
@@ -326,6 +334,59 @@ class TestAntiCrawlCheck:
 # =============================================================================
 # 5. _fetch_content HTTP请求与状态码处理测试
 # =============================================================================
+
+
+class TestSsrfCheck:
+    """测试 _check_ssrf SSRF 防护 (IP 字面量, 无 DNS 依赖)."""
+
+    def test_should_block_private_ip(self):
+        result = WebFetchTool._check_ssrf("http://10.0.0.1/admin")
+        assert result is not None
+        parsed = json.loads(result)
+        assert parsed["status"] == "blocked"
+        assert "10.0.0.1" in parsed["error"]
+
+    def test_should_block_cloud_metadata_endpoint(self):
+        result = WebFetchTool._check_ssrf("http://169.254.169.254/latest/meta-data/")
+        assert result is not None
+        parsed = json.loads(result)
+        assert parsed["status"] == "blocked"
+
+    def test_should_block_loopback(self):
+        result = WebFetchTool._check_ssrf("http://127.0.0.1:8080/")
+        assert result is not None
+
+    def test_should_block_bad_scheme(self):
+        result = WebFetchTool._check_ssrf("file:///etc/passwd")
+        assert result is not None
+        parsed = json.loads(result)
+        assert parsed["status"] == "blocked"
+        assert "协议" in parsed["error"]
+
+    def test_should_allow_public_ip_literal(self):
+        result = WebFetchTool._check_ssrf("http://8.8.8.8/")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_arun_should_block_ssrf_without_http_request(self):
+        """SSRF URL 在 _arun 中应直接返回 blocked, 不发起 HTTP."""
+        tool = WebFetchTool()
+        mock_cache = AsyncMock()
+        mock_cache.get_fetch = AsyncMock(return_value=None)
+        mock_cache.set_fetch = AsyncMock()
+
+        with (
+            patch(
+                "src.tools.external.web_fetch.get_expert_cache",
+                return_value=mock_cache,
+            ),
+            patch.object(tool, "_execute") as mock_execute,
+        ):
+            result = await tool._arun("http://169.254.169.254/")
+            parsed = json.loads(result)
+            assert parsed["status"] == "blocked"
+            mock_execute.assert_not_called()
+            mock_cache.set_fetch.assert_not_called()
 
 
 class TestFetchContentHttpStatusCodes:

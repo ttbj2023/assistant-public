@@ -2,15 +2,15 @@
 
 Personal Agent Assistant v1.9.0 三层测试体系. 设计规范总览见 [docs/development/testing.md](../docs/development/testing.md).
 
-## 当前状态 (2026-07-14)
+## 当前状态 (2026-07-24)
 
 | 类型 | 测试数 | 文件数 | 通过率 | 性质 |
 |------|--------|--------|--------|------|
-| 单元 | 3011 | 189 | 100% | 白盒, Mock 外部依赖 |
-| 集成 | 103 | 27 | 100% | 灰盒, 真实组件协作 |
+| 单元 | 3081 | 206 | 100% | 白盒, Mock 外部依赖 |
+| 集成 | 103 | 26 | 100% | 灰盒, 真实组件协作 |
 | E2E | 13 | 6 | 100% | 灰盒, ASGI TestClient 进程内 |
 
-综合行覆盖率(unit+integration) 83.60%, CI 门禁 80% (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
+综合行覆盖率(unit+integration) 85.15%, CI 门禁 80%总/75%分支/85%行 (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
 
 ## 目录结构
 
@@ -87,8 +87,8 @@ class TestMemoryRetrievalIntegration:
 
 ## 数据库架构 (测试环境)
 
-- `conversation_history.db`: `conversation_index` + `simple_pinned_memory` 表
-- `pinned_memory.db`: 独立置顶记忆数据库
+- `conversation_history.db`: `conversation_index` 表
+- `pinned_memory.db`: 独立置顶记忆数据库 (`pinned_memory_block` 表)
 - 路径: `./test_data/{user_id}/{thread_id}/database/`
 - 集成测试通过 `db_session` / `pinned_memory_db` fixture 初始化表结构, fixture 与 Service 层共用路径实现跨组件数据共享
 

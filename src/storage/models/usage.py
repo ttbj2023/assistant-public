@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel
-from pydantic import Field as PydanticField
 from sqlalchemy import Column, DateTime, Index, text
 from sqlmodel import Field, SQLModel
 
-UsageUnitType = Literal["token", "count"]
-UsageAccuracy = Literal["exact", "estimated", "unknown"]
+from src.core.datetime_utils import now_utc
+from src.core.types import UsageAccuracy, UsageRecordCreate, UsageUnitType
 
 
 class UsageRecordBase(SQLModel):
@@ -60,7 +58,7 @@ class UsageRecord(UsageRecordBase, table=True):
 
     id: int | None = Field(default=None, primary_key=True, description="记录ID")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
@@ -69,39 +67,6 @@ class UsageRecord(UsageRecordBase, table=True):
         """SQLModel配置."""
 
         from_attributes = True
-
-
-class UsageRecordCreate(BaseModel):
-    """创建用量记录的输入模型."""
-
-    user_id: str
-    thread_id: str
-    agent_id: str
-    round_number: int | None = None
-    request_id: str | None = None
-
-    operation: str
-    usage_source: str
-    provider: str | None = None
-    model_id: str | None = None
-    run_id: str | None = None
-    parent_run_id: str | None = None
-    external_job_id: str | None = None
-
-    unit_type: UsageUnitType = "token"
-    request_count: int = 1
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-    total_tokens: int | None = None
-    cache_read_tokens: int | None = None
-    cache_creation_tokens: int | None = None
-    reasoning_tokens: int | None = None
-
-    accuracy: UsageAccuracy = "unknown"
-    success: bool = True
-    duration_ms: int | None = None
-    raw_usage: dict | None = PydanticField(default=None)
-    metadata: dict | None = PydanticField(default=None)
 
 
 class UsageQuery(BaseModel):

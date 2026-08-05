@@ -1,10 +1,10 @@
 """OrchestratorAgent中间基类 - 提供基于ProcessorOrchestrator的通用Agent实现.
 
-将PersonalAssistantAgent和HealthAssistantAgent中的共享逻辑抽取到此处:
-- initialize: 创建并初始化ProcessorOrchestrator
+- initialize: 创建并初始化ProcessorOrchestrator + DomainDataDispatcher
 - cleanup: 清理orchestrator资源
 - _build_processor_config: 统一构建处理器配置
 - process_message/process_message_stream/finalize_conversation: 模板方法+钩子
+- 领域数据调度: agent.yaml 声明 domain_data 后, 基类统一 fire-and-forget 调度
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from src.agent.base_agent import ProcessMessageKwargs
 
 from src.agent.base_agent import BaseAgent
+from src.agent.domain_data import DomainDataDispatcher
 from src.agent.processors import ProcessorOrchestrator
 from src.config.agent_config import AgentConfig
 from src.core.streaming import StreamContent
@@ -34,6 +35,7 @@ class OrchestratorAgent(BaseAgent):
     def __init__(self, config: AgentConfig) -> None:
         super().__init__(config)
         self._orchestrator: ProcessorOrchestrator | None = None
+        self._domain_data_dispatcher: DomainDataDispatcher | None = None
         self._initialized = False
 
     @override
@@ -51,10 +53,18 @@ class OrchestratorAgent(BaseAgent):
             self._orchestrator = ProcessorOrchestrator(None, memory_type)
             await self._orchestrator.initialize()
 
+            domain_data_names = getattr(self.config, "domain_data", None) or []
+            if domain_data_names:
+                self._domain_data_dispatcher = DomainDataDispatcher(
+                    domain_data_names,
+                    self.id,
+                )
+
             self._initialized = True
             logger.info(
                 f"{self.__class__.__name__} {self.id} 初始化完成 "
-                f"(记忆类型: {memory_type}, 模型: {self.config.model_id})",
+                f"(记忆类型: {memory_type}, 模型: {self.config.model_id}"
+                f"{f', 领域数据: {domain_data_names}' if domain_data_names else ''})",
             )
 
         except Exception as e:
@@ -102,6 +112,25 @@ class OrchestratorAgent(BaseAgent):
             await self.initialize()
         self._ensure_initialized()
 
+    async def _collect_domain_injections(
+        self,
+        processor_config: dict[str, Any],
+        user_id: str,
+        thread_id: str,
+    ) -> None:
+        """收集领域数据注入内容, 存入 processor_config["domain_injection"]."""
+        if (
+            self._domain_data_dispatcher
+            and self._domain_data_dispatcher.has_domain_data
+        ):
+            injection = await self._domain_data_dispatcher.collect_injections(
+                user_id,
+                thread_id,
+                self.config,
+            )
+            if injection:
+                processor_config["domain_injection"] = injection
+
     @override
     async def process_message(
         self,
@@ -119,6 +148,7 @@ class OrchestratorAgent(BaseAgent):
             )
 
             processor_config = self._build_processor_config(**kwargs)
+            await self._collect_domain_injections(processor_config, user_id, thread_id)
 
             image_datas: list[dict[str, Any]] | None = cast(
                 "list[dict[str, Any]] | None",
@@ -182,6 +212,7 @@ class OrchestratorAgent(BaseAgent):
             )
 
             processor_config = self._build_processor_config(**kwargs)
+            await self._collect_domain_injections(processor_config, user_id, thread_id)
 
             image_datas: list[dict[str, Any]] | None = cast(
                 "list[dict[str, Any]] | None",
@@ -289,36 +320,71 @@ class OrchestratorAgent(BaseAgent):
             logger.error(f"{self.__class__.__name__} {self.id} 清理失败: {e}")
             raise
 
-    # ==================== 钩子方法(子类覆盖) ====================
+    # ==================== 钩子方法(子类可覆盖) ====================
 
     async def _post_process_hook(
         self,
-        result: str,
+        result: str,  # noqa: ARG002
         conversation_data: Any,
         user_id: str,
         thread_id: str,
         attachment_infos: list[Any] | None,
         kwargs: ProcessMessageKwargs,
     ) -> None:
-        """process_message后处理钩子, 子类可覆盖."""
+        """process_message后处理钩子: 调度领域数据提取."""
+        if (
+            self._domain_data_dispatcher
+            and self._domain_data_dispatcher.has_domain_data
+        ):
+            round_number = (
+                kwargs.get("round_number") if "round_number" in kwargs else None
+            )
+            self._domain_data_dispatcher.dispatch(
+                conversation_data=conversation_data,
+                user_id=user_id,
+                thread_id=thread_id,
+                attachment_infos=attachment_infos,
+                round_number=round_number,
+                agent_config=self.config,
+            )
 
     def _pre_stream_hook(
         self,
-        image_datas: list[dict[str, Any]] | None,
+        image_datas: list[dict[str, Any]] | None,  # noqa: ARG002
         attachment_infos: list[Any] | None,
-        kwargs: ProcessMessageKwargs,
+        kwargs: ProcessMessageKwargs,  # noqa: ARG002
     ) -> None:
-        """process_message_stream前置钩子, 子类可覆盖."""
+        """process_message_stream前置钩子: 缓存 attachment_infos 供 finalize 使用."""
+        if self._domain_data_dispatcher:
+            self._domain_data_dispatcher.cache_attachments(attachment_infos)
 
     async def _post_finalize_hook(
         self,
-        response: str,
+        response: str,  # noqa: ARG002
         conversation_data: Any,
         user_id: str,
         thread_id: str,
         kwargs: ProcessMessageKwargs,
     ) -> None:
-        """finalize_conversation后处理钩子, 子类可覆盖."""
+        """finalize_conversation后处理钩子: 调度领域数据提取并清理缓存."""
+        if (
+            self._domain_data_dispatcher
+            and self._domain_data_dispatcher.has_domain_data
+        ):
+            round_number = (
+                kwargs.get("round_number") if "round_number" in kwargs else None
+            )
+            self._domain_data_dispatcher.dispatch(
+                conversation_data=conversation_data,
+                user_id=user_id,
+                thread_id=thread_id,
+                attachment_infos=None,
+                round_number=round_number,
+                agent_config=self.config,
+            )
+            self._domain_data_dispatcher.clear_cached_attachments()
 
     def _cleanup_hook(self) -> None:
-        """cleanup时的额外清理钩子, 子类可覆盖."""
+        """cleanup时的额外清理钩子."""
+        if self._domain_data_dispatcher:
+            self._domain_data_dispatcher.clear_cached_attachments()

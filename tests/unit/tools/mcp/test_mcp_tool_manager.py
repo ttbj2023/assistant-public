@@ -604,6 +604,71 @@ class TestMcpBridgeLazyLoad:
     """懒加载测试"""
 
     @pytest.mark.asyncio
+    async def test_concurrent_load_creates_client_only_once(self):
+        """并发 _ensure_loaded 应串行化, Client 仅创建一次 (防重复连接)."""
+        import asyncio
+
+        mcp_tool = _make_mock_mcp_tool("tool_a", "A")
+
+        bridge = McpBridge({
+            "srv": McpServerConfig(
+                name="srv",
+                transport="streamable_http",
+                url="https://example.com/mcp",
+            ),
+        })
+
+        with _mock_fastmcp() as (mock_client_cls, _):
+            mock_client = _make_mock_client([mcp_tool])
+
+            async def yielding_aenter(*args: Any, **kwargs: Any) -> AsyncMock:
+                # 强制让出事件循环, 触发并发交错 (否则 AsyncMock 不挂起无法复现竞态)
+                await asyncio.sleep(0)
+                return mock_client
+
+            mock_client.__aenter__ = yielding_aenter
+            mock_client_cls.return_value = mock_client
+
+            with patch.object(bridge, "_create_transport", return_value=MagicMock()):
+                await asyncio.gather(
+                    bridge.get_all_tools(),
+                    bridge.get_all_tools(),
+                )
+
+            assert mock_client_cls.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_tool_call_uses_current_client_after_client_swap(self):
+        """重连后再次调用应使用最新 client, 而非工具创建时捕获的旧 client."""
+        mcp_tool = _make_mock_mcp_tool("project_tool", "T")
+
+        bridge = McpBridge({
+            "srv": McpServerConfig(
+                name="srv",
+                transport="streamable_http",
+                url="https://example.com/mcp",
+            ),
+        })
+
+        with _mock_fastmcp() as (mock_client_cls, _):
+            client_initial = _make_mock_client([mcp_tool])
+            mock_client_cls.return_value = client_initial
+
+            with patch.object(bridge, "_create_transport", return_value=MagicMock()):
+                tool = await bridge.get_tool("project_tool")
+
+            # 模拟重连: bridge 当前的 server client 已被替换
+            client_new = AsyncMock()
+            client_new.call_tool = AsyncMock(return_value="新client结果")
+            bridge._server_clients["srv"] = client_new
+
+            result = await tool.coroutine(query="x")
+
+        assert "新client结果" in result
+        client_new.call_tool.assert_awaited_once()
+        client_initial.call_tool.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_should_load_tools_on_first_access(self):
         mcp_tool = _make_mock_mcp_tool("datapro_search", "Search")
 

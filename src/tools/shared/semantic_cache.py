@@ -248,7 +248,7 @@ class SemanticCache:
             return {"status": "error", "error": str(e)}
 
 
-# 全局单例: 按collection_name隔离(web_research用research_cache, professional_database用datapro_cache)
+# 全局单例: 按collection_name隔离(web_research用research_cache, datapro领域工具用各自cache)
 _semantic_caches: dict[str, SemanticCache] = {}
 
 

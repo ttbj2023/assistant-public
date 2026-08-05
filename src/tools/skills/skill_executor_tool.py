@@ -22,7 +22,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.runtime_env import get_tool_runtime_base_url
 from src.files.paths import FILES_EXPORTS
-from src.tools.shared.base_external_tool import BaseExternalTool
+from langchain_core.tools import BaseTool
+from src.tools.shared.tool_runtime import sync_runnable, format_tool_error
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,8 @@ class SkillExecutorInput(BaseModel):
     )
 
 
-class SkillExecutorTool(BaseExternalTool):
+@sync_runnable
+class SkillExecutorTool(BaseTool):
     """Skill执行器工具 - 调用工具附属镜像执行代码并回收产物为附件."""
 
     name: str = "skill_executor"
@@ -112,7 +114,7 @@ class SkillExecutorTool(BaseExternalTool):
             return await self._format_result(result, duration_ms, code, title)
         except Exception as e:
             logger.exception("SkillExecutorTool执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     async def _execute_remote(
         self,

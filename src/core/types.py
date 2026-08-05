@@ -31,9 +31,49 @@ class ConversationIndexResult(BaseModel):
     topic: str = Field(description="主要话题,3-5个词")
 
 
+UsageUnitType = Literal["token", "count"]
+UsageAccuracy = Literal["exact", "estimated", "unknown"]
+
+
+class UsageRecordCreate(BaseModel):
+    """创建用量记录的输入模型 - inference 产出 / storage 消费的跨层契约."""
+
+    user_id: str
+    thread_id: str
+    agent_id: str
+    round_number: int | None = None
+    request_id: str | None = None
+
+    operation: str
+    usage_source: str
+    provider: str | None = None
+    model_id: str | None = None
+    run_id: str | None = None
+    parent_run_id: str | None = None
+    external_job_id: str | None = None
+
+    unit_type: UsageUnitType = "token"
+    request_count: int = 1
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_creation_tokens: int | None = None
+    reasoning_tokens: int | None = None
+
+    accuracy: UsageAccuracy = "unknown"
+    success: bool = True
+    duration_ms: int | None = None
+    raw_usage: dict | None = Field(default=None)
+    metadata: dict | None = Field(default=None)
+
+
 __all__ = [
     "ContentBlock",
     "ConversationIndexResult",
     "ImageUrl",
     "MessageContent",
+    "UsageAccuracy",
+    "UsageRecordCreate",
+    "UsageUnitType",
 ]

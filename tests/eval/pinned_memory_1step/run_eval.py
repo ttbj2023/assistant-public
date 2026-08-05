@@ -125,7 +125,7 @@ SCOPE_V2_PROMPT = """你是置顶记忆维护助手. 置顶记忆只保存"用�
 
 
 def format_memory_block(memory: dict[str, str]) -> str:
-    """复刻 SimplePinnedMemoryManager.get_memory_for_analysis 的格式."""
+    """格式化置顶记忆块用于评估."""
     lines: list[str] = []
     for fld in _FIELDS:
         lines.append(f"### {_FIELD_LABELS[fld]}")

@@ -177,6 +177,24 @@ class TestModelRegistry:
         assert isinstance(models_after, list)
 
 
+class TestSharedModelsCapabilities:
+    """共享模型能力声明测试(防回退)."""
+
+    def teardown_method(self) -> None:
+        clear_model_cache()
+
+    def test_kimi_k26_supports_image_input(self) -> None:
+        # Kimi 官方明确 K2.6 支持视觉与文本输入, caps 必须含 IMAGE_INPUT.
+        model = get_model("ark-agent-plan:kimi-k2.6")
+        assert model is not None
+        assert ModelCapability.IMAGE_INPUT in model.capabilities
+
+    def test_kimi_k3_supports_image_input(self) -> None:
+        model = get_model("ark-agent-plan:kimi-k3")
+        assert model is not None
+        assert ModelCapability.IMAGE_INPUT in model.capabilities
+
+
 class TestValidation:
     """验证函数测试."""
 

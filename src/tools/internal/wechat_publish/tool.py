@@ -6,10 +6,11 @@ import json
 import logging
 from typing import ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
-from src.tools.shared.base_internal_tool import BaseInternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class WechatPublishInput(QueryAliasModel):
     )
 
 
-class WechatPublishTool(BaseInternalTool):
+@sync_runnable
+class WechatPublishTool(BaseTool):
     """微信公众号推送工具 - 将Markdown文章发布到草稿箱."""
 
     name: str = "wechat_publish"
@@ -63,7 +65,6 @@ class WechatPublishTool(BaseInternalTool):
     args_schema: type = WechatPublishInput
     timeout: float = 300.0
 
-    @override
     async def is_available(self) -> bool:
         """检查用户是否配置了微信公众号凭证 (appid + secret)."""
         try:
@@ -106,7 +107,7 @@ class WechatPublishTool(BaseInternalTool):
 
         except Exception as e:
             logger.exception("WechatPublishTool 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
 
 __all__ = ["WechatPublishInput", "WechatPublishTool"]

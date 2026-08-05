@@ -52,6 +52,12 @@ class TestTokenEstimator:
         assert result >= 0, f"Token估算结果不能为负数: {result}"
 
     @pytest.mark.unit
+    def test_estimator_initializes_cache_when_enabled(self) -> None:
+        """enable_cache=True 时缓存始终初始化 (无全局开关阻断)."""
+        estimator = TokenEstimator(enable_cache=True)
+        assert estimator._cache is not None
+
+    @pytest.mark.unit
     def test_estimate_tokens_chinese_ratio_threshold(self) -> None:
         base_english = "a" * 10
 

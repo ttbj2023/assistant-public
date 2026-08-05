@@ -134,6 +134,7 @@ dmypy.json
 # Project specific
 /data/
 test_data/
+test_data_*/
 logs/
 *.db
 *.sqlite
@@ -199,6 +200,9 @@ Thumbs.db
 
 # Personal development scripts
 
+# opencode 工作计划草稿(临时产物, 用后即弃)
+.opencode/plans/
+
 # Temporary development scripts in root directory
 # These patterns prevent temporary scripts from cluttering the root directory
 /temp_*.py
@@ -247,3 +251,6 @@ src/auth/static_users.yaml
 # 具体的文件忽略应该通过各个工具的配置来控制（如MyPy的exclude配置）
 
 # 置顶记忆评测框架(已脱敏改编, 数据入库)
+
+# PDF 测试夹具(大文件, 临时性本地存放, SPEC.md 等文档仍入库)
+tests/fixtures/pdf/*.pdf

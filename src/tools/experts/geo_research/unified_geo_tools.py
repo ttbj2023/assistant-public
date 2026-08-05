@@ -19,11 +19,12 @@ import json
 import logging
 from typing import Any, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.tools.experts.geo_research import baidu_maps_client as baidu
 from src.tools.experts.geo_research import unified_geo_client as unified
-from src.tools.shared.base_external_tool import BaseExternalTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,8 @@ def _has_baidu_key() -> bool:
     return has_credential("baidu_maps_ak")
 
 
-class GeocodeTool(BaseExternalTool):
+@sync_runnable
+class GeocodeTool(BaseTool):
     name: str = "geocode"
     summary: str = "地址转坐标(地理编码)"
     description: str = (
@@ -135,7 +137,6 @@ class GeocodeTool(BaseExternalTool):
     args_schema: type[BaseModel] = _GeocodeInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -145,7 +146,8 @@ class GeocodeTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class ReverseGeocodeTool(BaseExternalTool):
+@sync_runnable
+class ReverseGeocodeTool(BaseTool):
     name: str = "reverse_geocode"
     summary: str = "坐标转地址(逆地理编码)"
     description: str = (
@@ -154,7 +156,6 @@ class ReverseGeocodeTool(BaseExternalTool):
     args_schema: type[BaseModel] = _ReverseGeocodeInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -164,7 +165,8 @@ class ReverseGeocodeTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class DistrictSearchTool(BaseExternalTool):
+@sync_runnable
+class DistrictSearchTool(BaseTool):
     name: str = "district_search"
     summary: str = "行政区划查询(省/市/区县列表)"
     description: str = (
@@ -176,7 +178,6 @@ class DistrictSearchTool(BaseExternalTool):
     args_schema: type[BaseModel] = _DistrictInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_tencent_key()
 
@@ -186,7 +187,8 @@ class DistrictSearchTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class PlaceSearchTool(BaseExternalTool):
+@sync_runnable
+class PlaceSearchTool(BaseTool):
     name: str = "place_search"
     summary: str = "POI搜索(餐厅/酒店/景点等)"
     description: str = (
@@ -198,7 +200,6 @@ class PlaceSearchTool(BaseExternalTool):
     args_schema: type[BaseModel] = _PlaceSearchInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -217,7 +218,8 @@ class PlaceSearchTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class DrivingDirectionsTool(BaseExternalTool):
+@sync_runnable
+class DrivingDirectionsTool(BaseTool):
     name: str = "driving_directions"
     summary: str = "驾车路线规划(距离/时间/过路费)"
     description: str = (
@@ -228,7 +230,6 @@ class DrivingDirectionsTool(BaseExternalTool):
     args_schema: type[BaseModel] = _RouteInput
     timeout: float = 15.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -244,7 +245,8 @@ class DrivingDirectionsTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class TransitDirectionsTool(BaseExternalTool):
+@sync_runnable
+class TransitDirectionsTool(BaseTool):
     name: str = "transit_directions"
     summary: str = "公交路线规划(距离/时间/换乘方案)"
     description: str = (
@@ -256,7 +258,6 @@ class TransitDirectionsTool(BaseExternalTool):
     args_schema: type[BaseModel] = _TransitInput
     timeout: float = 15.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -275,7 +276,8 @@ class TransitDirectionsTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class WalkingDirectionsTool(BaseExternalTool):
+@sync_runnable
+class WalkingDirectionsTool(BaseTool):
     name: str = "walking_directions"
     summary: str = "步行路线规划(距离/时间)"
     description: str = (
@@ -286,7 +288,6 @@ class WalkingDirectionsTool(BaseExternalTool):
     args_schema: type[BaseModel] = _RouteInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_any_key()
 
@@ -302,7 +303,8 @@ class WalkingDirectionsTool(BaseExternalTool):
         return json.dumps(result, ensure_ascii=False)
 
 
-class TrafficTool(BaseExternalTool):
+@sync_runnable
+class TrafficTool(BaseTool):
     name: str = "traffic"
     summary: str = "查询周边实时路况"
     description: str = (
@@ -312,7 +314,6 @@ class TrafficTool(BaseExternalTool):
     args_schema: type[BaseModel] = _TrafficInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         return _has_baidu_key()
 
@@ -327,15 +328,15 @@ class TrafficTool(BaseExternalTool):
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_geo_sub_tools() -> list[BaseExternalTool]:
+def create_geo_sub_tools() -> list[BaseTool]:
     """创建全部地理子工具实例 (供 geo_research deep 模式 Agent 使用)."""
     return [
-        GeocodeTool(),
-        ReverseGeocodeTool(),
-        DistrictSearchTool(),
-        PlaceSearchTool(),
-        DrivingDirectionsTool(),
-        TransitDirectionsTool(),
-        WalkingDirectionsTool(),
-        TrafficTool(),
+        GeocodeTool(),  # type: ignore[abstract]
+        ReverseGeocodeTool(),  # type: ignore[abstract]
+        DistrictSearchTool(),  # type: ignore[abstract]
+        PlaceSearchTool(),  # type: ignore[abstract]
+        DrivingDirectionsTool(),  # type: ignore[abstract]
+        TransitDirectionsTool(),  # type: ignore[abstract]
+        WalkingDirectionsTool(),  # type: ignore[abstract]
+        TrafficTool(),  # type: ignore[abstract]
     ]

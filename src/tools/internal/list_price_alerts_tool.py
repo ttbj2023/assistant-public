@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict
 
 from src.storage.service.price_alert_service import get_price_alert_engine
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ class ListPriceAlertsRequest(BaseModel):
     )
 
 
-class ListPriceAlertsTool(BaseInternalTool):
+@sync_runnable
+class ListPriceAlertsTool(BaseTool):
     """查看当前用户活跃的价格监控规则."""
 
     name: str = "list_price_alerts"

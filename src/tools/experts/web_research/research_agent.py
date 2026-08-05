@@ -151,7 +151,18 @@ class ResearchAgent:
         self._agent: Any | None = None
 
     def _get_llm(self) -> BaseChatModel:
-        return ExpertModelFactory.create_for_tool("web_research")
+        llm = ExpertModelFactory.create_for_tool(
+            "web_research",
+            model_id=self.model_id or None,
+        )
+        # 绑定单次 LLM 请求超时 (与整体研究 timeout 区分), 经 bind 传入运行时配置
+        if self.llm_request_timeout > 0:
+            from typing import cast
+
+            return cast(
+                "BaseChatModel", llm.bind(request_timeout=self.llm_request_timeout)
+            )
+        return llm
 
     def _get_or_create_agent(self) -> Any:
         if self._agent is not None:
@@ -201,7 +212,7 @@ class ResearchAgent:
             result = await asyncio.wait_for(
                 agent.ainvoke(
                     {"messages": messages},
-                    config=RunnableConfig(max_concurrency=1),
+                    config=RunnableConfig(max_concurrency=1, recursion_limit=50),
                 ),
                 timeout=self.timeout,
             )
@@ -262,7 +273,11 @@ def get_research_agent(
     global _agent_instance, _agent_tools_key
 
     tools_list = tools or []
-    current_key = ",".join(sorted(t.name for t in tools_list))
+    # 单例 key 含 tools/model_id/timeout, 任一变化即重建 Agent
+    current_key = (
+        f"{','.join(sorted(t.name for t in tools_list))}"
+        f"|{model_id}|{timeout}|{llm_request_timeout}"
+    )
 
     if _agent_instance is not None and _agent_tools_key == current_key:
         return _agent_instance

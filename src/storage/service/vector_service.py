@@ -179,5 +179,13 @@ class VectorService:
             logger.warning("⚠️ 关闭VectorService时出现警告: %s", e)
 
     def __del__(self) -> None:
-        """析构函数,确保资源清理."""
-        self.close()
+        """析构兜底: 仅解除引用, 不触发阻塞关闭.
+
+        vector_store 自身的 __del__ 负责非阻塞清理线程池,
+        避免在事件循环/GC 线程中阻塞.
+        """
+        try:
+            self._vector_store = None
+            self._initialized = False
+        except Exception:
+            pass

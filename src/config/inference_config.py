@@ -31,6 +31,28 @@ class EmbeddingsConfig(BaseModel):
     )
 
 
+class RerankConfig(BaseModel):
+    """重排序模型配置"""
+
+    enabled: bool = Field(
+        default=False,
+        description="是否启用 reranker 重排序 (关闭时检索结果保持原始排序)",
+    )
+    base_url: str = Field(
+        default="http://localhost:8768",
+        description="Reranker 服务地址",
+    )
+    timeout: float = Field(
+        default=30.0,
+        description="请求超时秒数",
+        gt=0,
+    )
+    instruction: str = Field(
+        default="",
+        description="任务指令 (留空用服务端默认; 自定义可提升 1-5% 精度)",
+    )
+
+
 class ContentAnalyzerConfig(BaseModel):
     """内容分析器配置(索引生成,置顶记忆更新等文字分析任务)"""
 
@@ -66,16 +88,6 @@ class ContentAnalyzerConfig(BaseModel):
             "判断类任务需要 fallback 保留思考, 应显式配置(如启用 thinking). "
             "仅作用于判断类任务, 索引生成/弧蒸馏仍走全局默认."
         ),
-    )
-    dedup_enabled: bool = Field(
-        default=True,
-        description="是否启用置顶记忆add语义去重(基于嵌入向量)",
-    )
-    dedup_threshold: float = Field(
-        default=0.90,
-        ge=0.0,
-        le=1.0,
-        description="语义去重余弦相似度阈值(越高越严格, 默认0.90)",
     )
 
 
@@ -191,13 +203,13 @@ class ExpertsConfig(BaseModel):
         default_factory=dict,
         description="GeoResearch模型专属bind参数(空=使用default_model_params)",
     )
-    professional_database_model: str = Field(
+    datapro_model: str = Field(
         default="",
-        description="ProfessionalDatabaseTool模型(空=使用default_model)",
+        description="DataPro领域工具(金融/工商/风险)LLM整理模型(空=使用default_model)",
     )
-    professional_database_model_params: dict[str, Any] = Field(
+    datapro_model_params: dict[str, Any] = Field(
         default_factory=dict,
-        description="ProfessionalDatabase模型专属bind参数(空=使用default_model_params)",
+        description="DataPro领域工具LLM整理模型bind参数(空=使用default_model_params)",
     )
     grounding_model: str = Field(
         default="gemini:gemini-2.5-flash-lite",
@@ -262,7 +274,7 @@ class ExpertsConfig(BaseModel):
             "web_research_synthesis": self.web_research_synthesis_model,
             "geo_research": self.geo_research_model,
             "geo_navigator": self.geo_research_model,
-            "professional_database": self.professional_database_model,
+            "datapro": self.datapro_model,
             "grounding": self.grounding_model,
             "url_context": self.url_context_model,
             "maps_grounding": self.maps_grounding_model,
@@ -285,7 +297,7 @@ class ExpertsConfig(BaseModel):
             "web_research_synthesis": self.web_research_synthesis_model_params,
             "geo_research": self.geo_research_model_params,
             "geo_navigator": self.geo_research_model_params,
-            "professional_database": self.professional_database_model_params,
+            "datapro": self.datapro_model_params,
         }
         params = mapping.get(tool_name, {})
         return params or self.default_model_params
@@ -301,11 +313,11 @@ class ImageGenerationConfig(BaseModel):
 
 
 class WechatPublishConfig(BaseModel):
-    """微信公众号发布配置 (摘要生成/封面提示词/文章润色/自动插图)"""
+    """微信公众号发布配置 (摘要生成/封面提示词/校对排版)"""
 
     model: str = Field(
         default="deepseek:deepseek-v4-flash",
-        description="微信发布文字任务模型(摘要/封面提示词/自动插图)",
+        description="微信发布文字任务模型(摘要/封面提示词)",
     )
     model_params: dict[str, Any] = Field(
         default_factory=lambda: {"max_tokens": 4096},
@@ -313,11 +325,11 @@ class WechatPublishConfig(BaseModel):
     )
     refine_model: str = Field(
         default="deepseek:deepseek-v4-pro",
-        description="文章润色模型(pro思考模式, 公众号排版优化)",
+        description="校对排版模型(错别字/断段/格式, 不改写表达)",
     )
     refine_model_params: dict[str, Any] = Field(
         default_factory=lambda: {"max_tokens": 32768},
-        description="润色模型bind参数",
+        description="校对排版模型bind参数",
     )
 
 
@@ -401,6 +413,10 @@ class InferenceConfig(BaseConfig):
     embeddings: EmbeddingsConfig = Field(
         default_factory=EmbeddingsConfig,
         description="嵌入模型配置",
+    )
+    reranker: RerankConfig = Field(
+        default_factory=RerankConfig,
+        description="重排序模型配置",
     )
     content_analyzer: ContentAnalyzerConfig = Field(
         default_factory=ContentAnalyzerConfig,
@@ -487,6 +503,7 @@ __all__ = [
     "ImageDescriptionConfig",
     "ImageGenerationConfig",
     "InferenceConfig",
+    "RerankConfig",
     "ToolFilterConfig",
     "WechatPublishConfig",
     "get_config",

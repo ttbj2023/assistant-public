@@ -6,11 +6,9 @@
 from __future__ import annotations
 
 from .conversation_formatter import ConversationFormatter
-from .pinned_memory_formatter import PinnedMemoryFormatter
 from .todo_formatter import TodoFormatter
 
 __all__ = [
     "ConversationFormatter",
-    "PinnedMemoryFormatter",
     "TodoFormatter",
 ]

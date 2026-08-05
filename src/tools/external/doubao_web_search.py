@@ -15,10 +15,11 @@ import logging
 from typing import Any, override
 
 import httpx
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.cache import ExpertCache, get_expert_cache
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,8 @@ class SearchInput(BaseModel):
     count: int = Field(default=5, ge=1, le=50, description="返回结果数量")
 
 
-class DoubaoSearchTool(BaseExternalTool):
+@sync_runnable
+class DoubaoSearchTool(BaseTool):
     """豆包网络搜索工具.
 
     直接调用 feedcoopapi web_search 接口, 走 Agent Plan 计费.
@@ -66,7 +68,6 @@ class DoubaoSearchTool(BaseExternalTool):
 
     timeout: float = 30.0
 
-    @override
     async def is_available(self) -> bool:
         return bool(_get_api_key())
 
@@ -113,6 +114,19 @@ async def doubao_web_search(
     return result
 
 
+class _RetryableServerError(Exception):
+    """豆包 200-body 可重试业务错误(如 Internal Error)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def _is_retryable_business_error(message: str) -> bool:
+    """判断业务错误是否属于服务端瞬时波动, 可重试."""
+    return "internal" in message.lower()
+
+
 async def _execute_search(
     api_key: str,
     query: str,
@@ -151,6 +165,8 @@ async def _execute_search(
             err = (data.get("ResponseMetadata") or {}).get("Error")
             if err:
                 msg = err.get("Message") or json.dumps(err, ensure_ascii=False)
+                if _is_retryable_business_error(msg):
+                    raise _RetryableServerError(msg)
                 logger.error("豆包搜索业务错误: %s", msg)
                 return {"error": f"豆包搜索错误: {msg}"}
 
@@ -166,6 +182,26 @@ async def _execute_search(
                 })
 
             return {"search_results": results}
+
+        except _RetryableServerError as e:
+            last_error = e
+            if attempt == max_retries:
+                logger.error(
+                    "豆包搜索业务错误(%s/%s): %s",
+                    attempt,
+                    max_retries,
+                    e.message,
+                )
+                break
+            delay = base_delay * attempt
+            logger.warning(
+                "豆包搜索业务错误(%s/%s), %ss后重试: %s",
+                attempt,
+                max_retries,
+                delay,
+                e.message,
+            )
+            await asyncio.sleep(delay)
 
         except httpx.HTTPStatusError as e:
             last_error = e

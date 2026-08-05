@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+MAX_LINES = 20
+MAX_TOTAL_LENGTH = 800
+
 
 class RewriteResult(BaseModel):
     """主模型覆写结果."""
@@ -36,6 +39,15 @@ class RewriteResult(BaseModel):
 
 class PinnedMemoryRewriter:
     """主模型每轮全文覆写统一置顶记忆."""
+
+    _BUDGET_ERROR_TEMPLATE = """你的输出超出了记忆容量限制:
+- 当前: {current_lines}行 / {current_chars}字
+- 上限: {max_lines}行 / {max_total_length}字
+
+请精简后重新输出. 保留对未来对话影响最大的条目, 合并或删除次要信息.
+
+输出JSON:
+{{"needs_update": true, "content": "精简后的完整记忆, 一行一条"}}"""
 
     LOCAL_REWRITE_PROMPT = """以上是本轮完整对话.
 
@@ -69,7 +81,7 @@ class PinnedMemoryRewriter:
 
 ## 容量约束
 - 一行一条, 用精炼的语言
-- 总计不超过20行/800字
+- 总计不超过{max_lines}行/{max_total_length}字
 - 宁可少记不要噪音; 拿不准倾向不记
 
 输出JSON:
@@ -102,7 +114,7 @@ class PinnedMemoryRewriter:
 
 ## 容量约束
 - 一行一条, 用精炼的语言
-- 总计不超过20行/800字
+- 总计不超过{max_lines}行/{max_total_length}字
 - 宁可少记不要噪音
 
 输出JSON:
@@ -149,7 +161,11 @@ class PinnedMemoryRewriter:
         if not template:
             raise ValueError(f"未知 mode: {mode}, 仅支持 local/simple")
 
-        instruction = template.format(current_memory=current_memory or "(空)")
+        instruction = template.format(
+            current_memory=current_memory or "(空)",
+            max_lines=MAX_LINES,
+            max_total_length=MAX_TOTAL_LENGTH,
+        )
         full_messages = [
             *messages,
             AIMessage(content=response),
@@ -164,7 +180,29 @@ class PinnedMemoryRewriter:
             usage_tag="pinned_memory_rewrite",
         )
 
-        return self._parse_result(raw)
+        result = self._parse_result(raw)
+
+        if result.needs_update and not self._within_budget(result.content):
+            full_messages.append(raw)
+            full_messages.append(
+                HumanMessage(content=self._budget_error(result.content))
+            )
+            raw = await invoke_with_fallback(
+                full_messages,
+                self.model_id,
+                self.model_params,
+                use_json_mode=True,
+                usage_tag="pinned_memory_rewrite_retry",
+            )
+            result = self._parse_result(raw)
+            if result.needs_update and not self._within_budget(result.content):
+                logger.warning(
+                    "置顶记忆重试后仍超限 (%d行/%d字), 已接受写入",
+                    len([ln for ln in result.content.splitlines() if ln.strip()]),
+                    len(result.content),
+                )
+
+        return result
 
     @staticmethod
     def _parse_result(response: Any) -> RewriteResult:
@@ -188,6 +226,23 @@ class PinnedMemoryRewriter:
         return RewriteResult(
             needs_update=bool(data.get("needs_update", False)),
             content=str(data.get("content", "")),
+        )
+
+    @staticmethod
+    def _within_budget(content: str) -> bool:
+        """检查内容是否在容量限额内."""
+        lines = [ln for ln in content.splitlines() if ln.strip()]
+        return len(lines) <= MAX_LINES and len(content) <= MAX_TOTAL_LENGTH
+
+    @staticmethod
+    def _budget_error(content: str) -> str:
+        """生成超限报错反馈."""
+        lines = [ln for ln in content.splitlines() if ln.strip()]
+        return PinnedMemoryRewriter._BUDGET_ERROR_TEMPLATE.format(
+            current_lines=len(lines),
+            current_chars=len(content),
+            max_lines=MAX_LINES,
+            max_total_length=MAX_TOTAL_LENGTH,
         )
 
 

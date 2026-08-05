@@ -26,7 +26,8 @@ def get_available_agents() -> list[str]:  # noqa: RUF067
             except Exception as e:
                 logger.warning(f"无法读取Agent配置 {item.name}: {e}")
 
-    return agents
+    # 排序保证返回顺序稳定, 不依赖文件系统遍历顺序
+    return sorted(agents)
 
 
 def get_agent_directory(agent_id: str) -> str:  # noqa: RUF067

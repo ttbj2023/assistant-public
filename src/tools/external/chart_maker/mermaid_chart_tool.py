@@ -8,11 +8,16 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from .chart_maker_base import ChartMakerBase
+from langchain_core.tools import BaseTool
+
+from src.tools.shared.tool_runtime import sync_runnable
+
+from .chart_render import render_chart
 from .models import MermaidChartInput
 
 
-class MermaidChartTool(ChartMakerBase):
+@sync_runnable
+class MermaidChartTool(BaseTool):
     """渲染 mermaid 流程图/时序图为 PNG 图片."""
 
     engine: ClassVar[str] = "mermaid"
@@ -36,8 +41,8 @@ class MermaidChartTool(ChartMakerBase):
         title: str | None = None,
         scale: int = 3,
     ) -> str:
-        return await self._render(
-            code=code, filename=filename, title=title, scale=scale
+        return await render_chart(
+            "mermaid", code=code, filename=filename, title=title, scale=scale
         )
 
 

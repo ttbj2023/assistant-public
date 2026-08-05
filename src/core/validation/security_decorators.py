@@ -19,11 +19,44 @@ logger = logging.getLogger(__name__)
 # 参数规范定义
 P = ParamSpec("P")
 
+# 需深度安全检查的参数名 (输入清洗越界风险最高)
+_DANGEROUS_PARAMS = frozenset({"query", "content", "user_input", "input", "text"})
+
+
+def _sanitize_params(kwargs: dict[str, Any], strict_mode: bool) -> dict[str, Any]:
+    """清理工具参数字典, 对高危参数做深度清洗.
+
+    UnifiedSanitizer 方法均为 classmethod 且无实例状态, 此处独立实例化
+    与原内联写法语义等价.
+    """
+    sanitizer = UnifiedSanitizer()
+    safe_kwargs = sanitizer.sanitize_tool_params(kwargs)
+    for param in _DANGEROUS_PARAMS:
+        if param in safe_kwargs:
+            value = safe_kwargs[param]
+            if isinstance(value, str) and value.strip():
+                UnifiedSanitizer.quick_security_check(value)
+                safe_kwargs[param] = sanitizer.sanitize(
+                    value,
+                    strict_mode=strict_mode,
+                ).strip()
+    return safe_kwargs
+
+
+def _sanitize_result(result: Any) -> Any:
+    """清理工具输出 (仅 dict/list), 失败时回退原始结果."""
+    if not isinstance(result, (dict, list)):
+        return result
+    try:
+        return UnifiedSanitizer().sanitize(result, strict_mode=False)
+    except Exception as e:
+        logger.warning("输出清理失败,使用原始结果: %s", e)
+        return result
+
 
 def secure_tool_params(
     strict_mode: bool = False,
     sanitize_output: bool = True,
-    _allow_dangerous_keys: list[str] | None = None,
 ) -> Callable[[Callable[P, Any]], Callable[P, Any]]:
     """工具参数安全装饰器.
 
@@ -32,7 +65,6 @@ def secure_tool_params(
     Args:
         strict_mode: 是否使用严格模式(更严格的验证)
         sanitize_output: 是否清理输出结果
-        allow_dangerous_keys: 允许的危险参数键列表(None表示使用默认黑名单)
 
     Returns:
         装饰后的函数
@@ -59,57 +91,24 @@ def secure_tool_params(
             @functools.wraps(func)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 try:
-                    # 快速安全检查
+                    # 无 kwargs 快速路径: 不做输出 sanitize (保留原行为)
                     if not kwargs:
                         return await func(*args, **kwargs)
 
-                    # 创建安全清理器
-                    sanitizer = UnifiedSanitizer()
-
-                    # 清理参数字典
-                    safe_kwargs = sanitizer.sanitize_tool_params(kwargs)
-
-                    # 对特定参数进行深度安全检查
-                    dangerous_params = {
-                        "query",
-                        "content",
-                        "user_input",
-                        "input",
-                        "text",
-                    }
-                    for param in dangerous_params:
-                        if param in safe_kwargs:
-                            value = safe_kwargs[param]
-                            if isinstance(value, str) and value.strip():
-                                # 快速安全检查
-                                UnifiedSanitizer.quick_security_check(value)
-                                # 深度清理
-                                safe_kwargs[param] = sanitizer.sanitize(
-                                    value,
-                                    strict_mode=strict_mode,
-                                ).strip()
-
-                    # 执行异步原函数
+                    safe_kwargs = _sanitize_params(kwargs, strict_mode)
                     result = await func(*args, **safe_kwargs)
 
-                    # 可选:清理输出结果
-                    if sanitize_output and isinstance(result, (dict, list)):
-                        try:
-                            result = sanitizer.sanitize(result, strict_mode=False)
-                        except Exception as e:
-                            logger.warning("输出清理失败,使用原始结果: %s", e)
-
+                    if sanitize_output:
+                        result = _sanitize_result(result)
                     return result
 
                 except ValueError as e:
                     logger.error(f"安全检查失败 - {func.__name__}: {e}")
                     raise ValueError(
-                        f"参数安全检查失败: {e}",
-                        "SECURITY_CHECK_FAILED",
+                        f"参数安全检查失败 (SECURITY_CHECK_FAILED): {e}",
                     ) from e
                 except Exception as e:
                     logger.error(f"装饰器执行失败 - {func.__name__}: {e}")
-                    # 装饰器失败时应该抛出异常,避免静默返回None
                     raise
 
             return async_wrapper
@@ -117,57 +116,24 @@ def secure_tool_params(
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             try:
-                # 快速安全检查
+                # 无 kwargs 快速路径: 不做输出 sanitize (保留原行为)
                 if not kwargs:
                     return func(*args, **kwargs)
 
-                # 创建安全清理器
-                sanitizer = UnifiedSanitizer()
-
-                # 清理参数字典
-                safe_kwargs = sanitizer.sanitize_tool_params(kwargs)
-
-                # 对特定参数进行深度安全检查
-                dangerous_params = {
-                    "query",
-                    "content",
-                    "user_input",
-                    "input",
-                    "text",
-                }
-                for param in dangerous_params:
-                    if param in safe_kwargs:
-                        value = safe_kwargs[param]
-                        if isinstance(value, str) and value.strip():
-                            # 快速安全检查
-                            UnifiedSanitizer.quick_security_check(value)
-                            # 深度清理
-                            safe_kwargs[param] = sanitizer.sanitize(
-                                value,
-                                strict_mode=strict_mode,
-                            ).strip()
-
-                # 执行同步原函数
+                safe_kwargs = _sanitize_params(kwargs, strict_mode)
                 result = func(*args, **safe_kwargs)
 
-                # 可选:清理输出结果
-                if sanitize_output and isinstance(result, (dict, list)):
-                    try:
-                        result = sanitizer.sanitize(result, strict_mode=False)
-                    except Exception as e:
-                        logger.warning("输出清理失败,使用原始结果: %s", e)
-
+                if sanitize_output:
+                    result = _sanitize_result(result)
                 return result
 
             except ValueError as e:
                 logger.error(f"安全检查失败 - {func.__name__}: {e}")
                 raise ValueError(
-                    f"参数安全检查失败: {e}",
-                    "SECURITY_CHECK_FAILED",
+                    f"参数安全检查失败 (SECURITY_CHECK_FAILED): {e}",
                 ) from e
             except Exception as e:
                 logger.error(f"装饰器执行失败 - {func.__name__}: {e}")
-                # 不重新抛出异常,让原函数的错误处理逻辑处理
                 raise
 
         return sync_wrapper

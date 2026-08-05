@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -21,6 +22,7 @@ from src.config.tools_config import get_config
 from src.core.lifecycle import register_resource
 from src.tools.experts import EXPERT_TOOL_NAMES, create_expert_tools
 from src.tools.mcp.mcp_tool_manager import McpBridge
+from src.tools.shared.tool_runtime import inject_identity
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,9 @@ class ToolsManager:
         self._expert_tools_cache: dict[str, BaseTool] = {}
 
         self._external_tools_cache: dict[str, BaseTool] = {}
+
+        # per-(cache_key,tool_name) 创建锁, 串行化同一工具的创建避免重复实例化
+        self._creation_locks: dict[str, asyncio.Lock] = {}
 
     async def create_tools(
         self,
@@ -250,65 +255,79 @@ class ToolsManager:
             agent_id: Agent ID
 
         """
-        if self._is_internal_tool(tool_name):
-            # 内部工具: 检查缓存
-            internal_cache = self._internal_cache[cache_key]
-            if tool_name in internal_cache:
-                logger.debug("复用内部工具缓存: %s", tool_name)
-                return internal_cache[tool_name]
+        # per-tool 锁: 串行化同一工具的创建, 防并发重复实例化 (Service/连接翻倍)
+        async with self._get_creation_lock(cache_key, tool_name):
+            if self._is_internal_tool(tool_name):
+                # 内部工具: 检查缓存
+                internal_cache = self._internal_cache[cache_key]
+                if tool_name in internal_cache:
+                    logger.debug("复用内部工具缓存: %s", tool_name)
+                    return internal_cache[tool_name]
 
-            # 创建新的内部工具
-            tool = await self._create_internal_tool(
-                tool_name,
-                user_id,
-                thread_id,
-                agent_id=agent_id,
-            )
+                # 创建新的内部工具
+                tool = await self._create_internal_tool(
+                    tool_name,
+                    user_id,
+                    thread_id,
+                    agent_id=agent_id,
+                )
+                if tool:
+                    internal_cache[tool_name] = tool
+                    logger.debug("创建并缓存内部工具: %s", tool_name)
+                return tool
+
+            if self._is_expert_tool(tool_name):
+                if tool_name in self._expert_tools_cache:
+                    logger.debug("复用专家工具缓存: %s", tool_name)
+                    return self._expert_tools_cache[tool_name]
+
+                from src.config.inference_config import get_config
+
+                experts_config = get_config().experts
+                model_id = experts_config.get_model_id(tool_name)
+
+                tools = create_expert_tools(
+                    [tool_name],
+                    mcp_bridge=self._mcp_bridge,
+                    model_id=model_id,
+                )
+                if tools:
+                    self._expert_tools_cache[tool_name] = tools[0]
+                    logger.debug("创建并缓存专家工具: %s", tool_name)
+                    return tools[0]
+                logger.warning("专家工具创建失败: %s", tool_name)
+                return None
+
+            if self._is_external_tool(tool_name):
+                if tool_name in self._external_tools_cache:
+                    logger.debug("复用外部工具缓存: %s", tool_name)
+                    return self._external_tools_cache[tool_name]
+
+                tool = self._create_external_tool(tool_name)
+                if tool:
+                    self._external_tools_cache[tool_name] = tool
+                    logger.debug("创建并缓存外部工具: %s", tool_name)
+                return tool
+
+            # MCP工具: 全局共享, 由McpBridge管理缓存
+            tool = await self._mcp_bridge.get_tool(tool_name)
             if tool:
-                internal_cache[tool_name] = tool
-                logger.debug("创建并缓存内部工具: %s", tool_name)
+                logger.debug("获取MCP工具: %s", tool_name)
+            else:
+                logger.warning("MCP工具未找到: %s", tool_name)
             return tool
 
-        if self._is_expert_tool(tool_name):
-            if tool_name in self._expert_tools_cache:
-                logger.debug("复用专家工具缓存: %s", tool_name)
-                return self._expert_tools_cache[tool_name]
+    def _get_creation_lock(self, cache_key: str, tool_name: str) -> asyncio.Lock:
+        """获取 (cache_key, tool_name) 对应的创建锁, 不存在则创建.
 
-            from src.config.inference_config import get_config
-
-            experts_config = get_config().experts
-            model_id = experts_config.get_model_id(tool_name)
-
-            tools = create_expert_tools(
-                [tool_name],
-                mcp_bridge=self._mcp_bridge,
-                model_id=model_id,
-            )
-            if tools:
-                self._expert_tools_cache[tool_name] = tools[0]
-                logger.debug("创建并缓存专家工具: %s", tool_name)
-                return tools[0]
-            logger.warning("专家工具创建失败: %s", tool_name)
-            return None
-
-        if self._is_external_tool(tool_name):
-            if tool_name in self._external_tools_cache:
-                logger.debug("复用外部工具缓存: %s", tool_name)
-                return self._external_tools_cache[tool_name]
-
-            tool = self._create_external_tool(tool_name)
-            if tool:
-                self._external_tools_cache[tool_name] = tool
-                logger.debug("创建并缓存外部工具: %s", tool_name)
-            return tool
-
-        # MCP工具: 全局共享, 由McpBridge管理缓存
-        tool = await self._mcp_bridge.get_tool(tool_name)
-        if tool:
-            logger.debug("获取MCP工具: %s", tool_name)
-        else:
-            logger.warning("MCP工具未找到: %s", tool_name)
-        return tool
+        单线程事件循环下 get/赋值之间无 await, 原子安全.
+        """
+        key = f"{cache_key}:{tool_name}"
+        lock = self._creation_locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._creation_locks[key] = lock
+        return lock
 
     def _is_internal_tool(self, tool_name: str) -> bool:
         """判断是否为内部工具"""
@@ -391,9 +410,14 @@ class ToolsManager:
             module_path, class_name = class_path.rsplit(".", 1)
             tool_class = UnifiedSanitizer.safe_import(module_path, class_name)
 
-            # 创建工具实例, 传递agent_id实现三级隔离
+            # 创建工具实例, 构造后注入身份实现三级隔离
             tool_config_dict = tool_config.config or {}
-            tool = tool_class(user_id, thread_id, agent_id=agent_id, **tool_config_dict)
+            tool = tool_class(**tool_config_dict)
+            inject_identity(tool, user_id, thread_id, agent_id)
+            # 强制注入 catalog name: 防御类默认 name="" 被 LangChain ToolNode
+            # 按 tools_by_name 折叠 (历史遗留: health_data_group 的 8 个工具类
+            # 默认 name=""), 即使类已正确声明 name 也无害覆盖
+            tool.name = tool_name
 
             logger.debug("成功创建内部工具: %s", tool_name)
             return tool

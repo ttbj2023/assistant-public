@@ -190,7 +190,7 @@ async def similarity_search(self, query: str, max_results: int = 4) -> list[Docu
 
 ### 数据获取策略
 ```
-置顶记忆: 全局缓存 + MemoryService
+置顶记忆: 全局缓存 + PinnedMemoryBlockService
     ↓
 索引区 + 对话历史: ConversationService (get_conversations_in_range / get_formatted_index_range)
     ↓

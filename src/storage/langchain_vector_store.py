@@ -1,4 +1,4 @@
-"""基于LangChain Chroma的对话历史向量存储实现.
+"""对话历史向量存储实现 - 直连 ChromaDB.
 
 实现统一配置驱动的对话历史存储架构:
 - Agent物理隔离: 每个agent拥有独立的向量存储目录
@@ -19,7 +19,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
-from langchain_chroma import Chroma
+import chromadb
 from langchain_core.documents import Document
 
 from src.config.inference_config import get_config
@@ -32,8 +32,36 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def distance_to_similarity(distance: float) -> float:
+    """L2 distance → 相似度转换.
+
+    Chroma collection 默认 L2 (欧氏距离), 值域 [0, +∞), 不具备 "1=最相似" 语义.
+    用 1/(1+d) 单调递减映射到 (0,1]: d=0 → 1.0, d 越大越趋近 0.
+    (原先误用 1-d 的 cosine 语义, 会因 d>1 截断为 0 丢失区分度.)
+    """
+    return 1.0 / (1.0 + max(0.0, distance))
+
+
+def _results_to_docs_and_scores(results: Any) -> list[tuple[Document, float]]:
+    """将 ChromaDB 原始 query 结果转换为 (Document, distance) 列表."""
+    return [
+        (
+            Document(page_content=doc, metadata=meta or {}, id=doc_id),
+            dist,
+        )
+        for doc, meta, doc_id, dist in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["ids"][0],
+            results["distances"][0],
+            strict=False,
+        )
+        if doc is not None
+    ]
+
+
 class LangChainVectorStore:
-    """基于LangChain Chroma的简化向量存储实现.
+    """直连 ChromaDB 的对话历史向量存储.
 
     特性:
     - 统一配置系统:从 inference.embeddings.model 读取嵌入模型配置
@@ -52,7 +80,7 @@ class LangChainVectorStore:
         persist_directory: str | None = None,
         embedding_model: str | None = None,
     ) -> None:
-        """初始化LangChain向量存储 (Agent物理隔离).
+        """初始化向量存储 (Agent物理隔离).
 
         Args:
             collection_name: 集合名称
@@ -87,7 +115,6 @@ class LangChainVectorStore:
             self.embedding_model = embedding_model
         else:
             try:
-                # 使用统一配置系统
                 inference_config = get_config()
                 self.embedding_model = inference_config.embeddings.model
                 logger.debug(
@@ -108,12 +135,13 @@ class LangChainVectorStore:
         # 线程池执行器(单例模式,避免资源泄漏)
         self._executor: ThreadPoolExecutor | None = None
 
-        # LangChain Chroma向量存储实例
-        self._vectorstore: Chroma | None = None
+        # ChromaDB 客户端与 collection
+        self._client: chromadb.ClientAPI | None = None
+        self._collection: Any | None = None
         self._initialized: bool = False
         self._initialization_lock = asyncio.Lock()
 
-        logger.info(f"🔗 初始化LangChain向量存储: {self.collection_name}")
+        logger.info(f"🔗 初始化向量存储: {self.collection_name}")
 
     def _get_executor(self) -> ThreadPoolExecutor:
         """获取线程池执行器,实现单例复用模式."""
@@ -161,36 +189,29 @@ class LangChainVectorStore:
                 return
             await self._initialize()
 
-    def _create_chroma_store(self) -> Chroma:
-        """在同步上下文中创建Chroma向量存储."""
-        # 创建ChromaDB客户端,确保tenant正确初始化
-        import chromadb
-
-        # 创建持久化客户端
-        client = chromadb.PersistentClient(
+    def _create_collection(self) -> None:
+        """在同步上下文中创建 ChromaDB 客户端与 collection."""
+        self._client = chromadb.PersistentClient(
             path=self.persist_directory,
-            tenant=chromadb.config.DEFAULT_TENANT,  # 使用默认tenant
-            database=chromadb.config.DEFAULT_DATABASE,  # 使用默认database
+            tenant=chromadb.config.DEFAULT_TENANT,
+            database=chromadb.config.DEFAULT_DATABASE,
         )
-
-        # 创建或获取collection
-        return Chroma(
-            client=client,
-            collection_name=self.collection_name,
-            embedding_function=self._embeddings,
+        self._collection = self._client.get_or_create_collection(
+            name=self.collection_name,
         )
 
     async def _initialize(self) -> None:
-        """初始化LangChain Chroma向量存储."""
+        """初始化向量存储."""
         try:
             # 初始化嵌入模型
             await self._initialize_embeddings()
 
-            # 创建Chroma向量存储
-            await self._create_vector_store()
+            # 创建 ChromaDB collection
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(self._get_executor(), self._create_collection)
 
             self._initialized = True
-            logger.info(f"✅ LangChain向量存储初始化成功: {self.collection_name}")
+            logger.info(f"✅ 向量存储初始化成功: {self.collection_name}")
 
         except Exception as e:
             logger.error("❌ 向量存储初始化失败: %s", e, exc_info=True)
@@ -275,14 +296,6 @@ class LangChainVectorStore:
 
         return provider, model_id
 
-    async def _create_vector_store(self) -> None:
-        """创建向量存储实例."""
-        loop = asyncio.get_running_loop()
-        self._vectorstore = await loop.run_in_executor(
-            self._get_executor(),
-            self._create_chroma_store,
-        )
-
     async def add_documents(
         self,
         documents: list[Document],
@@ -292,7 +305,7 @@ class LangChainVectorStore:
         """添加文档到向量存储.
 
         Args:
-            documents: LangChain Document列表
+            documents: Document列表
             ids: 文档ID列表(可选)
             **kwargs: 其他参数
 
@@ -301,7 +314,7 @@ class LangChainVectorStore:
 
         """
         await self._ensure_initialized()
-        assert self._vectorstore is not None
+        assert self._collection is not None
 
         try:
             # 验证输入
@@ -332,9 +345,7 @@ class LangChainVectorStore:
             cleaned_documents = []
             for doc in documents:
                 if doc.metadata:
-                    # 使用增强的元数据清理函数
                     cleaned_metadata = self._clean_metadata(doc.metadata)
-                    # 创建新的文档对象
                     cleaned_doc = Document(
                         page_content=doc.page_content,
                         metadata=cleaned_metadata,
@@ -346,34 +357,19 @@ class LangChainVectorStore:
             texts = [doc.page_content for doc in cleaned_documents]
             metadatas = [doc.metadata for doc in cleaned_documents]
 
+            assert self._embeddings is not None
+            embeddings = await self._embeddings.aembed_documents(texts)
+
             loop = asyncio.get_running_loop()
-
-            if self._embeddings is not None:
-                embeddings = await self._embeddings.aembed_documents(texts)
-
-                await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore._collection.upsert(
-                        embeddings=embeddings,
-                        documents=texts,
-                        metadatas=metadatas if any(metadatas) else None,
-                        ids=ids,
-                    ),
-                )
-            else:
-                await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore.add_documents(
-                        documents=cleaned_documents,
-                        ids=ids,
-                    ),
-                )
-
-            if hasattr(self._vectorstore, "persist"):
-                await loop.run_in_executor(
-                    self._get_executor(),
-                    self._vectorstore.persist,
-                )
+            await loop.run_in_executor(
+                self._get_executor(),
+                lambda: self._collection.upsert(
+                    embeddings=embeddings,
+                    documents=texts,
+                    metadatas=metadatas if any(metadatas) else None,
+                    ids=ids,
+                ),
+            )
 
             logger.debug(f"📝 添加了 {len(documents)} 个文档到向量存储")
             return ids
@@ -402,7 +398,7 @@ class LangChainVectorStore:
 
         """
         await self._ensure_initialized()
-        assert self._vectorstore is not None
+        assert self._collection is not None
 
         try:
             # 验证输入
@@ -417,36 +413,21 @@ class LangChainVectorStore:
 
             where_clause = search_filter or None
 
+            assert self._embeddings is not None
+            query_embedding = await self._embeddings.aembed_query(query)
+
             loop = asyncio.get_running_loop()
+            chroma_results = await loop.run_in_executor(
+                self._get_executor(),
+                lambda: self._collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=max_results,
+                    where=where_clause,
+                ),
+            )
 
-            if self._embeddings is not None:
-                query_embedding = await self._embeddings.aembed_query(query)
-
-                chroma_results = await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore._collection.query(
-                        query_embeddings=[query_embedding],
-                        n_results=max_results,
-                        where=where_clause,
-                    ),
-                )
-
-                from langchain_chroma.vectorstores import _results_to_docs_and_scores
-
-                docs_and_scores = _results_to_docs_and_scores(chroma_results)
-                results = [doc for doc, _ in docs_and_scores]
-            else:
-                filter_kwargs = {}
-                if where_clause:
-                    filter_kwargs["filter"] = where_clause
-                results = await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore.similarity_search(
-                        query=query,
-                        k=max_results,
-                        **filter_kwargs,
-                    ),
-                )
+            docs_and_scores = _results_to_docs_and_scores(chroma_results)
+            results = [doc for doc, _ in docs_and_scores]
 
             logger.debug(f"🔍 相似性搜索返回 {len(results)} 个结果")
             return results
@@ -471,14 +452,17 @@ class LangChainVectorStore:
 
         """
         await self._ensure_initialized()
-        assert self._vectorstore is not None
+        assert self._collection is not None
 
         try:
             if not ids:
                 raise ValueError("文档ID列表不能为空")
 
-            await self._vectorstore.adelete(ids=ids)
-            await self._vectorstore.apersist()
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                self._get_executor(),
+                lambda: self._collection.delete(ids=ids),
+            )
             logger.debug(f"🗑️ 删除了 {len(ids)} 个文档")
             return True
 
@@ -486,27 +470,35 @@ class LangChainVectorStore:
             logger.error("❌ 删除文档失败: %s", e, exc_info=True)
             raise
 
-    def close(self) -> None:
-        """关闭向量存储,清理资源."""
+    def close(self, *, blocking: bool = True) -> None:
+        """关闭向量存储,清理资源.
+
+        Args:
+            blocking: True 时阻塞等待线程池任务结束(显式关闭用);
+                False 时非阻塞(析构兜底用, 避免在事件循环/GC 线程中阻塞).
+
+        """
         try:
             if self._executor:
                 logger.debug(f"🔧 关闭线程池: {self.collection_name}")
-                self._executor.shutdown(wait=True)
+                self._executor.shutdown(wait=blocking)
                 self._executor = None
 
             # 清理其他资源
-            self._vectorstore = None
+            self._client = None
+            self._collection = None
             self._embeddings = None
             self._initialized = False
 
-            logger.info(f"✅ 向量存储已关闭: {self.collection_name}")
+            if blocking:
+                logger.info(f"✅ 向量存储已关闭: {self.collection_name}")
 
         except Exception as e:
             logger.warning("⚠️ 关闭向量存储时出现警告: %s", e)
 
     def __del__(self) -> None:
-        """析构函数,确保资源清理."""
-        self.close()
+        """析构兜底: 仅非阻塞清理, 避免在事件循环线程/GC 中阻塞."""
+        self.close(blocking=False)
 
     def _build_search_filter(
         self,
@@ -606,14 +598,10 @@ class LangChainVectorStore:
 
         """
         try:
-            if not self._vectorstore:
+            if not self._collection:
                 return {"error": "Vector store not initialized"}
 
-            # 获取集合信息
-            collection = self._vectorstore._collection
-
-            # 获取文档数量
-            doc_count = collection.count()
+            doc_count = self._collection.count()
 
             return {
                 "name": self.collection_name,
@@ -649,14 +637,12 @@ class LangChainVectorStore:
             user_message: 用户输入消息
             assistant_response: 助手回复
             agent_id: Agent ID,用于区分同一线程中不同 Agent 的记录
-            **metadata: 其他元数据
 
         Returns:
             添加的文档ID
 
         """
         await self._ensure_initialized()
-        assert self._vectorstore is not None
 
         try:
             # 验证输入
@@ -680,7 +666,6 @@ class LangChainVectorStore:
                 "agent_id": str(agent_id),
             }
 
-            # 创建LangChain文档
             document = Document(page_content=content, metadata=round_metadata)
 
             # doc_id 包含 agent_id,与 SQL unique key 对齐
@@ -699,6 +684,38 @@ class LangChainVectorStore:
         except Exception as e:
             logger.error("❌ 添加对话轮次失败: %s", e, exc_info=True)
             raise
+
+    async def get_existing_round_numbers(self) -> set[int]:
+        """查询 collection 中已存在的 round_number 集合(向量补偿 diff 用).
+
+        实例已按 (user_id, thread_id, agent_id) 物理隔离, 故无需额外 where 过滤.
+        用于向量补偿: SQL 有但向量库缺失的轮次即为需补入的 gap.
+
+        Returns:
+            已存在文档的 round_number 集合; 无文档或查询异常时返回空集合
+
+        """
+        await self._ensure_initialized()
+        assert self._collection is not None
+
+        try:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                self._get_executor(),
+                lambda: self._collection.get(include=["metadatas"]),
+            )
+            rounds: set[int] = set()
+            for meta in result.get("metadatas") or []:
+                if meta and "round_number" in meta:
+                    try:
+                        rounds.add(int(meta["round_number"]))
+                    except (TypeError, ValueError):
+                        continue
+            logger.debug("📋 向量库已有 round: %s", sorted(rounds))
+            return rounds
+        except Exception as e:
+            logger.warning("查询已存在 round 失败, 返回空集合: %s", e)
+            return set()
 
     # === 两阶段检索专用方法 ===
 
@@ -725,7 +742,7 @@ class LangChainVectorStore:
 
         """
         await self._ensure_initialized()
-        assert self._vectorstore is not None
+        assert self._collection is not None
 
         try:
             # 验证输入
@@ -745,56 +762,44 @@ class LangChainVectorStore:
                     raise ValueError("开始轮次必须小于等于结束轮次")
 
             # 构建搜索过滤条件
-            search_filter = None  # 默认无过滤条件
+            # ChromaDB where 仅支持 {field: {op: val}} 单 operator 或 {"$and": [...]} 组合,
+            # 不支持 {field: {"$gte": x, "$lte": y}} 同字段多 operator 合并,
+            # 故把所有条件收集到 list, 最后按需用 $and 包裹
+            conditions: list[dict] = []
 
-            # 添加轮次范围过滤
+            # 添加轮次范围过滤 (拆为 $gte/$lte 两个独立条件)
             if round_range:
                 start_round, end_round = round_range
-                search_filter = {
-                    "round_number": {"$gte": start_round, "$lte": end_round},
-                }
+                conditions.append({"round_number": {"$gte": start_round}})
+                conditions.append({"round_number": {"$lte": end_round}})
 
-            # 合并其他过滤条件
+            # 合并其他过滤条件 (每个 field 独立成一个条件项)
             if filters:
-                if search_filter is None:
-                    search_filter = {}
-                search_filter.update(filters)
+                for k, v in filters.items():
+                    conditions.append({k: v})
 
-            # 确保search_filter不为空字典,ChromaDB对此有严格要求
-            if search_filter == {}:
+            # 组装最终 search_filter
+            if not conditions:
                 search_filter = None
-
-            # 执行搜索: 先异步获取embedding,再调Chroma本地查询
-            loop = asyncio.get_running_loop()
-
-            if self._embeddings is not None:
-                query_embedding = await self._embeddings.aembed_query(query)
-
-                chroma_results = await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore._collection.query(
-                        query_embeddings=[query_embedding],
-                        n_results=max_results,
-                        where=search_filter,
-                    ),
-                )
-
-                from langchain_chroma.vectorstores import _results_to_docs_and_scores
-
-                docs_and_scores = _results_to_docs_and_scores(chroma_results)
+            elif len(conditions) == 1:
+                search_filter = conditions[0]
             else:
-                filter_kwargs = {}
-                if search_filter:
-                    filter_kwargs["filter"] = search_filter
-                raw_results = await loop.run_in_executor(
-                    self._get_executor(),
-                    lambda: self._vectorstore.similarity_search(
-                        query=query,
-                        k=max_results,
-                        **filter_kwargs,
-                    ),
-                )
-                docs_and_scores = [(doc, 1.0) for doc in raw_results]
+                search_filter = {"$and": conditions}
+
+            assert self._embeddings is not None
+            query_embedding = await self._embeddings.aembed_query(query)
+
+            loop = asyncio.get_running_loop()
+            chroma_results = await loop.run_in_executor(
+                self._get_executor(),
+                lambda: self._collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=max_results,
+                    where=search_filter,
+                ),
+            )
+
+            docs_and_scores = _results_to_docs_and_scores(chroma_results)
 
             # 提取轮次号和相似度得分(仅返回轮次号和得分,不返回完整内容)
             round_score_pairs = []
@@ -802,12 +807,8 @@ class LangChainVectorStore:
                 if "round_number" in doc.metadata:
                     round_number = doc.metadata["round_number"]
 
-                    # ChromaDB返回distance,需要转换为相似度得分
-                    # distance越小表示越相似,转换为0-1范围的相似度得分
-                    similarity_score = 1.0 - distance
-
-                    # 确保得分在合理范围内
-                    similarity_score = max(0.0, min(1.0, similarity_score))
+                    # ChromaDB 默认返回 L2 distance, 转换为 0-1 相似度得分
+                    similarity_score = distance_to_similarity(distance)
 
                     round_score_pairs.append((round_number, similarity_score))
 
@@ -819,96 +820,6 @@ class LangChainVectorStore:
 
         except Exception as e:
             logger.error("❌ 向量搜索轮次号失败: %s", e, exc_info=True)
-            raise
-
-    async def search_rounds_mmr_only(
-        self,
-        query: str,
-        max_results: int = 10,
-        fetch_k: int = 20,
-        round_range: tuple[int, int] | None = None,
-        **filters: Any,
-    ) -> list[int]:
-        """两阶段检索第一阶段:使用MMR搜索仅返回轮次号列表.
-
-        使用最大边际相关性搜索提高多样性,仅返回轮次号.
-
-        Args:
-            query: 搜索查询
-            max_results: 返回结果数量
-            fetch_k: 获取候选结果数量
-            round_range: 轮次范围 (start_round, end_round)
-            **filters: 其他过滤条件
-
-        Returns:
-            匹配的轮次号列表
-
-        """
-        await self._ensure_initialized()
-        assert self._vectorstore is not None
-
-        try:
-            # 验证输入
-            if not query or not query.strip():
-                raise ValueError("查询字符串不能为空")
-
-            if max_results <= 0:
-                raise ValueError("max_results必须大于0")
-
-            if fetch_k <= 0:
-                raise ValueError("fetch_k必须大于0")
-
-            if fetch_k < max_results:
-                raise ValueError("fetch_k必须大于等于max_results")
-
-            if round_range:
-                if len(round_range) != 2:
-                    raise ValueError("轮次范围必须是包含2个元素的元组")
-                start_round, end_round = round_range
-                if start_round < 0 or end_round < 0:
-                    raise ValueError("轮次号必须大于等于0")
-                if start_round > end_round:
-                    raise ValueError("开始轮次必须小于等于结束轮次")
-
-            # 构建搜索过滤条件
-            search_filter = None  # 默认无过滤条件
-
-            # 添加轮次范围过滤
-            if round_range:
-                start_round, end_round = round_range
-                search_filter = {
-                    "round_number": {"$gte": start_round, "$lte": end_round},
-                }
-
-            # 合并其他过滤条件
-            if filters:
-                if search_filter is None:
-                    search_filter = {}
-                search_filter.update(filters)
-
-            # 确保search_filter不为空字典,ChromaDB对此有严格要求
-            if search_filter == {}:
-                search_filter = None
-
-            # 使用MMR搜索提高多样性
-            results = await self._vectorstore.amax_marginal_relevance_search(
-                query=query,
-                k=max_results,
-                fetch_k=fetch_k,
-                filter=search_filter,
-            )
-
-            # 提取轮次号(仅返回轮次号,不返回完整内容)
-            round_numbers = []
-            for doc in results:
-                if "round_number" in doc.metadata:
-                    round_numbers.append(doc.metadata["round_number"])
-
-            logger.debug(f"🎯 MMR搜索返回 {len(round_numbers)} 个轮次号")
-            return round_numbers
-
-        except Exception as e:
-            logger.error("❌ MMR搜索轮次号失败: %s", e, exc_info=True)
             raise
 
 

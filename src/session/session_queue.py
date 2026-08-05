@@ -361,6 +361,7 @@ class SessionMessageQueue:
                 round_number=round_number,
                 usage_source="main_chat",
                 is_openclaw=is_openclaw,
+                timezone=timezone,
             ),
         )
 
@@ -447,6 +448,7 @@ class SessionMessageQueue:
                 round_number=round_number,
                 usage_source="main_chat",
                 is_openclaw=False,
+                timezone=timezone,
             ),
         )
 

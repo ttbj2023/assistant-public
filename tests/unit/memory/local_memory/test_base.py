@@ -16,7 +16,6 @@ from tests.factories.memory.local_memory import (
 )
 from tests.mocks.memory.local_memory import (
     ConversationMemoryCoreMocks,
-    SimplePinnedMemoryManagerMocks,
     SplittableMemoryCacheMocks,
     create_mock_conversation_data,
 )
@@ -86,9 +85,8 @@ class BaseLocalMemoryTest:
             pinned = memory_parts["pinned_memory"]
             if isinstance(pinned, dict):
                 combined_content += str(pinned.get("formatted_content", ""))
-                combined_content += (
-                    pinned.get("basic_info", "")
-                    + pinned.get("preferences", "")
+                combined_content += pinned.get("basic_info", "") + pinned.get(
+                    "preferences", ""
                 )
             else:
                 combined_content += str(pinned)
@@ -259,12 +257,6 @@ class MockMixin:
     def setup_splittable_memory_cache_mocks(self) -> SplittableMemoryCacheMocks:
         """设置SplittableMemoryCache Mock"""
         return SplittableMemoryCacheMocks()
-
-    def setup_simple_pinned_memory_manager_mocks(
-        self,
-    ) -> SimplePinnedMemoryManagerMocks:
-        """设置SimplePinnedMemoryManager Mock"""
-        return SimplePinnedMemoryManagerMocks()
 
 
 class AsyncTestMixin:

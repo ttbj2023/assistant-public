@@ -6,7 +6,7 @@
 
 规则:
   - 基于 git ls-files (自动遵循 .gitignore, 排除 data/.venv 等未跟踪内容)
-  - 黑名单: AGENTS.md / CLAUDE.md / .claude/ / .opencode/ (私人配置)
+  - 黑名单: AGENTS.md / CLAUDE.md / .agents/ / .claude/ / .opencode/ / .github/ (私人配置)
   - 脱敏: README / docs/README.md 去私人引用 (CLAUDE.md/AGENTS.md) / 精简 .gitignore
   - 新增: LICENSE (MIT)
 
@@ -31,6 +31,7 @@ EXCLUDE_PATHS: frozenset[str] = frozenset({
 })
 
 EXCLUDE_PREFIXES: tuple[str, ...] = (
+    ".agents/",
     ".claude/",
     ".opencode/",
     ".github/",

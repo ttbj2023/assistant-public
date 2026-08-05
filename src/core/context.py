@@ -32,6 +32,7 @@ class UserContext:
     round_number: int | None = None
     usage_source: str = "main_chat"
     is_openclaw: bool = False
+    timezone: str = "Asia/Shanghai"
     exported_files: list[dict] = field(default_factory=list)
 
 

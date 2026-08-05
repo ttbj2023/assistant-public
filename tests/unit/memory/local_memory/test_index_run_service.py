@@ -380,3 +380,51 @@ class TestEmbeddingCleaning:
         key = index_run_service._run_key("u", "t", "a")
         assert key in index_run_service._open_runs
         assert index_run_service._open_runs[key]["emb"] == [1.0, 0.0]
+
+
+class TestDetectRunsFullCoverage:
+    """detect_runs_full_coverage: 全覆盖 run 检测(强制闭合尾部)."""
+
+    def _entry(self, rnd: int, summary: str, vec: list[float]) -> dict:
+        return {"round": rnd, "topic": summary, "summary": summary, "emb": vec}
+
+    def test_empty_entries_returns_empty(self) -> None:
+        from src.agent.memory.local_memory.index_run_service import (
+            detect_runs_full_coverage,
+        )
+
+        assert detect_runs_full_coverage([]) == []
+
+    def test_tail_forced_closed(self) -> None:
+        """末尾未闭合 run 被强制闭合, 保证 [1..N] 无 gap."""
+        from src.agent.memory.local_memory.index_run_service import (
+            detect_runs_full_coverage,
+        )
+
+        entries = [
+            self._entry(1, "A", [1.0, 0.0]),
+            self._entry(2, "A", [1.0, 0.0]),
+            self._entry(3, "A", [1.0, 0.0]),
+        ]
+        runs = detect_runs_full_coverage(entries, threshold=0.5)
+        assert len(runs) == 1
+        assert runs[0]["start"] == 1
+        assert runs[0]["end"] == 3
+        # 尾部 run close_sim 应为 None
+        assert runs[0]["close_sim"] is None
+
+
+class TestEmbeddingsEnabledFlag:
+    """_embeddings_enabled: embedding 配置读取与异常回退."""
+
+    def test_config_exception_defaults_enabled(self) -> None:
+        """配置读取异常时默认返回 True(嵌入启用)."""
+        with patch(
+            "src.config.inference_config.get_config",
+            side_effect=Exception("配置读取失败"),
+        ):
+            from src.agent.memory.local_memory.index_run_service import (
+                _embeddings_enabled,
+            )
+
+            assert _embeddings_enabled() is True

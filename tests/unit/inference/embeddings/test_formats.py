@@ -7,12 +7,25 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from src.inference.embeddings.formats import (
     GeminiFormatEmbeddings,
     OpenAIFormatEmbeddings,
 )
+
+
+def _make_response(
+    status_code: int,
+    body: dict | None = None,
+    url: str = "https://api.example.com/v1/embeddings",
+) -> httpx.Response:
+    """构造真实 httpx.Response, status>=400 时 raise_for_status 会抛 HTTPStatusError."""
+    request = httpx.Request("POST", url)
+    if body is not None:
+        return httpx.Response(status_code, json=body, request=request)
+    return httpx.Response(status_code, request=request)
 
 
 class TestOpenAIFormatEmbeddingsInit:
@@ -182,14 +195,31 @@ class TestOpenAIFormatEmbeddingsRequest:
         assert len(result) == 3
 
     @pytest.mark.asyncio
-    async def test_close_should_aclose_client(self):
-        """close应关闭HTTP客户端."""
+    async def test_close_should_not_aclose_shared_client(self):
+        """传入共享http_client时close不应关闭它(避免摧毁连接池)."""
         mock_client = AsyncMock()
         emb = OpenAIFormatEmbeddings(
             base_url="https://api.example.com/v1",
             model="test-model",
             http_client=mock_client,
         )
+
+        await emb.close()
+
+        mock_client.aclose.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_close_should_aclose_owned_client(self):
+        """自建http_client时close应关闭它."""
+        mock_client = AsyncMock()
+        with patch(
+            "src.inference.embeddings.formats.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            emb = OpenAIFormatEmbeddings(
+                base_url="https://api.example.com/v1",
+                model="test-model",
+            )
 
         await emb.close()
 
@@ -291,8 +321,8 @@ class TestGeminiFormatEmbeddingsRequest:
         assert result == [0.1, 0.2, 0.3]
 
     @pytest.mark.asyncio
-    async def test_close_should_aclose_client(self):
-        """close应关闭HTTP客户端."""
+    async def test_close_should_not_aclose_shared_client(self):
+        """传入共享http_client时close不应关闭它(避免摧毁连接池)."""
         mock_client = AsyncMock()
         emb = GeminiFormatEmbeddings(
             base_url="https://example.com",
@@ -303,4 +333,145 @@ class TestGeminiFormatEmbeddingsRequest:
 
         await emb.close()
 
+        mock_client.aclose.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_close_should_aclose_owned_client(self):
+        """自建http_client时close应关闭它."""
+        mock_client = AsyncMock()
+        with patch(
+            "src.inference.embeddings.formats.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            emb = GeminiFormatEmbeddings(
+                base_url="https://example.com",
+                model="test-model",
+                api_key="key",
+            )
+
+        await emb.close()
+
         mock_client.aclose.assert_called_once()
+
+
+class TestOpenAIFormatEmbeddingsRetry:
+    """嵌入请求重试机制 - 对标 Ollama 503 瞬时故障场景."""
+
+    @pytest.mark.asyncio
+    async def test_retry_should_succeed_after_transient_503(self):
+        """503瞬时错误应重试并最终成功(对标本次 Ollama 抖动)."""
+        resp_503 = _make_response(503)
+        resp_200 = _make_response(
+            200,
+            {"data": [{"embedding": [0.1, 0.2]}], "usage": {"total_tokens": 3}},
+        )
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = [resp_503, resp_200]
+
+        emb = OpenAIFormatEmbeddings(
+            base_url="https://api.example.com/v1",
+            model="test-model",
+            http_client=mock_client,
+        )
+
+        with (
+            patch("src.inference.usage.arecord_embedding_usage"),
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            result = await emb._request_embeddings(["hello"])
+
+        assert mock_client.post.call_count == 2
+        assert result == [[0.1, 0.2]]
+        assert mock_sleep.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_retry_should_raise_after_max_retries_exceeded(self):
+        """连续503超过重试上限应抛出HTTPStatusError."""
+        resp_503 = _make_response(503)
+        mock_client = AsyncMock()
+        mock_client.post.return_value = resp_503
+
+        emb = OpenAIFormatEmbeddings(
+            base_url="https://api.example.com/v1",
+            model="test-model",
+            http_client=mock_client,
+        )
+
+        with (
+            patch("src.inference.usage.arecord_embedding_usage"),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                await emb._request_embeddings(["hello"])
+
+        assert exc_info.value.response.status_code == 503
+        # max_retries=2 (含首次尝试), 调用2次后放弃
+        assert mock_client.post.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_should_not_retry_on_400_client_error(self):
+        """4xx(非429)客户端错误不应重试, 直接抛出."""
+        resp_400 = _make_response(400)
+        mock_client = AsyncMock()
+        mock_client.post.return_value = resp_400
+
+        emb = OpenAIFormatEmbeddings(
+            base_url="https://api.example.com/v1",
+            model="test-model",
+            http_client=mock_client,
+        )
+
+        with (
+            patch("src.inference.usage.arecord_embedding_usage"),
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            with pytest.raises(httpx.HTTPStatusError):
+                await emb._request_embeddings(["hello"])
+
+        assert mock_client.post.call_count == 1
+        assert mock_sleep.await_count == 0
+
+    @pytest.mark.asyncio
+    async def test_retry_should_backoff_longer_on_429_than_503(self):
+        """429限流应使用rate_limit_delay, 普通错误使用base_delay*attempt."""
+        # 503: base_delay * 1 = 1.0
+        resp_503 = _make_response(503)
+        resp_200 = _make_response(200, {"data": [{"embedding": [0.1]}]})
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = [resp_503, resp_200]
+
+        emb = OpenAIFormatEmbeddings(
+            base_url="https://api.example.com/v1",
+            model="test-model",
+            http_client=mock_client,
+        )
+
+        delays_503: list[float] = []
+        with (
+            patch("src.inference.usage.arecord_embedding_usage"),
+            patch(
+                "asyncio.sleep",
+                new_callable=AsyncMock,
+                side_effect=lambda d: delays_503.append(d),
+            ),
+        ):
+            await emb._request_embeddings(["a"])
+
+        # 429: rate_limit_delay = 3.0
+        resp_429 = _make_response(429)
+        resp_200b = _make_response(200, {"data": [{"embedding": [0.1]}]})
+        mock_client.post.side_effect = [resp_429, resp_200b]
+
+        delays_429: list[float] = []
+        with (
+            patch("src.inference.usage.arecord_embedding_usage"),
+            patch(
+                "asyncio.sleep",
+                new_callable=AsyncMock,
+                side_effect=lambda d: delays_429.append(d),
+            ),
+        ):
+            await emb._request_embeddings(["a"])
+
+        assert delays_503 == [1.0]
+        assert delays_429 == [3.0]

@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, select
 
 from ..models.pinned_memory_block import PinnedMemoryBlock
 from .database_operations import AsyncDatabaseOperations
@@ -82,25 +82,6 @@ class AsyncPinnedMemoryBlockDAO:
         except Exception as e:
             logger.error("更新或插入统一置顶记忆块失败: %s", e)
             raise
-
-    async def delete(self, user_id: str, thread_id: str) -> bool:
-        """清空记忆块."""
-        try:
-            async with self.db_ops.transaction_scope() as session:
-                statement = delete(PinnedMemoryBlock).where(
-                    and_(
-                        PinnedMemoryBlock.user_id == user_id,
-                        PinnedMemoryBlock.thread_id == thread_id,
-                    ),
-                )
-                result = await session.execute(statement)
-                return result.rowcount > 0
-        except Exception as e:
-            logger.error("清空统一置顶记忆块失败: %s", e)
-            raise
-
-    async def health_check(self) -> bool:
-        return await self.db_ops.health_check()
 
 
 __all__ = ["AsyncPinnedMemoryBlockDAO"]

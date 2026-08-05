@@ -59,7 +59,10 @@ def _extract_json(content: str) -> dict:
     except json.JSONDecodeError:
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            return json.loads(match.group(0))
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
         raise ValueError(f"响应中未找到有效JSON: {text[:200]}")
 
 

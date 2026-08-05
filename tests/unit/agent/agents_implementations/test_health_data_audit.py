@@ -4,7 +4,7 @@
 - 轮次驱动审计触发逻辑 (should_audit / mark_audited)
 - 数据快照加载 (load_data_snapshot - Mock Service)
 - 用户消息构建 (_build_message_text)
-- JSON解析与验证 (_call_audit_llm - Mock create_llm)
+- JSON解析与验证 (_call_audit_llm - Mock invoke_with_fallback)
 - 数据过滤/清理/格式化已迁移到 HealthDataExtractionService, 见对应测试
 """
 
@@ -272,15 +272,11 @@ class TestLoadDataSnapshot:
 
 
 class TestCallAuditLlm:
-    """审计LLM调用测试 (Mock create_llm)."""
+    """审计LLM调用测试 (Mock invoke_with_fallback)."""
 
     @staticmethod
-    def _make_mock_llm(content: str):
-        mock_response = AsyncMock(content=content)
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.bind = MagicMock(return_value=mock_llm)
-        return mock_llm
+    def _make_mock_response(content: str):
+        return MagicMock(content=content)
 
     @pytest.mark.asyncio
     async def test_valid_response_parsing(self) -> None:
@@ -317,13 +313,14 @@ class TestCallAuditLlm:
                 return_value="deepseek:deepseek-v4-flash",
             ),
             patch(
-                "src.inference.llm.model_loader.create_llm",
-                return_value=self._make_mock_llm(
+                "src.inference.llm.model_loader.invoke_with_fallback",
+                new_callable=AsyncMock,
+                return_value=self._make_mock_response(
                     json.dumps(llm_response, ensure_ascii=False)
                 ),
             ),
         ):
-            result = await _call_audit_llm("测试消息", "测试快照")
+            result = await _call_audit_llm("u1", "测试消息", "测试快照")
 
             assert len(result["extractions"]) == 1
             assert result["extractions"][0]["data_type"] == "weight_record"
@@ -335,11 +332,6 @@ class TestCallAuditLlm:
         from src.agent.agents_implementations.health_assistant.health_data_audit import (
             _call_audit_llm,
         )
-
-        mock_response_obj = AsyncMock(content="")
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response_obj)
-        mock_llm.bind = MagicMock(return_value=mock_llm)
 
         with (
             patch(
@@ -353,11 +345,12 @@ class TestCallAuditLlm:
                 return_value="deepseek:deepseek-v4-flash",
             ),
             patch(
-                "src.inference.llm.model_loader.create_llm",
-                return_value=mock_llm,
+                "src.inference.llm.model_loader.invoke_with_fallback",
+                new_callable=AsyncMock,
+                return_value=self._make_mock_response(""),
             ),
         ):
-            result = await _call_audit_llm("msg", "snap")
+            result = await _call_audit_llm("u1", "msg", "snap")
             assert result == {"extractions": [], "operations": []}
 
     @pytest.mark.asyncio
@@ -386,11 +379,14 @@ class TestCallAuditLlm:
                 return_value="deepseek:deepseek-v4-flash",
             ),
             patch(
-                "src.inference.llm.model_loader.create_llm",
-                return_value=self._make_mock_llm(json.dumps(llm_response)),
+                "src.inference.llm.model_loader.invoke_with_fallback",
+                new_callable=AsyncMock,
+                return_value=self._make_mock_response(
+                    json.dumps(llm_response)
+                ),
             ),
         ):
-            result = await _call_audit_llm("msg", "snap")
+            result = await _call_audit_llm("u1", "msg", "snap")
             assert len(result["extractions"]) == 1
             assert result["extractions"][0]["data_type"] == "weight_record"
 
@@ -421,11 +417,14 @@ class TestCallAuditLlm:
                 return_value="deepseek:deepseek-v4-flash",
             ),
             patch(
-                "src.inference.llm.model_loader.create_llm",
-                return_value=self._make_mock_llm(json.dumps(llm_response)),
+                "src.inference.llm.model_loader.invoke_with_fallback",
+                new_callable=AsyncMock,
+                return_value=self._make_mock_response(
+                    json.dumps(llm_response)
+                ),
             ),
         ):
-            result = await _call_audit_llm("msg", "snap")
+            result = await _call_audit_llm("u1", "msg", "snap")
             assert len(result["operations"]) == 0
 
 
@@ -477,7 +476,8 @@ class TestRunAudit:
             assert should_audit("u", "t", "a", 15) is False
 
     @pytest.mark.asyncio
-    async def test_exception_still_marks_round(self) -> None:
+    async def test_exception_does_not_mark_round(self) -> None:
+        """审计异常时不应标记轮次, 允许下轮重试."""
         from src.agent.agents_implementations.health_assistant.health_data_audit import (
             run_audit,
         )
@@ -493,4 +493,4 @@ class TestRunAudit:
             ),
         ):
             await run_audit("u", "t", "a", 10, user_message="test")
-            assert should_audit("u", "t", "a", 15) is False
+            assert should_audit("u", "t", "a", 15) is True

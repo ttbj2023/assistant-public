@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.tools.shared.base_expert_tool import BaseExpertTool
+from langchain_core.tools import BaseTool
 
 from .geo_research_tool import GeoResearchTool
 from .web_research_tool import WebResearchTool
@@ -17,7 +17,7 @@ def create_expert_tools(
     *,
     mcp_bridge: Any | None = None,
     model_id: str,
-) -> list[BaseExpertTool]:
+) -> list[BaseTool]:
     """创建专家工具实例.
 
     Args:
@@ -26,22 +26,22 @@ def create_expert_tools(
         model_id: 专家工具使用的模型ID
 
     Returns:
-        创建的BaseExpertTool实例列表
+        创建的专家工具实例列表
 
     """
-    tools: list[BaseExpertTool] = []
+    tools: list[BaseTool] = []
 
     for name in tool_names:
         if name == "web_research":
             tools.append(
-                WebResearchTool(
+                WebResearchTool(  # type: ignore[abstract]
                     model_id=model_id,
                     mcp_bridge=mcp_bridge,
                 ),
             )
         elif name == "geo_navigator":
             tools.append(
-                GeoResearchTool(
+                GeoResearchTool(  # type: ignore[abstract]
                     model_id=model_id,
                 ),
             )

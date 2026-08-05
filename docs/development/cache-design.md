@@ -32,7 +32,7 @@
 > 如果一个实例是无状态的方法容器 (底层资源已被 Layer 1 覆盖), 则**不缓存**. 只有实例持有不可轻易重建的 OS 级资源时, 才纳入缓存.
 
 **不缓存的** (无状态薄壳, 底层 engine 已由 Layer 1 覆盖):
-- ConversationService / TodoService / MemoryService / UserRequirementService
+- ConversationService / TodoService / PinnedMemoryBlockService
 - HealthDataService / HealthDataExtractionService
 - UserChannelConfigService / UsageService / PriceAlertService
 - Agent 实例 (无状态处理架构, 每次请求创建)

@@ -138,3 +138,51 @@ class TestGetExpertCache:
         cache1 = get_expert_cache()
         cache2 = get_expert_cache()
         assert cache1 is cache2
+
+
+# =============================================================================
+# 5. 并发安全测试
+# =============================================================================
+
+
+class TestExpertCacheConcurrency:
+    """测试 ExpertCache 并发读写的协程安全."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_writes_keep_cache_consistent(self):
+        """并发写同一 key 不应损坏缓存, 最终值应是某次写入值."""
+        import asyncio
+
+        cache = ExpertCache()
+        key = "concurrent-key"
+        values = [f"v{i}" for i in range(50)]
+
+        await asyncio.gather(*(cache.set_search(key, v) for v in values))
+
+        result = await cache.get_search(key)
+        assert result in values
+
+    @pytest.mark.asyncio
+    async def test_concurrent_mixed_operations_complete_without_error(self):
+        """并发读写/不同缓存类型混合操作不应抛异常."""
+        import asyncio
+
+        cache = ExpertCache()
+
+        async def writer():
+            for i in range(30):
+                await cache.set_search(f"k{i}", f"s{i}")
+                await cache.set_fetch(f"k{i}", f"f{i}")
+                await cache.set_geo(f"k{i}", f"g{i}")
+
+        async def reader():
+            for i in range(30):
+                await cache.get_search(f"k{i}")
+                await cache.get_fetch(f"k{i}")
+                await cache.get_geo(f"k{i}")
+
+        await asyncio.gather(writer(), reader(), reader())
+
+        assert await cache.get_search("k29") == "s29"
+        assert await cache.get_fetch("k29") == "f29"
+        assert await cache.get_geo("k29") == "g29"

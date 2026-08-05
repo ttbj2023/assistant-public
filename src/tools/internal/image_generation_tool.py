@@ -5,15 +5,20 @@ from __future__ import annotations
 import logging
 import os
 import re
-from datetime import datetime
 from typing import Any, ClassVar, Literal, override
 
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
+from src.core.datetime_utils import now_utc
 from src.core.path_resolver import get_user_path_resolver
 from src.inference.image_generation import ImageGenerationService
-from src.tools.shared.base_internal_tool import BaseInternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import (
+    format_tool_error,
+    format_tool_success,
+    sync_runnable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +60,8 @@ class ImageGenerationInput(QueryAliasModel):
     )
 
 
-class ImageGenerationTool(BaseInternalTool):
+@sync_runnable
+class ImageGenerationTool(BaseTool):
     """图片生成工具."""
 
     name: str = "generate_image"
@@ -78,24 +84,21 @@ class ImageGenerationTool(BaseInternalTool):
     )
     args_schema: type[ImageGenerationInput] = ImageGenerationInput
 
-    def __init__(
-        self,
-        user_id: str,
-        thread_id: str,
-        *,
-        model_id: str = "",
-        timeout: float = 120.0,
-        agent_id: str,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(user_id, thread_id, agent_id=agent_id, **kwargs)
-        if not model_id:
-            from src.config.inference_config import get_config as get_inference_config
+    model_id: str = ""
+    timeout: float = 120.0
 
-            model_id = get_inference_config().image_generation.model_id
-        object.__setattr__(self, "_model_id", model_id)
-        object.__setattr__(self, "_timeout", timeout)
-        object.__setattr__(self, "_service", ImageGenerationService())
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._service: Any = None
+
+    def _get_service(self) -> ImageGenerationService:
+        """懒加载图片生成服务 (首次使用时创建, 不在 __init__ 创建重量级资源)."""
+        svc: ImageGenerationService | None = self._service
+        if svc is not None:
+            return svc
+        svc = ImageGenerationService()
+        object.__setattr__(self, "_service", svc)
+        return svc
 
     @override
     async def _arun(
@@ -108,12 +111,20 @@ class ImageGenerationTool(BaseInternalTool):
             self._validate_size(size)
             safe_filename = self._build_filename(filename)
 
-            generated = await self._service.generate_image(
-                model_id=self._model_id,
+            resolved_model_id = self.model_id
+            if not resolved_model_id:
+                from src.config.inference_config import (
+                    get_config as get_inference_config,
+                )
+
+                resolved_model_id = get_inference_config().image_generation.model_id
+
+            generated = await self._get_service().generate_image(
+                model_id=resolved_model_id,
                 prompt=prompt,
                 size=size,
                 watermark=False,
-                timeout=self._timeout,
+                timeout=self.timeout,
             )
 
             from src.files.paths import FILES_IMAGES_GENERATED
@@ -142,7 +153,7 @@ class ImageGenerationTool(BaseInternalTool):
                 thread_id=self.thread_id,
             )
 
-            return self._format_success(
+            return format_tool_success(
                 {
                     "file_id": reg_result["file_id"],
                     "filename": reg_result["filename"],
@@ -155,7 +166,7 @@ class ImageGenerationTool(BaseInternalTool):
 
         except Exception as e:
             logger.exception("ImageGenerationTool 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     @staticmethod
     def _validate_size(size: str) -> None:
@@ -173,7 +184,7 @@ class ImageGenerationTool(BaseInternalTool):
                 raise ValueError("文件名包含非法字符, 请使用字母/数字/下划线/连字符")
             stem = name.rsplit(".", 1)[0] if "." in name else name
         else:
-            stem = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}"
+            stem = f"image_{now_utc().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}"
 
         if len(stem) > 120:
             raise ValueError("文件名过长, 最大120字符")

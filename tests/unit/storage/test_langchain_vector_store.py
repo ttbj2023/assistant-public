@@ -225,9 +225,8 @@ class TestLangChainVectorStoreAddDocuments:
                 )
                 # Mock初始化状态
                 store._initialized = True
-                store._vectorstore = AsyncMock()
-                store._vectorstore.add_documents = Mock(return_value=["id1", "id2"])
-                store._vectorstore.persist = Mock()
+                store._collection = Mock()
+                store._embeddings = AsyncMock()
                 store._executor = Mock()
                 return store
 
@@ -264,7 +263,8 @@ class TestLangChainVectorStoreSimilaritySearch:
                     agent_id="test-agent",
                 )
                 store._initialized = True
-                store._vectorstore = AsyncMock()
+                store._collection = Mock()
+                store._embeddings = AsyncMock()
                 store._executor = Mock()
                 return store
 
@@ -301,9 +301,7 @@ class TestLangChainVectorStoreDelete:
                     agent_id="test-agent",
                 )
                 store._initialized = True
-                store._vectorstore = AsyncMock()
-                store._vectorstore.adelete = AsyncMock()
-                store._vectorstore.apersist = AsyncMock()
+                store._collection = Mock()
                 return store
 
     @pytest.mark.asyncio
@@ -348,10 +346,98 @@ class TestLangChainVectorStoreResourceManagement:
         executor.shutdown.assert_called_once_with(wait=True)
         assert store._executor is None
 
+    def test_del_should_use_non_blocking_shutdown(self, store):
+        """析构兜底应非阻塞 shutdown(wait=False), 避免在事件循环/GC 线程中阻塞."""
+        executor = store._executor
+        assert executor is not None
+
+        store.__del__()
+
+        executor.shutdown.assert_called_once_with(wait=False)
+
+
+def test_distance_to_similarity_uses_l2_formula():
+    """L2 distance → 相似度应用 1/(1+d) 单调递减公式, 落在 (0,1]."""
+    from src.storage.langchain_vector_store import distance_to_similarity
+
+    # d=0 (完全相同) → 1.0
+    assert distance_to_similarity(0.0) == 1.0
+    # 单调递减: d 越大相似度越低
+    assert distance_to_similarity(0.5) > distance_to_similarity(1.0)
+    assert distance_to_similarity(1.0) == 0.5
+    # 大 distance 趋近 0 但非负
+    assert 0.0 <= distance_to_similarity(100.0) < 0.02
+
     def test_get_collection_stats_uninitialized_should_return_error(self, store):
         """测试获取统计：未初始化应返回错误"""
-        store._vectorstore = None
+        store._collection = None
 
         stats = store.get_collection_stats()
 
         assert "error" in stats
+
+
+# ==================== TestLangChainVectorStoreExistingRounds ====================
+
+
+class TestLangChainVectorStoreExistingRounds:
+    """测试 get_existing_round_numbers: 向量补偿 diff 的数据源."""
+
+    @pytest.fixture
+    def store(self):
+        """创建已初始化的存储实例(跳过真实 Chroma 初始化)."""
+        with (
+            patch("src.storage.langchain_vector_store.get_config"),
+            patch("src.storage.langchain_vector_store.get_vector_path"),
+        ):
+            s = LangChainVectorStore(
+                collection_name="test",
+                user_id="user",
+                thread_id="thread",
+                agent_id="agent",
+            )
+            s._initialized = True
+            return s
+
+    @pytest.mark.asyncio
+    async def test_should_return_round_numbers_from_metadata(self, store):
+        """应从 collection metadatas 提取 round_number 集合."""
+        mock_collection = Mock()
+        mock_collection.get = Mock(
+            return_value={
+                "ids": ["x_round_1", "x_round_3"],
+                "metadatas": [{"round_number": 1}, {"round_number": 3}],
+            },
+        )
+        store._collection = mock_collection
+
+        result = await store.get_existing_round_numbers()
+
+        assert result == {1, 3}
+        mock_collection.get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_should_return_empty_set_when_no_documents(self, store):
+        """无文档时应返回空集合(首次补偿场景)."""
+        mock_collection = Mock()
+        mock_collection.get = Mock(return_value={"ids": [], "metadatas": []})
+        store._collection = mock_collection
+
+        result = await store.get_existing_round_numbers()
+
+        assert result == set()
+
+    @pytest.mark.asyncio
+    async def test_should_skip_metadata_without_round_number(self, store):
+        """应跳过缺少 round_number 的 metadata(兼容历史脏数据)."""
+        mock_collection = Mock()
+        mock_collection.get = Mock(
+            return_value={
+                "metadatas": [{"round_number": 2}, None, {"other": "x"}],
+            },
+        )
+        store._collection = mock_collection
+
+        result = await store.get_existing_round_numbers()
+
+        assert result == {2}

@@ -2,13 +2,13 @@
 
 验证对话记忆核心的并行存储协作, 补充单元测试过度 Mock 的真实行为:
 
-- 5 路并行操作数据一致性 (SQL/向量/索引/缓存/置顶覆写)
+- 并行存储操作数据一致性 (SQL/向量/索引/缓存)
 - 向量存储失败容错: asyncio.gather(return_exceptions=True) 不阻塞 SQL
 - 嵌入禁用降级: _embeddings_enabled=False 跳过向量路径
 - 跨线程/Agent 物理隔离: 各自数据库独立
 - 并发写竞态: 同线程多轮次并发不丢失不重复
 
-测试策略: 灰盒 - 真实 ConversationMemoryCore + PinnedMemoryService + 全部 SQL Service +
+测试策略: 灰盒 - 真实 ConversationMemoryCore + 全部 SQL Service +
 真实 SQLite, 仅 Mock 真正的外部依赖 (LLM 分析器 + ChromaDB 向量存储).
 """
 
@@ -16,32 +16,19 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.memory.local_memory import pinned_memory_service
 from src.agent.memory.local_memory.core import ConversationMemoryCore
 from src.config.agent_config import AgentConfig
 from src.core.types import ConversationIndexResult
-from src.inference.content_analyzer.pinned_memory_rewriter import RewriteResult
 from src.storage.models.conversation import ConversationData
-from src.storage.service import create_pinned_memory_block_service
 from src.storage.service.service_factory import (
     clear_vector_cache,
     create_conversation_service,
-    create_memory_service,
 )
 
 _AGENT_ID = "test-agent"
-
-
-async def _drain_pinned_bg_tasks() -> None:
-    """等待所有置顶后台任务完成 (置顶覆写 fire-and-forget)."""
-    pending = list(pinned_memory_service.get_bg_tasks())
-    if pending:
-        await asyncio.gather(*pending, return_exceptions=True)
 
 
 def _make_conv_data(
@@ -88,11 +75,10 @@ class TestConversationMemoryCoreIntegration:
         """测试并行存储操作后的数据一致性.
 
         协作场景: ConversationMemoryCore.add_conversation_round 编排
-                  SQL 存储 + 向量存储 + 索引生成 + 缓存更新 +
-                  fire-and-forget 置顶覆写
-        Mock 边界: LLM 索引分析器 + 向量服务 + PinnedMemoryRewriter.rewrite
+                  SQL 存储 + 向量存储 + 索引生成 + 缓存更新
+        Mock 边界: LLM 索引分析器 + 向量服务
         验证重点: SQL 对话内容可读回 / 向量服务被调用 / 索引 LLM 被调用 /
-                  fire-and-forget 置顶覆写真实写入 pinned_memory_block
+                  索引 topic/summary 持久化到 DB
         业务价值: 确保对话完成后所有存储路径数据一致, 不丢失
         """
         llm_mocks[
@@ -102,22 +88,9 @@ class TestConversationMemoryCoreIntegration:
             topic="天气",
         )
 
-        with patch(
-            "src.inference.content_analyzer.pinned_memory_rewriter.PinnedMemoryRewriter.rewrite",
-            new=AsyncMock(
-                return_value=RewriteResult(
-                    needs_update=True, content="用户关注每日天气变化"
-                ),
-            ),
-        ):
-            core = _make_core(test_user, test_thread_id)
-            conv_data = _make_conv_data(test_user, test_thread_id, round_number=1)
-            conv_data.metadata["_messages_snapshot"] = [
-                HumanMessage(content="今天天气怎么样"),
-                AIMessage(content="今天晴天"),
-            ]
-            await core.add_conversation_round(conv_data)
-            await _drain_pinned_bg_tasks()
+        core = _make_core(test_user, test_thread_id)
+        conv_data = _make_conv_data(test_user, test_thread_id, round_number=1)
+        await core.add_conversation_round(conv_data)
 
         conv_service = await create_conversation_service(
             test_user, test_thread_id, agent_id=_AGENT_ID
@@ -134,12 +107,6 @@ class TestConversationMemoryCoreIntegration:
 
         assert llm_mocks["vector"].add_conversation_content.called, "向量服务应被调用"
         llm_mocks["index"].analyze_conversation_index.assert_called_once()
-
-        block_service = await create_pinned_memory_block_service(
-            test_user, test_thread_id, agent_id=_AGENT_ID
-        )
-        pinned_content = await block_service.get_content(test_user, test_thread_id)
-        assert "天气" in pinned_content, "置顶覆写应写入 pinned_memory_block"
 
     @pytest.mark.asyncio
     async def test_integration_core_vector_failure_does_not_block_sql(
@@ -171,7 +138,6 @@ class TestConversationMemoryCoreIntegration:
         await core.add_conversation_round(
             _make_conv_data(test_user, test_thread_id, round_number=1)
         )
-        await _drain_pinned_bg_tasks()
 
         conv_service = await create_conversation_service(
             test_user, test_thread_id, agent_id=_AGENT_ID
@@ -212,7 +178,6 @@ class TestConversationMemoryCoreIntegration:
         await core.add_conversation_round(
             _make_conv_data(test_user, test_thread_id, round_number=1)
         )
-        await _drain_pinned_bg_tasks()
 
         vector_calls_disabled = llm_mocks["vector"].add_conversation_content.call_count
 
@@ -224,7 +189,6 @@ class TestConversationMemoryCoreIntegration:
         await core_enabled.add_conversation_round(
             _make_conv_data(test_user, test_thread_id, round_number=2)
         )
-        await _drain_pinned_bg_tasks()
 
         vector_calls_enabled = llm_mocks["vector"].add_conversation_content.call_count
 
@@ -286,7 +250,6 @@ class TestConversationMemoryCoreIntegration:
                 )
             ),
         )
-        await _drain_pinned_bg_tasks()
 
         conv_service_a = await create_conversation_service(
             test_user, thread_a, agent_id=_AGENT_ID
@@ -356,7 +319,6 @@ class TestConversationMemoryCoreIntegration:
                 )
             ),
         )
-        await _drain_pinned_bg_tasks()
 
         conv_service = await create_conversation_service(
             test_user, test_thread_id, agent_id=_AGENT_ID

@@ -10,16 +10,16 @@ import pytest
 
 from src.inference.image_generation import GeneratedImage
 from src.tools.internal.image_generation_tool import ImageGenerationTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool() -> ImageGenerationTool:
-    return ImageGenerationTool(
-        "user1",
-        "thread1",
+    t = ImageGenerationTool(
         model_id="doubao:doubao-seedream-5-0-260128",
-        agent_id="personal-assistant",
     )
+    inject_identity(t, "user1", "thread1", "personal-assistant")
+    return t
 
 
 def test_build_filename_rejects_unsafe_name() -> None:
@@ -31,9 +31,11 @@ def test_build_filename_rejects_unsafe_name() -> None:
 @pytest.mark.asyncio
 async def test_arun_writes_image_and_calls_register(tool: ImageGenerationTool, tmp_path: Path) -> None:
     """生成成功后应保存图片并调 register_tool_output 统一注册."""
-    tool._service.generate_image = AsyncMock(
+    mock_service = MagicMock()
+    mock_service.generate_image = AsyncMock(
         return_value=GeneratedImage(image_data=b"png-data", mime_type="image/png")
     )
+    object.__setattr__(tool, "_service", mock_service)
 
     resolver = MagicMock()
     resolver.get_shared_storage_path.return_value = tmp_path

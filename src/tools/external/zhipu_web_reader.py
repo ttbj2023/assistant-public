@@ -15,10 +15,12 @@ import logging
 from typing import Any, override
 
 import httpx
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.cache import ExpertCache, get_expert_cache
+from src.tools.shared.tool_runtime import sync_runnable
+from src.tools.shared.url_safety import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,8 @@ class ReaderInput(BaseModel):
     url: str = Field(description="要阅读的网页URL")
 
 
-class ZhipuReaderTool(BaseExternalTool):
+@sync_runnable
+class ZhipuReaderTool(BaseTool):
     """智谱AI网页阅读工具.
 
     直接调用 /paas/v4/reader API, 将网页转为结构化 markdown/text.
@@ -66,7 +69,6 @@ class ZhipuReaderTool(BaseExternalTool):
 
     timeout: float = 30.0
 
-    @override
     async def is_available(self) -> bool:
         return bool(_get_api_key())
 
@@ -142,6 +144,12 @@ async def _check_url_reachable(
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8",
     }
+
+    # SSRF 防护: 拦截私网/回环/链路本地/元数据等不安全目标, 标记为硬失败
+    safe, reason = is_safe_url(url)
+    if not safe:
+        logger.warning("SSRF 拦截: %s → %s", url, reason)
+        return (False, f"URL 不安全已拦截: {reason}", True)
 
     try:
         async with httpx.AsyncClient(

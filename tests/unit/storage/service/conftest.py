@@ -4,14 +4,10 @@
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.storage.models.simple_pinned_memory import (
-    SimplePinnedMemory,
-    SimplePinnedMemoryType,
-)
 from src.storage.models.todo import TodoItem, TodoPriority, TodoStatus
 
 
@@ -27,20 +23,6 @@ def mock_todo_item():
         status=TodoStatus.PENDING,
         priority=TodoPriority.MEDIUM,
         due_date=None,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-    )
-
-
-@pytest.fixture
-def mock_pinned_memory():
-    """创建标准的置顶记忆对象用于测试."""
-    return SimplePinnedMemory(
-        id=1,
-        user_id="test_user",
-        thread_id="test_thread_id",
-        memory_type=SimplePinnedMemoryType.BASIC_INFO,
-        content="测试置顶记忆内容",
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
@@ -117,38 +99,10 @@ def mock_todo_dao():
 
 
 @pytest.fixture
-def mock_memory_dao():
-    """模拟PinnedMemoryDAO."""
-    dao = AsyncMock()
-    dao.get_all_memories = AsyncMock(return_value=[])
-    dao.upsert_memory = AsyncMock(
-        return_value=SimplePinnedMemory(
-            id=1,
-            user_id="test_user",
-            thread_id="test_thread_id",
-            memory_type=SimplePinnedMemoryType.BASIC_INFO,
-            content="Updated content",
-        )
-    )
-    dao.get_memory_by_type = AsyncMock(return_value=None)
-    dao.delete_memory = AsyncMock(return_value=True)
-    return dao
-
-
-@pytest.fixture
 def mock_todo_formatter():
     """模拟TODO格式化器."""
     formatter = AsyncMock()
     formatter.format_todolist = AsyncMock(return_value="格式化的TODO列表")
-    return formatter
-
-
-@pytest.fixture
-def mock_memory_formatter():
-    """模拟记忆格式化器."""
-    formatter = Mock()
-    formatter.sanitize_pinned_memory_data = Mock(side_effect=lambda x: x)
-    formatter.format_pinned_memory = AsyncMock(return_value="格式化的记忆")
     return formatter
 
 
@@ -175,36 +129,6 @@ def create_multiple_todo_items():
         return items
 
     return _create_items
-
-
-@pytest.fixture
-def create_multiple_pinned_memories():
-    """创建多个置顶记忆的工厂函数."""
-
-    def _create_memories():
-        memories = [
-            SimplePinnedMemory(
-                id=1,
-                user_id="test_user",
-                thread_id="test_thread_id",
-                memory_type=SimplePinnedMemoryType.BASIC_INFO,
-                content="基本信息内容",
-                created_at=datetime.now(UTC),
-                updated_at=datetime.now(UTC),
-            ),
-            SimplePinnedMemory(
-                id=2,
-                user_id="test_user",
-                thread_id="test_thread_id",
-                memory_type=SimplePinnedMemoryType.PREFERENCES,
-                content="偏好设置内容",
-                created_at=datetime.now(UTC),
-                updated_at=datetime.now(UTC),
-            ),
-        ]
-        return memories
-
-    return _create_memories
 
 
 @pytest.fixture

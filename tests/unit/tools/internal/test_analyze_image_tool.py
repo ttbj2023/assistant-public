@@ -11,11 +11,14 @@ import pytest
 
 from src.files import AttachmentDTO
 from src.tools.internal.analyze_image_tool import AnalyzeImageTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool() -> AnalyzeImageTool:
-    return AnalyzeImageTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = AnalyzeImageTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 def make_entry(**overrides: Any) -> AttachmentDTO:

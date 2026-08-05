@@ -1,12 +1,11 @@
 """Conversation Memory Core - 对话记忆核心.
 
-为个人助手系统提供对话记忆管理, 包含6个并行存储操作:
-1. SQL数据库对话内容存储
-2. 向量数据库语义存储
-3. 置顶记忆更新
-4. 对话索引生成
-5. 轮次号使用确认
-6. 缓存更新与溢出处理
+为个人助手系统提供对话记忆管理, 存储操作分层执行:
+- 并行 await: SQL对话内容存储 / 向量语义存储 / 缓存更新 (asyncio.gather)
+- gather 后串行: 对话索引生成
+- fire-and-forget 后台任务: 索引 run 检测
+- 置顶记忆(用户画像)由 DomainDataDispatcher 调度, 不再由此处管理
+- 轮次号使用确认由 ProcessorOrchestrator 负责, 不在此处
 
 基于统一ConversationData数据源, 确保所有操作的数据一致性.
 """
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     from src.storage.models.conversation import ConversationData
 
 from .index_run_service import IndexRunService
-from .pinned_memory_service import PinnedMemoryService
+from .vector_backfill_service import VectorBackfillService
 
 # 缓存内部索引区和对话历史的分隔符 - 使用中性标记, 不与外层XML标签冲突
 
@@ -90,14 +89,6 @@ class ConversationMemoryCore:
             )
         self.agent_id: str = agent_config.agent_id
 
-        # 置顶记忆子系统: 主模型覆写 (fire-and-forget)
-        self._pinned_svc = PinnedMemoryService(
-            self.user_id,
-            self.thread_id,
-            self.agent_id,
-            agent_config=agent_config,
-        )
-
         # 索引 run 检测子系统: 语义连续性判定 + 弧短语冻结 (fire-and-forget)
         sim_threshold = _resolve_index_run_threshold(agent_config)
         arc_max_chars = _resolve_index_arc_max_chars(agent_config)
@@ -107,6 +98,13 @@ class ConversationMemoryCore:
             self.agent_id,
             similarity_threshold=sim_threshold,
             arc_max_chars=arc_max_chars,
+        )
+
+        # 向量补偿子系统: SQL→向量库缺失轮次的懒补偿 (fire-and-forget)
+        self._vector_backfill_svc = VectorBackfillService(
+            self.user_id,
+            self.thread_id,
+            self.agent_id,
         )
 
         # 加载嵌入模型配置,避免重复读取
@@ -140,7 +138,7 @@ class ConversationMemoryCore:
         4. 缓存更新与溢出处理
 
         后台路径(fire-and-forget, 不阻塞主流程, 读写缓存解耦):
-        - 置顶记忆覆写(每轮): 主模型全文覆写单一块, _pinned_lock 串行化
+        - 索引 run 检测 / 向量补偿
 
         使用统一ConversationData数据源确保所有操作的数据一致性.
         提供容错机制,单个操作失败不影响整体流程.
@@ -154,13 +152,6 @@ class ConversationMemoryCore:
         )
 
         try:
-            # 置顶记忆处理 (fire-and-forget 覆写)
-            messages_snapshot = conversation_data.metadata.get("_messages_snapshot")
-            self._pinned_svc.on_conversation_round(
-                conversation_data,
-                messages_snapshot=messages_snapshot,
-            )
-
             logger.debug(
                 f"🔄 开始并行存储操作: {self.user_id}:{self.thread_id}, 轮次: {conversation_data.round_number}",
             )
@@ -202,6 +193,10 @@ class ConversationMemoryCore:
             # 索引 run 检测(fire-and-forget): 在索引生成完成后触发, 此时本轮
             # topic+summary 已落库, run 检测可读本轮 summary 做 embedding 判连续性
             self._index_run_svc.on_conversation_round(conversation_data)
+
+            # 向量补偿(fire-and-forget): SQL 已落库, diff 向量库缺失轮次并补入,
+            # 兜住嵌入服务故障导致的向量数据丢失
+            self._vector_backfill_svc.on_conversation_round(conversation_data)
 
             logger.debug(
                 f"✅ 已添加对话轮次并完成所有存储操作: {self.user_id}:{self.thread_id}, 轮次: {conversation_data.round_number}",

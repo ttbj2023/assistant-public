@@ -34,11 +34,16 @@ class ExpertModelFactory:
         return llm
 
     @staticmethod
-    def create_for_tool(tool_name: str) -> BaseChatModel:
+    def create_for_tool(
+        tool_name: str,
+        *,
+        model_id: str | None = None,
+    ) -> BaseChatModel:
         """根据工具名从配置中获取模型ID和专属参数, 创建LLM实例.
 
         Args:
             tool_name: 工具名称, 如 "web_research", "geo_navigator"
+            model_id: 显式模型 ID 覆盖; 为 None/空串时回退到配置默认值
 
         Returns:
             LLM客户端实例(带配置参数覆盖)
@@ -47,6 +52,6 @@ class ExpertModelFactory:
         from src.config.inference_config import get_config as get_inference_config
 
         inference_config = get_inference_config()
-        model_id = inference_config.experts.get_model_id(tool_name)
+        effective_model = model_id or inference_config.experts.get_model_id(tool_name)
         params = inference_config.experts.get_model_params(tool_name)
-        return ExpertModelFactory.create(model_id, **params)
+        return ExpertModelFactory.create(effective_model, **params)

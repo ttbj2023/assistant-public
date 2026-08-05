@@ -333,10 +333,10 @@ async def _run_deep_research(
 ) -> dict[str, Any]:
     """Deep模式: grounding + Agent迭代研究."""
     agent_tools: list[BaseTool] = [
-        WebFetchTool(),
-        DoubaoSearchTool(),
-        ZhipuReaderTool(),
-        AcademicSearchTool(),
+        WebFetchTool(),  # type: ignore[abstract]
+        DoubaoSearchTool(),  # type: ignore[abstract]
+        ZhipuReaderTool(),  # type: ignore[abstract]
+        AcademicSearchTool(),  # type: ignore[abstract]
     ]
 
     if mcp_bridge is not None:

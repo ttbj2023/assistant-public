@@ -1,7 +1,7 @@
 """Embeddings组件单元测试.
 
 测试职责: 验证嵌入模型创建的核心功能逻辑
-测试范围: create_embeddings函数、get_embedding_info函数、SimpleSettings类
+测试范围: create_embeddings函数、SimpleSettings类
 Mock策略: Mock配置系统和模型加载器，保留业务逻辑
 测试价值: 确保嵌入模型创建的正确性和多provider支持
 

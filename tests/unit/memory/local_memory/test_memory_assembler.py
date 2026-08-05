@@ -1,14 +1,13 @@
 """MemoryAssembler 单元测试.
 
 测试职责: 验证 messages 数组路径的组装行为
-测试范围: assemble_memory_context 端到端 (Mock pinned 获取)
+测试范围: assemble_memory_context 端到端 (system_prompt_extension 恒空)
           _build_history_messages 滚动缓存语义 (命中零 DB / 冷启动种子化)
           _find_latest_formatted_suffix_start 纯预算驱动
 
 select_main_history_suffix 的纯函数测试见 test_history_budget.py.
 
-Mock策略: Mock MemoryAssembler 的 pinned 方法,
-          Mock create_conversation_service 避免 DB 访问.
+Mock策略: Mock create_conversation_service 避免 DB 访问.
 """
 
 from __future__ import annotations
@@ -77,8 +76,6 @@ class TestAssembleMemoryContext:
             agent_config=agent_config,
         )
 
-        assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
-
         mock_conv_service = AsyncMock()
         mock_conv_service.get_latest_round_number.return_value = 0
         mock_conv_service.conversation_dao = AsyncMock()
@@ -97,38 +94,6 @@ class TestAssembleMemoryContext:
         assert ctx.system_prompt_extension == ""
 
     @pytest.mark.asyncio
-    async def test_pinned_memory_wrapped_in_xml_extension(self) -> None:
-        """置顶记忆非空时应包裹在 <pinned_memory> XML 标签内."""
-        agent_config = Mock()
-        agent_config.memory = Mock()
-        agent_config.memory.total_char_budget = 40000
-
-        assembler = MemoryAssembler(
-            agent_id="test-agent",
-            agent_config=agent_config,
-        )
-
-        assembler._get_pinned_memory_with_cache = AsyncMock(
-            return_value="用户偏好: 早起",
-        )
-
-        mock_conv_service = AsyncMock()
-        mock_conv_service.get_latest_round_number.return_value = 0
-
-        with patch(
-            "src.agent.memory.local_memory.assembler.create_conversation_service",
-            return_value=mock_conv_service,
-        ):
-            ctx = await assembler.assemble_memory_context(
-                user_id="u",
-                thread_id="t",
-            )
-
-        assert "<pinned_memory>" in ctx.system_prompt_extension
-        assert "</pinned_memory>" in ctx.system_prompt_extension
-        assert "用户偏好: 早起" in ctx.system_prompt_extension
-
-    @pytest.mark.asyncio
     async def test_history_with_index_area_and_main_history(self) -> None:
         """完整场景: 索引区伪对话轮 + 主历史真实 Human/AI 交替."""
         agent_config = Mock()
@@ -139,8 +104,6 @@ class TestAssembleMemoryContext:
             agent_id="test-agent",
             agent_config=agent_config,
         )
-
-        assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
 
         mock_conv_service = AsyncMock()
         mock_conv_service.get_latest_round_number.return_value = 5
@@ -201,8 +164,6 @@ class TestAssembleMemoryContext:
         agent_config.memory.index_char_budget = 10000
 
         assembler = MemoryAssembler(agent_id="test-agent", agent_config=agent_config)
-        assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
-
         mock_conv_service = AsyncMock()
         mock_conv_service.get_latest_round_number.return_value = 60
         # 主历史仅最近 10 轮 (51-60), 其余轮次交由索引区, index_end = 50
@@ -253,7 +214,6 @@ class TestRollingMainHistoryCache:
         agent_config.memory.index_char_budget = 0
 
         assembler = MemoryAssembler(agent_id="test-agent", agent_config=agent_config)
-        assembler._get_pinned_memory_with_cache = AsyncMock(return_value="")
         return assembler
 
     @pytest.mark.asyncio
@@ -359,7 +319,11 @@ class TestFetchIndexInBudget:
         conv_svc.get_formatted_index_range = AsyncMock(side_effect=fake_fine)
 
         await assembler._fetch_index_in_budget(
-            conv_svc, "u", "t", end_round=10, budget=10000,
+            conv_svc,
+            "u",
+            "t",
+            end_round=10,
+            budget=10000,
         )
 
         # raw_fine_start=1 => arc_groups 空, 不展示弧短语
@@ -393,7 +357,11 @@ class TestFetchIndexInBudget:
         conv_svc.get_formatted_index_range = AsyncMock(side_effect=fake_fine)
 
         await assembler._fetch_index_in_budget(
-            conv_svc, "u", "t", end_round=10, budget=200,
+            conv_svc,
+            "u",
+            "t",
+            end_round=10,
+            budget=200,
         )
 
         # 有弧短语展示(两个 group 起点都溢出)
@@ -432,11 +400,17 @@ class TestFetchIndexInBudget:
 
         # budget 使 raw_fine_start 落在 group(4-7) 内(每行~60字符, [6,10]~310<=330)
         await assembler._fetch_index_in_budget(
-            conv_svc, "u", "t", end_round=10, budget=330,
+            conv_svc,
+            "u",
+            "t",
+            end_round=10,
+            budget=330,
         )
 
         # 跨界 group(4-7) 全弧展示
         arc_starts = [g["round_start"] for groups in timeline_calls for g in groups]
         assert 4 in arc_starts
         # fine 从 group(4-7) round_end+1 = 8 起(跨界推高, 非裸 raw_fine_start)
-        assert fine_calls[0][0] == 8, f"fine 应从 8 起(跨界 group 末尾+1), 实际 {fine_calls}"
+        assert fine_calls[0][0] == 8, (
+            f"fine 应从 8 起(跨界 group 末尾+1), 实际 {fine_calls}"
+        )

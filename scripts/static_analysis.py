@@ -15,6 +15,7 @@
 - Safety: 依赖安全检查
 - Vulture: 死代码检测
 - 依赖关系检查: 模块使用分析
+- 继承深度检查: 业务继承深度门禁(>2 报 STRICT)
 - 代码格式化: 自动修复和中文标点处理
 """
 
@@ -38,6 +39,16 @@ from typing import Any, ClassVar
 
 from rich.console import Console
 from rich.panel import Panel
+
+# 将项目根加入 sys.path, 支持脚本直接运行时绝对导入 scripts 包
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from scripts.inheritance_depth_check import (
+    find_depth_violations,
+    scan_project_classes,
+)
 
 
 class SeverityLevel(Enum):
@@ -1006,6 +1017,81 @@ class StaticAnalysisRunner:
                 error_message=str(e),
             )
 
+    async def run_inheritance_depth_check(self) -> TaskResult:
+        """运行继承深度检查.
+
+        扫描 src/ 下所有类, 业务继承深度 > 2 记为 STRICT issue.
+        白名单策略只计项目内基类层数, 外部框架基类(BaseTool/BaseModel 等)天然排除.
+        """
+        task_name = "继承深度检查"
+        start_time = time.time()
+
+        try:
+            src_dir = self.project_root / self.target_path
+            classes = scan_project_classes(src_dir)
+            violations = find_depth_violations(src_dir, max_depth=2)
+
+            def _rel_path(file_path: Path) -> str:
+                try:
+                    return str(file_path.relative_to(self.project_root))
+                except ValueError:
+                    return str(file_path)
+
+            issues = [
+                {
+                    "class": v.class_name,
+                    "file": _rel_path(v.file_path),
+                    "line": v.line,
+                    "depth": v.depth,
+                    "chain": " -> ".join(v.chain),
+                }
+                for v in violations
+            ]
+
+            strict_count = len(violations)
+            success = strict_count == 0
+
+            report_data = {
+                "tool": "inheritance_depth_check",
+                "timestamp": time.time(),
+                "success": success,
+                "max_depth": 2,
+                "classes_scanned": len(classes),
+                "violation_count": strict_count,
+                "issues": issues,
+            }
+            report_path = await self._save_static_analysis_report(
+                "inheritance_depth", report_data
+            )
+
+            execution_details = {
+                "classes_scanned": len(classes),
+                "strict_issues": strict_count,
+            }
+
+            return TaskResult(
+                task_name=task_name,
+                task_type="static_analysis",
+                success=success,
+                duration=time.time() - start_time,
+                output=f"继承深度检查完成, 发现 {strict_count} 个深度超过 2 的继承链",
+                report_path=report_path,
+                structured_data={
+                    **report_data,
+                    "execution_details": execution_details,
+                },
+                execution_details=execution_details,
+            )
+
+        except Exception as e:
+            return TaskResult(
+                task_name=task_name,
+                task_type="static_analysis",
+                success=False,
+                duration=time.time() - start_time,
+                error_message=str(e),
+            )
+
     def _validate_mypy_config(self, config_path: Path) -> bool:
         """验证MyPy配置文件是否有效"""
         try:
@@ -1480,6 +1566,10 @@ class StaticAnalysisRunner:
         )
         static_tasks.append(
             asyncio.create_task(self.run_config_governance_analysis(), name="config")
+        )
+        # 继承深度检查: 业务继承深度 > 2 记为 STRICT, 进核心模式门禁
+        static_tasks.append(
+            asyncio.create_task(self.run_inheritance_depth_check(), name="inheritance")
         )
         tasks.extend(static_tasks)
 

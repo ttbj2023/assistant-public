@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from src.core.datetime_utils import now_utc
 from src.storage.dao.database_operations import AsyncDatabaseOperations
 from src.storage.models.health_data import (
     DailyHealthSummary,
@@ -182,7 +183,7 @@ class AsyncHealthDAO:
     ) -> list[dict[str, Any]]:
         """查询单项指标的日历史."""
         async with self.session_factory() as session:
-            cutoff_date = date.today() - timedelta(days=days)
+            cutoff_date = now_utc().date() - timedelta(days=days)
             stmt = (
                 select(
                     DailyHealthSummary.record_date,
@@ -376,7 +377,7 @@ class AsyncHealthDAO:
     async def get_workout_history(self, days: int = 30) -> list[WorkoutRecord]:
         """获取运动历史记录."""
         async with self.session_factory() as session:
-            cutoff_date = datetime.now() - timedelta(days=days)
+            cutoff_date = now_utc() - timedelta(days=days)
             stmt = (
                 select(WorkoutRecord)
                 .where(WorkoutRecord.start_time >= cutoff_date)
@@ -388,7 +389,7 @@ class AsyncHealthDAO:
     async def get_weekly_activity_summary(self) -> dict[str, Any]:
         """获取每周活动汇总."""
         async with self.session_factory() as session:
-            week_ago = datetime.now() - timedelta(days=7)
+            week_ago = now_utc() - timedelta(days=7)
 
             stmt = select(WorkoutRecord).where(WorkoutRecord.start_time >= week_ago)
             result = await session.execute(stmt)
@@ -509,6 +510,53 @@ class AsyncHealthDAO:
         total_nutrition["date"] = meal_date.isoformat()
 
         return total_nutrition
+
+    async def calculate_nutrition_range(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> dict[str, dict[str, Any]]:
+        """批量计算日期范围内每日营养汇总 (一次查询替代逐日往返).
+
+        无记录的日期不出现在返回 dict 中, 调用方按需跳过.
+        """
+        from sqlalchemy import select
+
+        async with self.session_factory() as session:
+            stmt = select(MealRecord).where(
+                MealRecord.meal_date >= start_date,
+                MealRecord.meal_date <= end_date,
+            )
+            result = await session.execute(stmt)
+            meals = list(result.scalars().all())
+
+        by_date: dict[str, dict[str, Any]] = {}
+        for meal in meals:
+            key = meal.meal_date.isoformat() if meal.meal_date else "unknown"
+            bucket = by_date.setdefault(
+                key,
+                {
+                    "calories": 0.0,
+                    "protein": 0.0,
+                    "carbs": 0.0,
+                    "fat": 0.0,
+                    "meal_count": 0,
+                },
+            )
+            bucket["meal_count"] += 1
+            if meal.total_calories:
+                bucket["calories"] += meal.total_calories
+            if meal.total_protein:
+                bucket["protein"] += meal.total_protein
+            if meal.total_carbs:
+                bucket["carbs"] += meal.total_carbs
+            if meal.total_fat:
+                bucket["fat"] += meal.total_fat
+
+        for bucket in by_date.values():
+            bucket["status"] = "success"
+
+        return by_date
 
     # ========== 数据覆盖统计 ==========
 
@@ -730,7 +778,7 @@ class AsyncHealthDAO:
     ) -> list[WorkoutRecord]:
         """获取运动历史记录, 支持类型筛选."""
         async with self.session_factory() as session:
-            cutoff_date = datetime.now() - timedelta(days=days)
+            cutoff_date = now_utc() - timedelta(days=days)
             stmt = select(WorkoutRecord).where(WorkoutRecord.start_time >= cutoff_date)
             if workout_type:
                 stmt = stmt.where(WorkoutRecord.workout_type == workout_type)
@@ -747,7 +795,7 @@ class AsyncHealthDAO:
         from sqlalchemy import func
 
         async with self.session_factory() as session:
-            cutoff_date = datetime.now() - timedelta(days=days)
+            cutoff_date = now_utc() - timedelta(days=days)
             base_condition = WorkoutRecord.start_time >= cutoff_date
             if workout_type:
                 base_condition &= WorkoutRecord.workout_type == workout_type

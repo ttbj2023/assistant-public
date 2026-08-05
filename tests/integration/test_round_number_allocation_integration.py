@@ -157,3 +157,44 @@ class TestConversationServiceRoundNumberIntegration:
 
         remaining = await service.allocate_round_number(test_user, test_thread_id)
         assert remaining == 3
+
+    @pytest.mark.asyncio
+    async def test_concurrent_create_conversation_no_round_collision(
+        self, test_user: str, test_thread_id: str
+    ):
+        """C1 回归: 并发 create_conversation 应都成功且轮次号不冲突.
+
+        协作场景: allocate(SELECT MAX) + store(INSERT) 在同一事务内,
+        SQLite 单写锁串行化消除 "读后读" 竞态.
+        设计思路: 两个并发请求同时创建对话, 旧实现(分离事务)会都读到 MAX=0
+        都插入 round=1 触发唯一约束冲突; C1 统一事务后应分别得到 1 和 2.
+        Mock边界: 无 Mock, 真实 Service + 真实 SQLite.
+        业务价值: 锁死并发轮次号分配的原子性, 防回归.
+        """
+        import asyncio
+
+        from src.storage.service.service_factory import create_conversation_service
+
+        service = await create_conversation_service(
+            test_user, test_thread_id, agent_id="test-agent"
+        )
+
+        results = await asyncio.gather(
+            service.create_conversation(
+                user_message="并发1",
+                assistant_response="r1",
+                user_id=test_user,
+                thread_id=test_thread_id,
+                agent_id="test-agent",
+            ),
+            service.create_conversation(
+                user_message="并发2",
+                assistant_response="r2",
+                user_id=test_user,
+                thread_id=test_thread_id,
+                agent_id="test-agent",
+            ),
+        )
+
+        round_numbers = sorted(r.round_number for r in results)
+        assert round_numbers == [1, 2]

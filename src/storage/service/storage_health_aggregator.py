@@ -10,7 +10,7 @@ import time
 from typing import Any
 
 from .conversation_service import ConversationService
-from .memory_service import MemoryService
+from .pinned_memory_block_service import PinnedMemoryBlockService
 from .todo_service import TodoService
 from .vector_service import VectorService
 
@@ -29,8 +29,10 @@ class StorageHealthAggregator:
         self,
         conversation_service: ConversationService,
         todo_service: TodoService,
-        memory_service: MemoryService,
+        memory_service: PinnedMemoryBlockService,
         vector_service: VectorService,
+        *,
+        extra_services: dict[str, Any] | None = None,
     ) -> None:
         """初始化存储健康检查聚合器.
 
@@ -39,12 +41,15 @@ class StorageHealthAggregator:
             todo_service: TODO服务
             memory_service: 记忆服务
             vector_service: 向量服务
+            extra_services: 额外服务 {名称: 带 health_check() 的实例},
+                用于扩展覆盖面 (如 usage/file_registry 等), 可选.
 
         """
         self.conversation_service = conversation_service
         self.todo_service = todo_service
         self.memory_service = memory_service
         self.vector_service = vector_service
+        self.extra_services: dict[str, Any] = extra_services or {}
         self.logger = logging.getLogger(f"{__name__}.StorageHealthAggregator")
 
     async def check_all_services_health(self) -> dict[str, Any]:
@@ -67,6 +72,7 @@ class StorageHealthAggregator:
                 self.todo_service.health_check(),
                 self.memory_service.health_check(),
                 self.vector_service.health_check(),
+                *(svc.health_check() for svc in self.extra_services.values()),
             ]
 
             # 并行执行健康检查
@@ -83,6 +89,7 @@ class StorageHealthAggregator:
                 "todo_service",
                 "memory_service",
                 "vector_service",
+                *self.extra_services.keys(),
             ]
 
             for _i, (service_name, result) in enumerate(

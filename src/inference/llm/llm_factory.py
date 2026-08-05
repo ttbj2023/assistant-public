@@ -185,7 +185,7 @@ class LlmFactory:
 
         provider_cfg = get_provider_config(provider)
         usage_kwargs = {
-            "callbacks": [get_usage_tracking_callback()],
+            "callbacks": [get_usage_tracking_callback(provider=provider)],
             "metadata": {"model": metadata.id, "provider": provider},
         }
         api_key: str | None = None
@@ -370,17 +370,7 @@ class LlmFactory:
 
     def stats(self) -> dict[str, Any]:
         """获取工厂统计信息 (主要供 fastapi_app lifespan 输出)."""
-        cache_stats = self._cache.get_stats()
-        client_counts = self._cache.get_client_count()
-
-        return {
-            "total_clients": client_counts["total_clients"],
-            "llm_clients": client_counts["llm_clients"],
-            "embedding_clients": client_counts["embedding_clients"],
-            "llm_hit_rate": cache_stats["llm_clients"]["hit_rate"],
-            "embedding_hit_rate": cache_stats["embedding_clients"]["hit_rate"],
-            "total_hit_rate": cache_stats["total_hit_rate"],
-        }
+        return self._cache.get_stats()
 
     def clear_cache(self) -> None:
         """清空客户端缓存 (主要用于测试)."""

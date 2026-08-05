@@ -190,6 +190,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         # 健康检查系统已简化,无需初始化注册
         logger.info("🏥 健康检查系统使用简化设计,无需预注册")
 
+        # 注入用量落库适配器 (inference UsageSink 端口 <- storage StorageUsageSink)
+        from src.inference.usage import configure_usage_sink
+        from src.storage.service.usage_sink import StorageUsageSink
+
+        configure_usage_sink(StorageUsageSink())
+
     except Exception as e:
         logger.error("❌ Agent系统初始化失败: %s", e)
         # 不阻止应用启动,只记录错误
@@ -199,6 +205,11 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # 关闭时的清理逻辑
     try:
         logger.info("🔄 开始应用关闭流程...")
+
+        # 释放用量落库适配器 (断开 inference -> storage 的运行时桥接)
+        from src.inference.usage import configure_usage_sink
+
+        configure_usage_sink(None)
 
         # 1. 停止语义缓存周期清理任务 (需await cancel, 手动处理)
         if _semantic_cache_cleanup_task is not None:

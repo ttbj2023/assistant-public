@@ -19,6 +19,7 @@ import pytest
 
 from src.config.tools_config import SkillConfig
 from src.tools.skills.load_skill_tool import LoadSkillTool
+from src.tools.shared.tool_runtime import inject_identity
 from src.tools.skills.skill_bridge import SkillBridge
 
 
@@ -47,7 +48,8 @@ class TestLoadSkillL2:
     @pytest.mark.asyncio
     async def test_should_return_l2_body_for_valid_skill(self, tmp_path: Path) -> None:
         bridge = _make_bridge_with_skill(tmp_path)
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         tool.set_skill_pool(bridge, ["xlsx"])
         result = await tool._arun(skill_name="xlsx")
         assert result == "L2正文内容"
@@ -55,7 +57,8 @@ class TestLoadSkillL2:
     @pytest.mark.asyncio
     async def test_should_return_error_for_unknown_skill(self) -> None:
         bridge = MagicMock()
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         tool.set_skill_pool(bridge, ["xlsx"])
         result = await tool._arun(skill_name="nope")
         data = json.loads(result)
@@ -65,7 +68,8 @@ class TestLoadSkillL2:
 
     @pytest.mark.asyncio
     async def test_should_return_error_when_no_skill_pool(self) -> None:
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         # 未调set_skill_pool
         result = await tool._arun(skill_name="xlsx")
         data = json.loads(result)
@@ -80,7 +84,8 @@ class TestLoadSkillL3:
             tmp_path, "chart_maker",
             references={"mermaid": "# Mermaid 语法\n完整内容"},
         )
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         tool.set_skill_pool(bridge, ["chart_maker"])
         result = await tool._arun(skill_name="chart_maker", reference="mermaid")
         assert "Mermaid" in result
@@ -94,7 +99,8 @@ class TestLoadSkillL3:
             tmp_path, "chart_maker",
             references={"mermaid": "# M", "vega_lite": "# V"},
         )
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         tool.set_skill_pool(bridge, ["chart_maker"])
         result = await tool._arun(skill_name="chart_maker", reference="nope")
         data = json.loads(result)
@@ -107,7 +113,8 @@ class TestLoadSkillL3:
         self, tmp_path: Path
     ) -> None:
         bridge = _make_bridge_with_skill(tmp_path, "xlsx")
-        tool = LoadSkillTool("u1", "t1", agent_id="a1")
+        tool = LoadSkillTool()
+        inject_identity(tool, "u1", "t1", "a1")
         tool.set_skill_pool(bridge, ["xlsx"])
         result = await tool._arun(skill_name="xlsx", reference="anything")
         data = json.loads(result)

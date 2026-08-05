@@ -6,10 +6,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select, update
+
+from src.core.datetime_utils import now_utc
 
 from ..models.price_alert import AlertStatus, PriceAlertRule
 from .database_operations import AsyncDatabaseOperations
@@ -106,7 +107,7 @@ class AsyncPriceAlertDAO:
             async with self.session_factory() as session:
                 values: dict[str, Any] = {"status": AlertStatus.DISABLED}
                 if triggered:
-                    values["triggered_at"] = datetime.utcnow()
+                    values["triggered_at"] = now_utc()
                 stmt = (
                     update(PriceAlertRule)
                     .where(

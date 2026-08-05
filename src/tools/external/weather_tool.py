@@ -9,11 +9,12 @@ import json
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.tools.shared.baidu_http import baidu_get, check_response
-from src.tools.shared.base_external_tool import BaseExternalTool
 from src.tools.shared.cache import ExpertCache, get_expert_cache
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ class WeatherQueryInput(BaseModel):
     )
 
 
-class WeatherQueryTool(BaseExternalTool):
+@sync_runnable
+class WeatherQueryTool(BaseTool):
     """天气查询工具 - 供主Agent直接调用, 无需经过geo_research专家."""
 
     name: str = "weather_query"
@@ -51,7 +53,6 @@ class WeatherQueryTool(BaseExternalTool):
     args_schema: type[BaseModel] = WeatherQueryInput
     timeout: float = 10.0
 
-    @override
     async def is_available(self) -> bool:
         from src.config.credentials_registry import has_credential
 

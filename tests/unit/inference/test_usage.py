@@ -168,3 +168,66 @@ async def test_usage_callback_records_llm_duration_ms() -> None:
     assert duration_ms is not None
     assert isinstance(duration_ms, int)
     assert duration_ms >= 0
+
+
+@pytest.mark.asyncio
+async def test_persist_usage_delegates_to_configured_sink() -> None:
+    """注入 sink 后 _persist_usage 委托 sink.record; 置 None 时跳过落库."""
+    from src.core.types import UsageRecordCreate
+    from src.inference.usage import _persist_usage, configure_usage_sink
+
+    recorded: list[UsageRecordCreate] = []
+
+    class _FakeSink:
+        async def record(self, data: UsageRecordCreate) -> None:
+            recorded.append(data)
+
+    record = UsageRecordCreate(
+        user_id="u",
+        thread_id="t",
+        agent_id="a",
+        operation="llm_chat",
+        usage_source="test",
+    )
+
+    configure_usage_sink(_FakeSink())
+    try:
+        await _persist_usage(record)
+        assert recorded == [record]
+
+        configure_usage_sink(None)
+        await _persist_usage(record)
+        assert recorded == [record]
+    finally:
+        configure_usage_sink(None)
+
+
+@pytest.mark.asyncio
+async def test_usage_callback_binds_provider_for_openai_compatible() -> None:
+    """绑定的 provider 应覆盖 response model_name 的推断.
+
+    回归: OpenAI 兼容端点 response 只返回纯 model_name (无 provider 前缀),
+    _provider_from_model_id 推断失败导致 provider=NULL. 绑定 provider 后
+    应直接记录绑定值, 不依赖 response 里的 model_name.
+    """
+    persisted: list[object] = []
+
+    async def spy_persist(data: object) -> None:
+        persisted.append(data)
+
+    token = set_user_context(
+        UserContext(user_id="U", thread_id="t", agent_id="a"),
+    )
+    try:
+        with patch.object(usage_mod, "_persist_usage", spy_persist):
+            model = FakeListLLM(
+                responses=["ok"],
+                callbacks=[UsageTrackingCallback(provider="doubao")],
+            )
+            await model.ainvoke("hi")
+            await asyncio.sleep(0.05)
+    finally:
+        reset_user_context(token)
+
+    assert len(persisted) == 1
+    assert persisted[0].provider == "doubao"  # type: ignore[attr-defined]

@@ -190,6 +190,12 @@ class HealthDataService(ServiceHealthCheckMixin):
         """获取指定日期的营养汇总."""
         return await self.health_dao.calculate_daily_nutrition(target_date)
 
+    async def get_nutrition_range(
+        self, start_date: date, end_date: date
+    ) -> dict[str, dict[str, Any]]:
+        """批量获取日期范围内每日营养汇总 (一次查询)."""
+        return await self.health_dao.calculate_nutrition_range(start_date, end_date)
+
     async def get_report_detail(self) -> dict[str, Any]:
         """获取最新体检报告详情(含历史趋势)."""
         latest = await self.health_dao.get_latest_report()

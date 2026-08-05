@@ -5,11 +5,16 @@ from __future__ import annotations
 import logging
 from typing import ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
 from src.files import AttachmentDTO
-from src.tools.shared.base_internal_tool import BaseInternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import (
+    format_tool_error,
+    format_tool_success,
+    sync_runnable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +38,8 @@ class RegenerateDownloadLinkInput(QueryAliasModel):
     )
 
 
-class RegenerateDownloadLinkTool(BaseInternalTool):
+@sync_runnable
+class RegenerateDownloadLinkTool(BaseTool):
     """重新生成下载链接工具."""
 
     name: str = "regenerate_download_link"
@@ -58,7 +64,7 @@ class RegenerateDownloadLinkTool(BaseInternalTool):
         try:
             entry = await self._get_entry(file_id)
             if not entry:
-                return self._format_error(
+                return format_tool_error(
                     ValueError(f"文件 {file_id} 不存在或已过期"),
                 )
 
@@ -71,7 +77,7 @@ class RegenerateDownloadLinkTool(BaseInternalTool):
             )
 
             if not full_path.exists():
-                return self._format_error(
+                return format_tool_error(
                     FileNotFoundError(f"文件已不存在: {entry.filename}"),
                 )
 
@@ -99,7 +105,7 @@ class RegenerateDownloadLinkTool(BaseInternalTool):
             )
             self._register_exported_file(url, file_id, file_type, entry)
 
-            return self._format_success(
+            return format_tool_success(
                 {
                     "file_id": file_id,
                     "filename": entry.filename,
@@ -111,7 +117,7 @@ class RegenerateDownloadLinkTool(BaseInternalTool):
 
         except Exception as e:
             logger.error("regenerate_download_link 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     def _register_exported_file(
         self, url: str, file_id: str, file_type: str, entry: AttachmentDTO

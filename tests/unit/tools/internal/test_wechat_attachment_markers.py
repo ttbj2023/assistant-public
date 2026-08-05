@@ -417,3 +417,47 @@ class TestEndToEndIsolation:
         assert "<strong>WXATT" not in final
         assert "WXATT_a1b2c3d4" not in final
         assert "[file:" not in final
+
+
+class TestConverterSignature:
+    """md_to_wechat_html 签名变更回归: 不再接受 summary 参数."""
+
+    def test_no_summary_param(self) -> None:
+        html = md_to_wechat_html("正文内容", author="测试")
+        assert "正文内容" in html
+        assert "文/ 测试" in html
+
+    def test_no_date_header_no_thanks(self) -> None:
+        html = md_to_wechat_html("正文内容")
+        assert "感谢阅读" not in html
+        assert "年" not in html or "正文内容" in html
+
+    def test_no_summary_box(self) -> None:
+        html = md_to_wechat_html("正文内容")
+        assert "border-left: 4px solid #607D8B" not in html
+
+    def test_ai_disclaimer_present(self) -> None:
+        html = md_to_wechat_html("正文内容")
+        assert "资料核查与文字整理由AI辅助生成" in html
+
+    def test_disclaimer_present_without_author(self) -> None:
+        html = md_to_wechat_html("正文内容")
+        assert "文/" not in html
+        assert "资料核查与文字整理由AI辅助生成" in html
+
+    def test_duplicate_title_removed(self) -> None:
+        content = "## 我的标题\n\n正文段落"
+        html = md_to_wechat_html(content, title="我的标题")
+        assert "正文段落" in html
+        assert html.count("我的标题") == 0
+
+    def test_title_not_removed_when_different(self) -> None:
+        content = "## 另一个标题\n\n正文段落"
+        html = md_to_wechat_html(content, title="我的标题")
+        assert "另一个标题" in html
+
+    def test_h1_title_removed_regardless(self) -> None:
+        content = "# 我的标题\n\n正文段落"
+        html = md_to_wechat_html(content, title="我的标题")
+        assert "我的标题" not in html
+        assert "正文段落" in html

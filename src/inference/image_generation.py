@@ -14,7 +14,7 @@ from src.core.http_pool import get_http_pool
 from src.inference.llm.definitions import get_provider_config
 from src.inference.llm.definitions.model_registry import get_model
 from src.inference.llm.definitions.model_types import ModelCapability
-from src.inference.llm.definitions.provider_registry import require_api_key_env
+from src.inference.shared.provider_validation import resolve_api_key
 from src.inference.usage import record_usage_from_context
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class ImageGenerationService:
             raise ValueError(f"模型不支持图片生成: {model_id}")
 
         provider_config = get_provider_config(metadata.provider)
-        api_key = self._get_api_key(provider_config.api_key_env)
+        api_key = resolve_api_key(provider_config.api_key_env, purpose="图片生成模型")
         base_url = provider_config.get_effective_base_url() or (
             "https://ark.cn-beijing.volces.com/api/v3"
         )
@@ -134,13 +134,6 @@ class ImageGenerationService:
                     "watermark": watermark,
                 },
             )
-
-    @staticmethod
-    def _get_api_key(env_name: str | None) -> str:
-        try:
-            return require_api_key_env(env_name, purpose="图片生成模型")
-        except RuntimeError as e:
-            raise ValueError(str(e)) from e
 
     @staticmethod
     def _build_url(base_url: str) -> str:

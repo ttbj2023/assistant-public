@@ -166,57 +166,6 @@ class ServiceMockFactory:
         return mock_service
 
     @classmethod
-    def create_memory_service(cls, **overrides) -> AsyncMock:
-        """创建MemoryService Mock.
-
-        Args:
-            **overrides: 方法覆盖，用于定制特定行为
-
-        Returns:
-            配置好所有公共接口的AsyncMock
-        """
-        mock_service = AsyncMock()
-
-        # 记忆获取方法
-        mock_service.get_pinned_memory_as_dict = AsyncMock(return_value={})
-
-        mock_service.format_pinned_memory_dict = AsyncMock(
-            return_value="### 👤 基本信息\n测试用户"
-        )
-
-        # 记忆更新方法
-        mock_service.update_memory = AsyncMock(return_value=None)
-
-        # 记忆查询方法
-        mock_service.get_memory_by_type = AsyncMock(return_value=None)
-
-        mock_service.get_all_memories = AsyncMock(return_value=[])
-
-        mock_service.delete_memory = AsyncMock(return_value=True)
-
-        mock_service.get_memory_types_status = AsyncMock(
-            return_value={"action": 0, "character": 0, "knowledge": 0}
-        )
-
-        # 健康检查
-        mock_service.health_check = AsyncMock(
-            return_value={
-                "status": "healthy",
-                "message": "记忆服务正常",
-                "details": {"memory_types": 3},
-            }
-        )
-
-        # 属性
-        mock_service.session_factory = MagicMock()
-
-        # 允许覆盖
-        for key, value in overrides.items():
-            setattr(mock_service, key, value)
-
-        return mock_service
-
-    @classmethod
     def create_vector_service(cls, **overrides) -> AsyncMock:
         """创建VectorService Mock.
 
@@ -234,10 +183,6 @@ class ServiceMockFactory:
         )
 
         mock_service.search_conversations = AsyncMock(return_value=[])
-
-        mock_service.search_conversation_rounds = AsyncMock(return_value=[])
-
-        mock_service.search_conversation_rounds_mmr = AsyncMock(return_value=[])
 
         # 统计方法
         mock_service.get_collection_stats = AsyncMock(
@@ -278,13 +223,11 @@ class ServiceMockFactory:
             包含所有Service mock的字典:
             - conversation: ConversationService mock
             - todo: TodoService mock
-            - memory: MemoryService mock
             - vector: VectorService mock
         """
         services = {
             "conversation": cls.create_conversation_service(),
             "todo": cls.create_todo_service(),
-            "memory": cls.create_memory_service(),
             "vector": cls.create_vector_service(),
         }
 
@@ -304,7 +247,7 @@ class ServiceMockFactory:
 
         Args:
             error_type: 错误类型 (database, timeout, validation)
-            service_name: 服务名称 (conversation, todo, memory, vector)
+            service_name: 服务名称 (conversation, todo, vector)
 
         Returns:
             配置好错误行为的Service Mock
@@ -328,9 +271,6 @@ class ServiceMockFactory:
         elif service_name == "todo":
             mock_service = cls.create_todo_service()
             mock_service.create_todo = AsyncMock(side_effect=error)
-        elif service_name == "memory":
-            mock_service = cls.create_memory_service()
-            mock_service.update_memory = AsyncMock(side_effect=error)
         elif service_name == "vector":
             mock_service = cls.create_vector_service()
             mock_service.add_conversation_content = AsyncMock(side_effect=error)

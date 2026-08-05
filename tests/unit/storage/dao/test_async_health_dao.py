@@ -87,6 +87,76 @@ class TestMealRecordManagement:
         assert result["fat"] == 28.0
         assert result["meal_count"] == 2
 
+    @pytest.mark.asyncio
+    async def test_calculate_nutrition_range_should_group_by_date(
+        self, health_dao, mock_session_factory
+    ):
+        """批量营养汇总应一次查询并按日期分组聚合."""
+        meals = [
+            MealRecord(
+                id=1,
+                meal_type="breakfast",
+                meal_date=date(2025, 1, 10),
+                items=[],
+                total_calories=400.0,
+                total_protein=15.0,
+                total_carbs=50.0,
+                total_fat=10.0,
+            ),
+            MealRecord(
+                id=2,
+                meal_type="lunch",
+                meal_date=date(2025, 1, 10),
+                items=[],
+                total_calories=600.0,
+                total_protein=25.0,
+                total_carbs=70.0,
+                total_fat=18.0,
+            ),
+            MealRecord(
+                id=3,
+                meal_type="breakfast",
+                meal_date=date(2025, 1, 11),
+                items=[],
+                total_calories=300.0,
+                total_protein=10.0,
+                total_carbs=40.0,
+                total_fat=8.0,
+            ),
+        ]
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = meals
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_session_factory.session.execute.return_value = mock_result
+
+        result = await health_dao.calculate_nutrition_range(
+            date(2025, 1, 10), date(2025, 1, 11)
+        )
+
+        assert result["2025-01-10"]["calories"] == 1000.0
+        assert result["2025-01-10"]["meal_count"] == 2
+        assert result["2025-01-11"]["calories"] == 300.0
+        assert result["2025-01-11"]["meal_count"] == 1
+        assert result["2025-01-10"]["status"] == "success"
+
+    @pytest.mark.asyncio
+    async def test_calculate_nutrition_range_empty_should_return_empty_dict(
+        self, health_dao, mock_session_factory
+    ):
+        """范围内无记录应返回空 dict (无记录日期不出现)."""
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_session_factory.session.execute.return_value = mock_result
+
+        result = await health_dao.calculate_nutrition_range(
+            date(2025, 1, 10), date(2025, 1, 11)
+        )
+
+        assert result == {}
+
 
 class TestAnalyzeReportTrends:
     @pytest.mark.asyncio
@@ -884,6 +954,34 @@ class TestGetWorkoutHistory:
 
         assert len(result) == 1
         assert result[0].workout_type == "Running"
+
+    @pytest.mark.asyncio
+    async def test_cutoff_is_utc_based_not_local(
+        self, health_dao, mock_session_factory
+    ):
+        """cutoff 必须基于 UTC, 而非服务器本地时间.
+
+        服务器本地 +8 时, datetime.now() 比 now_utc() 快 8 小时, 会导致日期窗口
+        整体前移, 边界记录被错误纳入/排除. 此处提取实际传入查询的 cutoff 值,
+        断言其与 UTC 基准的偏差在 60s 内.
+        """
+        from datetime import UTC, timedelta
+
+        from src.core.datetime_utils import now_utc
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session_factory.session.execute.return_value = mock_result
+
+        await health_dao.get_workout_history(days=30)
+
+        stmt = mock_session_factory.session.execute.call_args[0][0]
+        cutoff = stmt.whereclause.right.value
+        # naive (存储约定) 视为 UTC; aware 直接比较
+        if cutoff.tzinfo is None:
+            cutoff = cutoff.replace(tzinfo=UTC)
+        expected = now_utc() - timedelta(days=30)
+        assert abs((cutoff - expected).total_seconds()) < 60
 
 
 class TestWorkoutHistoryFiltered:

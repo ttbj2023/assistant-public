@@ -71,9 +71,7 @@ class ConversationMemoryCoreMocks:
         self.sql_storage.store_vector_conversation.return_value = None
         self.conversation_dao.create_conversation.return_value = None
         self.conversation_dao.create_conversation_index.return_value = None
-        self.content_analyzer.analyze_pinned_memory_update.return_value = (
-            MagicMock()
-        )
+        self.content_analyzer.analyze_pinned_memory_update.return_value = MagicMock()
         self.vector_store.add_conversations.return_value = None
 
     def get_failure_scenario(self, operation: str) -> None:
@@ -159,65 +157,6 @@ class SplittableMemoryCacheMocks:
             "conversation_cache": self.conversation_cache,
             "todolist_cache": self.todolist_cache,
             "lru_cache": self.lru_cache,
-        }
-
-
-class SimplePinnedMemoryManagerMocks:
-    """SimplePinnedMemoryManager专用Mock集合"""
-
-    def __init__(self):
-        """初始化Mock组件"""
-        self._setup_data_manager_mocks()
-        self._setup_analyzer_mocks()
-
-    def _setup_data_manager_mocks(self) -> None:
-        """设置数据管理器Mock"""
-        self.data_manager = MagicMock()
-        self.data_manager.memory_dao = AsyncMock()
-        self.data_manager.memory_dao.get_pinned_memory = AsyncMock()
-
-        # 默认返回空记忆
-        self.data_manager.memory_dao.get_pinned_memory.return_value = {
-            "basic_info": "",
-            "preferences": "",
-        }
-
-    def _setup_analyzer_mocks(self) -> None:
-        """设置分析器Mock"""
-        self.content_analyzer = AsyncMock()
-        self.content_analyzer.analyze_content = AsyncMock(
-            return_value={
-                "basic_info": "分析后的基础信息",
-                "preferences": "分析后的偏好信息",
-            }
-        )
-
-    def get_normal_memory_scenario(self) -> None:
-        """配置正常记忆场景"""
-        self.data_manager.memory_dao.get_pinned_memory.return_value = {
-            "basic_info": "用户基础信息",
-            "preferences": "用户偏好设置",
-        }
-
-    def get_empty_memory_scenario(self) -> None:
-        """配置空记忆场景"""
-        self.data_manager.memory_dao.get_pinned_memory.return_value = {
-            "basic_info": "",
-            "preferences": "",
-        }
-
-    def get_analysis_success_scenario(self) -> None:
-        """配置分析成功场景"""
-        self.content_analyzer.analyze_content.return_value = {
-            "basic_info": "LLM分析的基础信息",
-            "preferences": "LLM分析的偏好信息",
-        }
-
-    def get_mocks(self) -> dict[str, Any]:
-        """获取所有Mock对象"""
-        return {
-            "data_manager": self.data_manager,
-            "content_analyzer": self.content_analyzer,
         }
 
 

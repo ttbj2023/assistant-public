@@ -35,6 +35,11 @@ class TestParseArcPhrase:
         result = parse_arc_phrase('noise {"arc_phrase": "ok"} trailing', 40)
         assert result == "ok"
 
+    def test_parse_invalid_extracted_json_should_raise_value_error(self) -> None:
+        """regex提取到非法JSON时应抛ValueError而非JSONDecodeError."""
+        with pytest.raises(ValueError, match="未找到有效JSON"):
+            parse_arc_phrase("noise {invalid} trailing", 40)
+
 
 class TestFormatRunEntries:
     def test_formats_round_topic_summary(self) -> None:

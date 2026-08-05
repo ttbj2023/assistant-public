@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 from typing import Any
 
+from src.core.datetime_utils import now_utc
 from src.files.paths import FILES_CHARTS
 from src.tools.shared.browser_renderer import get_browser_renderer
 from src.tools.shared.file_output import (
@@ -92,7 +92,7 @@ async def run_chart_maker(
             "width": width,
             "height": height,
             "scale": scale,
-            "created_at": datetime.now().isoformat(),
+            "created_at": now_utc().isoformat(),
         }
 
         # 注册输出 (签名URL + 附件注册 + exported_files + 配额)

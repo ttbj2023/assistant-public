@@ -6,12 +6,13 @@
 
 from __future__ import annotations
 
-# 唯一权威顺序: base(身份) -> tools(工具策略) -> skills(预留) -> memory(动态数据)
+# 唯一权威顺序: base(身份) -> tools(工具策略) -> skills(预留) -> memory(动态数据) -> domain_data(领域注入)
 SYSTEM_PROMPT_SECTION_ORDER: tuple[str, ...] = (
     "base",
     "tools",
     "skills",
     "memory",
+    "domain_data",
 )
 
 

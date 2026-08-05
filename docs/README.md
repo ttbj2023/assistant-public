@@ -1,11 +1,11 @@
 # 项目文档索引
 
-**项目版本**: v1.9.0 | **文档更新**: 2026-07-14
+**项目版本**: v1.9.0 | **文档更新**: 2026-07-24
 
 ## 📚 核心文档导航
 
 ### 🎯 快速入门
-3. **[README.md](../README.md)** - 项目介绍和快速开始
+3. **[README.md](../README.md)** - 项目介绍、核心设计哲学和快速开始
 4. **[调试模式](./debugging.md)** - 双层调试功能使用指南
 
 ### ⚙️ 配置和部署
@@ -14,6 +14,7 @@
 - **[配置治理规范](./development/config-governance.md)** - 新增配置归类与禁止事项
 - **[用户管理指南](./user_management_guide.md)** - API Key认证和用户隔离
 - **[路径管理](./path-management.md)** - 数据隔离路径系统
+- **[Reranker 外部服务](./reranker-service.md)** - Qwen3-Reranker-0.6B 独立服务概览
 
 ### 🛠️ 开发指南
 - **[测试系统](./development/testing.md)** - 三层测试架构（单元/集成/E2E）
@@ -51,5 +52,5 @@ Mock：development/unit_test_design_specification.md
 ---
 
 **文档维护**: 季度审查, 版本同步, 保持一致性
-**最后更新**: 2026-07-14
+**最后更新**: 2026-07-24
 **项目版本**: v1.9.0

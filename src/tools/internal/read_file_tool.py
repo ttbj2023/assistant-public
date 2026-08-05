@@ -14,11 +14,16 @@ from __future__ import annotations
 import logging
 from typing import ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import ConfigDict, Field
 
 from src.files import AttachmentDTO
-from src.tools.shared.base_internal_tool import BaseInternalTool
 from src.tools.shared.query_alias_model import QueryAliasModel
+from src.tools.shared.tool_runtime import (
+    format_tool_error,
+    format_tool_success,
+    sync_runnable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +53,8 @@ class ReadFileInput(QueryAliasModel):
     )
 
 
-class ReadFileTool(BaseInternalTool):
+@sync_runnable
+class ReadFileTool(BaseTool):
     """文件描述读取工具."""
 
     name: str = "read_file"
@@ -88,14 +94,14 @@ class ReadFileTool(BaseInternalTool):
             entry = await self._get_entry(file_id)
 
             if not content:
-                return self._format_error(
+                return format_tool_error(
                     ValueError(f"文件 {file_id} 无可用描述 (描述文件未生成)"),
                 )
 
             content_total_chars = len(content)
             truncated = content_total_chars > max_chars
             content = content[:max_chars]
-            return self._format_success(
+            return format_tool_success(
                 {
                     "file_id": file_id,
                     "filename": entry.filename if entry else None,
@@ -111,7 +117,7 @@ class ReadFileTool(BaseInternalTool):
 
         except Exception as e:
             logger.exception("read_file 执行失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
     async def _get_entry(self, file_id: str) -> AttachmentDTO | None:
         """查询文件注册表获取元信息 (filename/file_type)."""

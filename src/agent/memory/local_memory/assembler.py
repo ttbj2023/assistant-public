@@ -3,7 +3,6 @@
 输出结构:
   [HumanMessage("[过往对话回顾]"), AIMessage("<conversation_index>...")]  # 伪对话轮 (索引区)
   [HumanMessage(轮N原文), AIMessage(轮N回复), ...]                       # 真实历史
-  + system_prompt_extension (置顶记忆, 含引导语前缀)
 
 预算机制 (字符级, 主历史/索引区独立预算):
 - 主历史: total_char_budget (默认 20000), 内存二分查找, 判定 sum(len(user_message) + len(assistant_response))
@@ -32,9 +31,7 @@ from src.storage.service.conversation_messages_builder import (
 
 from .cache import (
     get_conversation,
-    get_pinned_memory,
     set_conversation,
-    set_pinned_memory,
 )
 from .history_budget import (
     resolve_total_char_budget,
@@ -59,13 +56,16 @@ class MemoryContext:
 
     Attributes:
         history_messages: 索引区伪对话轮 + 主历史真实轮次, 顺序为时间正序.
-        system_prompt_extension: 置顶记忆(含引导语前缀), 由 orchestrator 拼到
-            system_prompt 尾部. 空字符串表示无置顶记忆.
+        system_prompt_extension: 预留字段, 当前始终为空(置顶记忆已迁移至 domain_data).
+        earliest_round: 主历史窗口最早轮次号 (Push 上下文覆盖的起点).
+        latest_round: 主历史窗口最晚轮次号.
 
     """
 
     history_messages: list[BaseMessage] = field(default_factory=list)
     system_prompt_extension: str = ""
+    earliest_round: int | None = None
+    latest_round: int | None = None
 
 
 class MemoryAssembler:
@@ -123,34 +123,28 @@ class MemoryAssembler:
         budget = self._resolve_total_char_budget(total_budget)
 
         try:
-            pinned_str = (
-                await self._get_pinned_memory_with_cache(user_id, thread_id)
-            ).strip()
-
-            history_messages = await self._build_history_messages(
+            (
+                history_messages,
+                earliest_round,
+                latest_round,
+            ) = await self._build_history_messages(
                 user_id,
                 thread_id,
                 budget,
                 effective_agent_id,
             )
 
-            extension = ""
-            if pinned_str:
-                extension = (
-                    "以下是你需要长期记住的关键信息:\n"
-                    f"<pinned_memory>\n{pinned_str}\n</pinned_memory>"
-                )
-
             logger.debug(
-                "MemoryAssembler 组装完成 for %s:%s, messages=%d, extension=%d",
+                "MemoryAssembler 组装完成 for %s:%s, messages=%d",
                 user_id,
                 thread_id,
                 len(history_messages),
-                len(extension),
             )
             return MemoryContext(
                 history_messages=history_messages,
-                system_prompt_extension=extension,
+                system_prompt_extension="",
+                earliest_round=earliest_round,
+                latest_round=latest_round,
             )
 
         except Exception as e:
@@ -168,15 +162,12 @@ class MemoryAssembler:
         thread_id: str,
         total_budget: int,
         agent_id: str,
-    ) -> list[BaseMessage]:
+    ) -> tuple[list[BaseMessage], int | None, int | None]:
         """构建历史 messages (索引区伪对话轮 + 主历史真实轮次).
 
-        流程:
-        1. 主历史: 从滚动有界缓存取窗口; 命中直接用(零 DB), 未命中冷启动种子化
-        2. 主历史最早轮决定索引区边界 index_end = earliest_in_primary - 1
-        3. 索引区 budget 驱动级联组装(_fetch_index_in_budget):
-           - fine 行从 index_end 往前填 budget, 溢出 group 全弧展示(不拆分)
-        4. 主历史 -> build_messages_from_conversations 重建为 Human/AI 交替
+        Returns:
+            (messages, earliest_round, latest_round) 三元组.
+            无对话时 earliest/latest 均为 None.
         """
         conv_service = await create_conversation_service(
             user_id,
@@ -188,7 +179,7 @@ class MemoryAssembler:
             thread_id,
         )
         if latest_round <= 0:
-            return []
+            return [], None, None
 
         primary_budget = max(total_budget, 0)
         primary_convs = await self._get_main_history_with_cache(
@@ -202,7 +193,7 @@ class MemoryAssembler:
 
         messages: list[BaseMessage] = []
         if not primary_convs:
-            return messages
+            return messages, None, None
 
         earliest_in_primary = primary_convs[0].round_number
         index_end = earliest_in_primary - 1
@@ -226,7 +217,7 @@ class MemoryAssembler:
                 )
 
         messages.extend(build_messages_from_conversations(primary_convs))
-        return messages
+        return messages, earliest_in_primary, primary_convs[-1].round_number
 
     async def _get_main_history_with_cache(
         self,
@@ -349,41 +340,6 @@ class MemoryAssembler:
                 group_count,
                 len(rendered),
             )
-
-    # ==================== 缓存集成的数据获取方法 ====================
-
-    async def _get_pinned_memory_with_cache(self, user_id: str, thread_id: str) -> str:
-        """获取置顶记忆单一块 - 缓存优先, DB 回退."""
-        try:
-            cached_pinned = get_pinned_memory(
-                user_id,
-                thread_id,
-                agent_id=self.agent_id,
-            )
-            if isinstance(cached_pinned, str) and cached_pinned:
-                return cached_pinned
-
-            from src.storage.service import create_pinned_memory_block_service
-
-            block_service = await create_pinned_memory_block_service(
-                user_id,
-                thread_id,
-                agent_id=self.agent_id,
-            )
-            pinned_str = await block_service.get_formatted(user_id, thread_id)
-
-            if pinned_str:
-                set_pinned_memory(
-                    user_id,
-                    thread_id,
-                    pinned_str,
-                    agent_id=self.agent_id,
-                )
-            return pinned_str
-
-        except Exception as e:
-            logger.error("获取置顶记忆失败 for %s:%s: %s", user_id, thread_id, e)
-            return ""
 
     # ==================== 配置解析 ====================
 

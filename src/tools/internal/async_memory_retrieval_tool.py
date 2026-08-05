@@ -8,13 +8,13 @@ from __future__ import annotations
 import logging
 from typing import Any, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.validation.security_decorators import secure_tool_params
 from src.storage.service import (
     create_retrieval_service,
 )
-from src.tools.shared.base_internal_tool import BaseInternalTool
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class MemorySearchRequest(BaseModel):
     )
 
 
-class AsyncMemoryRetrievalTool(BaseInternalTool):
+class AsyncMemoryRetrievalTool(BaseTool):
     """异步对话历史检索工具."""
 
     name: str = "search_memories"
@@ -69,15 +69,9 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
 
     _retrieval_service: Any
 
-    def __init__(self, user_id: str, thread_id: str, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """初始化异步记忆检索工具."""
-        if not user_id or not user_id.strip():
-            raise ValueError("用户ID不能为空")
-
-        if not thread_id or not thread_id.strip():
-            raise ValueError("线程ID不能为空")
-
-        super().__init__(user_id, thread_id, **kwargs)
+        super().__init__(**kwargs)
 
         self._retrieval_service = None
 
@@ -189,6 +183,8 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
                         max_results=max_results,
                     )
                     results = self._format_documents_to_results(documents)
+
+                results = self._filter_context_rounds(results)
             else:
                 raise RuntimeError("检索服务不可用:无法初始化检索服务")
 
@@ -236,6 +232,24 @@ class AsyncMemoryRetrievalTool(BaseInternalTool):
                 "metadata": doc.metadata,
             })
         return results
+
+    def _filter_context_rounds(
+        self,
+        results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """过滤已在 Push 上下文窗口中的轮次, 避免重复返回 LLM 已可见的内容."""
+        earliest = getattr(self, "context_earliest_round", None)
+        if earliest is None:
+            return results
+        filtered = [r for r in results if r.get("round_number", 0) < earliest]
+        if len(filtered) < len(results):
+            logger.info(
+                "过滤 Push 窗口内轮次: %d → %d (earliest_round=%d)",
+                len(results),
+                len(filtered),
+                earliest,
+            )
+        return filtered
 
     async def aget_relevant_documents(self, query: str) -> list[Any]:
         """异步获取相关文档 - 基于检索服务架构.

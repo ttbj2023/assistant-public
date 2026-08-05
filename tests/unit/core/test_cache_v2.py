@@ -150,6 +150,23 @@ class TestSimpleMemoryCache:
     # ===== 统计功能测试 =====
 
     @pytest.mark.unit
+    def test_get_stats_returns_honest_flat_stats(self, cache) -> None:
+        """get_stats 应返回单一共享缓存的真实扁平统计, 而非假的 llm/embedding 分项."""
+        cache.set("k1", "v1")
+        cache.get("k1")  # hit
+        cache.get("miss")  # miss
+
+        stats = cache.get_stats()
+
+        # 真实统计字段
+        assert stats["total_clients"] == 1
+        assert stats["hit_rate"] == 0.5
+        assert stats["current_size"] == 1
+        # 不应再有假的 llm/embedding 分项 (同一共享缓存, 无法区分)
+        assert "llm_clients" not in stats
+        assert "embedding_clients" not in stats
+
+    @pytest.mark.unit
     def test_cache_should_track_hit_rate_correctly(self, cache_with_config) -> None:
         """测试缓存应该正确跟踪命中率"""
         # Arrange

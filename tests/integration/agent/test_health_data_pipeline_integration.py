@@ -256,7 +256,7 @@ class TestHealthDataPipelineIntegration:
 
         assert mock_audit_llm.called
         call_args = mock_audit_llm.call_args
-        snapshot = call_args.args[1] if len(call_args.args) > 1 else call_args.kwargs.get("data_snapshot", "")
+        snapshot = call_args.args[2] if len(call_args.args) > 2 else call_args.kwargs.get("data_snapshot", "")
         assert "## weight_record" in snapshot
         assert "70.5kg" in snapshot
         assert "R5" in snapshot

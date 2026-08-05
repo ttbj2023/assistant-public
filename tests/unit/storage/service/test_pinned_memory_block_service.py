@@ -23,7 +23,6 @@ def service_with_mock_dao() -> tuple[PinnedMemoryBlockService, AsyncMock]:
     mock_dao = AsyncMock()
     mock_dao.get.return_value = None
     mock_dao.upsert.return_value = None
-    mock_dao.delete.return_value = True
     service._dao = mock_dao
     return service, mock_dao
 

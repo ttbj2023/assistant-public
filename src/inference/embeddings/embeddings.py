@@ -39,10 +39,3 @@ def create_embeddings(provider: str = "local", model: str | None = None) -> Embe
     logger.info("📋 获取嵌入模型客户端: %s", model_id)
 
     return get_embeddings_factory().get_embeddings(model_id)
-
-
-def get_embedding_info(embeddings: Embeddings) -> str:
-    """获取嵌入模型信息."""
-    if hasattr(embeddings, "model"):
-        return f"Embeddings: {embeddings.model}"
-    return "Embeddings: unknown"

@@ -1,15 +1,13 @@
 """微信公众号文章发布服务.
 
 编排完整发布流程:
-1. 摘要+封面提示词自动生成 (1次LLM) + 文章润色 (1次LLM) - 并行
+1. 摘要+封面提示词自动生成 (1次LLM) + 校对排版 (1次LLM) - 并行
 2. 封面图生成+上传
-3. 自动插图定位 (纯代码) + 插图描述生成 (1次LLM)
-4. 附件清理 ([file: id] 引用解析)
-5. 插图处理 ({{IMG:...}} 占位符 -> 图片生成)
-6. Markdown -> 微信 HTML
-7. 图片上传到微信素材库 + CDN替换
-8. 封面图插入文章开头
-9. 创建草稿
+3. 附件清理 ([file: id] 引用解析)
+4. Markdown -> 微信 HTML
+5. 附件上传到微信素材库 + CDN替换
+6. 封面图插入文章开头
+7. 创建草稿
 """
 
 from __future__ import annotations
@@ -34,10 +32,6 @@ from .converter import md_to_wechat_html
 
 logger = logging.getLogger(__name__)
 
-_IMG_PLACEHOLDER_RE = re.compile(r"\{\{IMG:(.+?)\}\}")
-_AUTO_PREFIX = "auto:"
-_ILLUSTRATION_MARKER_RE = re.compile(r"\[ILLUSTRATION_(\d+)\]")
-
 _ATTACHMENT_MARKER_RE = re.compile(r"\[file:\s*(\w{8})\]")
 _ATTACHMENT_PLACEHOLDER_RE = re.compile(r"\{WXATT:\w+\}")
 
@@ -52,7 +46,10 @@ _ANALYZE_PROMPT = """\
 
 ## 任务
 1. 生成摘要:80字符以内, 概括核心洞察, 不要添加"本文介绍了"等冗余词语
-2. 生成封面图提示词:描述一张封面图画面, 体现文章核心洞察, 专业克制有质感
+2. 生成封面图提示词:描述一张与文章核心意象强关联的封面图画面
+   - 画面应承载信息量: 用视觉隐喻/符号传达文章核心矛盾或关键概念, 而非纯装饰
+   - 风格不要固定: 根据文章气质自由选择 (写实/超现实/极简/拼贴/数据可视化风格/插画/摄影感等), 每篇文章应有不同的视觉方向
+   - 追求视觉冲击力和记忆点, 避免泛泛的"科技感深色背景"
    - 严禁在图片中包含任何文字/标题/标签
    - 只描述画面内容, 不要提及"封面图"/"微信"等平台词汇
 
@@ -60,55 +57,28 @@ _ANALYZE_PROMPT = """\
 {{"summary": "摘要内容", "cover_prompt": "封面图画面描述"}}"""
 
 _REFINE_PROMPT = """\
-你是一位科技类深度公众号的主编, 账号调性为"冷静/专业/有洞察/不煽动", 读者多为科技行业从业者和深度思考者. 你的任务是帮助我把一篇草稿打磨成适合该公众号发布的作品.
+你是一位校对编辑. 你的任务是对一篇 Markdown 草稿做校对和格式排版, 使其适合微信公众号手机端阅读.
 
 [原文内容]
 {content}
 
-[核心原则]
-- 尊重原文的洞察/思考深度和核心结论, 只调整表达方式, 不添加原文没有的新观点
-- 写作者的存在感要低, 让事实和逻辑本身说话, 避免任何"小编感"语言
+[绝对禁止]
+- 禁止改写/替换/润色任何句子, 禁止调整措辞或语气
+- 禁止添加原文没有的观点/过渡句/总结句/引言/小标题
+- 禁止删除原文中的任何段落或句子
+- 禁止统一文风, 原文的口语化/不规则/个人化表达必须原样保留
 
-[改写要求]
-1. 结构与段落
-   - 为文章添加恰当的小标题(二级或三级标题), 标题本身要信息量足/冷静克制, 不使用疑问句/感叹句和网络热词
-   - 正文段落控制在3-5句, 每段不超过150字; 段落之间逻辑跳跃不要太大, 适当使用过渡句衔接
-   - 保持清晰的"引入-展开-洞察-收束"结构, 但不使用套路化结尾
+[允许的操作 (仅限以下)]
+1. 校对: 修错别字/标点错误/明显断句错误 (不改变表达)
+2. 断段: 过长的段落拆分, 适配手机屏幕阅读
+3. 格式整理: 调整标题层级/加粗/列表等 Markdown 格式, 使排版清晰
+4. 保留原文中的 [file: id] 标记, 不要修改或删除
 
-2. 语言与措辞
-   - 使用客观/准确/克制的书面语, 避免口头禅/网络用语和过度修饰
-   - 优先用"观察到""值得注意""一个被忽视的视角是"等表达, 避免"你必须""每个人都应该"等说教或催促句式
-   - 不制造焦虑, 不放大情绪, 不夹带价值观评判
-   - 禁用标题党写法, 包括但不限于:"震惊""彻底改写""一夜之间""终于有人把...讲清楚了"
+[格式]
+- Markdown 格式, 仅限: 标题(##/###)/加粗/无序列表/引用块
+- 不生成表格/分割线/代码块
 
-3. 阅读节奏(移动端适配)
-   - 考虑到微信公众号的手机阅读场景, 要在长句中穿插短句, 使阅读有呼吸感
-   - 关键洞察可以用独立短句成段来强调, 但全文不超过3次
-   - 专业术语首次出现时保留, 但全篇避免在同一概念上反复解释
-
-4. 格式
-   - 使用 Markdown 格式, 但仅限: 标题(##/###)/加粗/无序列表/引用块(用于引述观点或数据)
-   - 不生成表格/分割线和代码块
-   - 保留原文中的 [file: id] 标记, 不要修改或删除这些标记
-   - 不得添加任何AI提示痕迹或解释性说明, 直接输出改写后的全文
-
-直接输出改写完成后的完整文章, 以 Markdown 格式呈现."""
-
-_ILLUSTRATION_PROMPT = """\
-你是一个科技文章视觉编辑. 以下文章中 [ILLUSTRATION_1] [ILLUSTRATION_2] ... 标记了需要插图的位置.
-
-为每个标记位置生成一张插图的视觉描述:
-- 纯视觉符号/画面, 严禁包含任何文字/标签/标题/品牌名
-- 风格: 抽象/专业/克制, 深色冷色调为主
-- 结合上下文内容, 图画应呼应前文主题
-
-返回严格 JSON (不要 markdown 代码块):
-{{"illustrations": {{"1": "描述1", "2": "描述2", ...}}}}
-
-key 必须与标记中的序号一一对应.
-
-文章:
-{content}"""
+直接输出整理后的完整文章."""
 
 
 async def run_publish(
@@ -177,40 +147,12 @@ async def run_publish(
     if not cover_media_info:
         return {"success": False, "message": "封面图生成或上传失败"}
 
-    content = await _auto_insert_illustrations(
-        content, text_model_id, text_model_params
-    )
-
     content, attachment_map = await _clean_content(content, client, user_id, thread_id)
 
-    content, illustration_paths = await _process_illustrations(
-        content, img_service, image_model_id
-    )
-
-    html = md_to_wechat_html(content, summary=summary, author=final_author)
+    html = md_to_wechat_html(content, author=final_author, title=title)
     html = sanitize(html)
 
-    for placeholder, local_path in illustration_paths:
-        if await asyncio.to_thread(pathlib.Path(local_path).exists):
-            media_info = await client.upload_media(local_path)
-            if media_info and media_info.get("url"):
-                img_tag = (
-                    '<section style="text-align: center; margin: 16px 0;">'
-                    f'<img src="{media_info["url"]}" style="max-width: 100%; height: auto;" />'
-                    "</section>"
-                )
-                html = html.replace(placeholder, img_tag)
-            await asyncio.to_thread(pathlib.Path(local_path).unlink)
-
     html = _replace_attachment_markers(html, attachment_map)
-
-    if cover_media_info and cover_media_info.get("url"):
-        cover_img = (
-            '<section style="text-align: center; margin: 0 0 16px 0;">'
-            f'<img src="{cover_media_info["url"]}" style="max-width: 100%; height: auto;" />'
-            "</section>"
-        )
-        html = cover_img + html
 
     article: dict[str, Any] = {
         "title": title,
@@ -307,7 +249,7 @@ async def _refine_content(
     model_id: str,
     model_params: dict[str, Any],
 ) -> str:
-    """用 pro 模型润色文章, 优化公众号排版. 失败返回原文."""
+    """校对 + 格式排版: 修错别字/断段/调整格式, 不改写表达. 失败返回原文."""
     prompt = _REFINE_PROMPT.format(content=content)
     try:
         response = await _invoke_llm(
@@ -315,11 +257,11 @@ async def _refine_content(
         )
         refined = response.content.strip()
         if refined:
-            logger.info("文章润色完成")
+            logger.info("校对排版完成")
             return refined
         return content
     except Exception as e:
-        logger.warning("文章润色失败, 使用原文: %s", e)
+        logger.warning("校对排版失败, 使用原文: %s", e)
         return content
 
 
@@ -451,189 +393,6 @@ async def _resolve_attachment_markers(
             content = marker_re.sub("", content)
 
     return content
-
-
-def _locate_illustration_points(
-    content: str,
-    interval: int = 600,
-    max_points: int = 4,
-) -> list[int]:
-    """纯代码定位插图插入点.
-
-    规则:
-    - 每 ~interval 字且在段落结尾处标记一个插图点
-    - 含 [file: id] 的段落及其后一个段落跳过 (图表后延)
-    - 不在最后一个段落放插图
-    - 最多 max_points 个插图点
-
-    Returns:
-        需要插入插图标记的段落索引列表
-    """
-    paragraphs = re.split(r"\n\n+", content.strip())
-    if len(paragraphs) < 3:
-        return []
-
-    chart_skip: set[int] = set()
-    for i, para in enumerate(paragraphs):
-        if _ATTACHMENT_MARKER_RE.search(para):
-            chart_skip.add(i)
-            if i + 1 < len(paragraphs):
-                chart_skip.add(i + 1)
-
-    points: list[int] = []
-    char_count = 0
-
-    for i, para in enumerate(paragraphs):
-        if i in chart_skip:
-            char_count += len(para)
-            continue
-        if i == len(paragraphs) - 1:
-            break
-
-        prev_count = char_count
-        char_count += len(para)
-
-        if (
-            char_count >= interval * (len(points) + 1)
-            and prev_count < char_count
-            and char_count - prev_count > 10
-        ):
-            points.append(i)
-            if len(points) >= max_points:
-                break
-
-    return points
-
-
-async def _generate_illustration_prompts(
-    content_with_markers: str,
-    model_id: str,
-    model_params: dict[str, Any],
-) -> dict[str, str]:
-    """LLM 为每个 [ILLUSTRATION_N] 生成视觉描述.
-
-    Returns:
-        {序号: 描述} 映射; 失败返回空 dict.
-    """
-    markers = _ILLUSTRATION_MARKER_RE.findall(content_with_markers)
-    if not markers:
-        return {}
-
-    expected_ids = set(markers)
-    params = {**model_params, "max_tokens": 8192}
-
-    prompt_text = _ILLUSTRATION_PROMPT.format(content=content_with_markers)
-    try:
-        response = await _invoke_llm(
-            [HumanMessage(content=prompt_text)], model_id, params
-        )
-        raw = content_to_text(response.content).strip()
-        json_str = _extract_json(raw)
-        result = json.loads(json_str)
-        illustrations_raw = result.get("illustrations", {})
-
-        if not isinstance(illustrations_raw, dict):
-            logger.warning(
-                "插图描述格式错误: 期望 dict, 得到 %s", type(illustrations_raw).__name__
-            )
-            return {}
-
-        matched: dict[str, str] = {}
-        for mid in expected_ids:
-            if illustrations_raw.get(mid):
-                matched[mid] = illustrations_raw[mid]
-            else:
-                logger.warning("插图 %s: LLM 未返回描述, 跳过", mid)
-
-        extra = set(illustrations_raw.keys()) - expected_ids
-        if extra:
-            logger.info("LLM 多返回 %d 个描述, 已丢弃: %s", len(extra), extra)
-
-        if matched:
-            logger.info("插图描述生成完成: %d/%d 个", len(matched), len(expected_ids))
-        return matched
-    except Exception as e:
-        logger.warning("插图描述生成失败: %s", e)
-        return {}
-
-
-async def _auto_insert_illustrations(
-    content: str,
-    model_id: str,
-    model_params: dict[str, Any],
-) -> str:
-    """自动插图: 纯代码定位 + LLM 生成描述.
-
-    1. 纯代码在段落结尾定位插图点 (每 ~600 字, 避开图表区域)
-    2. 插入带序号的标记 [ILLUSTRATION_N]
-    3. LLM 为每个标记生成视觉描述 (按序号对应)
-    4. 按序号精确替换为 {{IMG:auto:描述}} 占位符
-    5. 清理残留未匹配的标记
-    """
-    existing_count = len(_IMG_PLACEHOLDER_RE.findall(content))
-    if existing_count >= 2:
-        return content
-
-    point_indices = _locate_illustration_points(content)
-    if not point_indices:
-        logger.info("无需自动插图")
-        return content
-
-    paragraphs = re.split(r"\n\n+", content.strip())
-
-    for i, idx in enumerate(point_indices, start=1):
-        paragraphs[idx] += f"\n\n[ILLUSTRATION_{i}]\n\n"
-
-    content_with_markers = "\n\n".join(paragraphs)
-
-    prompts = await _generate_illustration_prompts(
-        content_with_markers, model_id, model_params
-    )
-
-    if not prompts:
-        cleaned = _ILLUSTRATION_MARKER_RE.sub("", content_with_markers)
-        return cleaned.strip()
-
-    for mid, prompt_text in prompts.items():
-        marker = f"[ILLUSTRATION_{mid}]"
-        replacement = f"\n\n{{{{IMG:auto:{prompt_text}}}}}\n\n"
-        content_with_markers = content_with_markers.replace(marker, replacement)
-
-    cleaned = _ILLUSTRATION_MARKER_RE.sub("", content_with_markers)
-    logger.info("自动插图完成: %d 张", len(prompts))
-    return cleaned.strip()
-
-
-async def _process_illustrations(
-    content: str,
-    img_service: ImageGenerationService,
-    image_model_id: str,
-) -> tuple[str, list[tuple[str, str]]]:
-    """扫描并处理 {{IMG:...}} 占位符.
-
-    Returns:
-        (处理后的content, [(原始占位符, 本地图片路径)] 列表)
-
-    """
-    illustration_paths: list[tuple[str, str]] = []
-
-    matches = _IMG_PLACEHOLDER_RE.findall(content)
-    for raw in matches:
-        original = f"{{{{IMG:{raw}}}}}"
-        local_path: str | None = None
-
-        if raw.startswith(_AUTO_PREFIX):
-            prompt = raw[len(_AUTO_PREFIX) :]
-            local_path = await _generate_image(
-                img_service, image_model_id, prompt, "illustration"
-            )
-        elif await asyncio.to_thread(pathlib.Path(raw).exists):
-            local_path = raw
-
-        if local_path:
-            illustration_paths.append((original, local_path))
-
-    return content, illustration_paths
 
 
 def _replace_attachment_markers(

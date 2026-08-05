@@ -7,11 +7,16 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from .chart_maker_base import ChartMakerBase
+from langchain_core.tools import BaseTool
+
+from src.tools.shared.tool_runtime import sync_runnable
+
+from .chart_render import render_chart
 from .models import VegaChartInput
 
 
-class VegaChartTool(ChartMakerBase):
+@sync_runnable
+class VegaChartTool(BaseTool):
     """渲染 Vega-Lite 数据图表为 PNG 图片."""
 
     engine: ClassVar[str] = "vega_lite"
@@ -40,7 +45,8 @@ class VegaChartTool(ChartMakerBase):
         height: int | None = None,
         scale: int = 3,
     ) -> str:
-        return await self._render(
+        return await render_chart(
+            "vega_lite",
             code=code,
             filename=filename,
             title=title,

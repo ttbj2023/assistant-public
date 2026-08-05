@@ -5,7 +5,7 @@
 - get_bindings: 通过 POST /api/v1/admin/rpc config.get 拉 bindings (需 admin-http-rpc 插件)
 
 设计原则:
-- 模块级单例 + 工厂函数, 与 SharedHTTPClientManager 风格一致
+- 模块级单例 + 工厂函数
 - 复用单个 httpx.AsyncClient (连接池)
 - 失败不抛异常, 返回 bool/Optional, 调用方决定降级策略
 - 结构化日志 (含 target 前 16 字符脱敏, 避免泄露完整 user_id)

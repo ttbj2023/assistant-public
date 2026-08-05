@@ -3,23 +3,21 @@
 验证记忆组装 + 推理 + 对话数据构建的完整协作, 补充单元测试过度 Mock 的部分:
 
 - process 全链路: 真实记忆组装 → (Mock)推理 → 对话数据落库
-- finalize 自动分配 round_number + 6 路并行存储
+- finalize 自动分配 round_number + 并行存储
 - finalize 的 exported_files 附件标记追加 (ContextVar 透传)
 - 推理错误传播
 
 测试策略: 灰盒 - 真实 ProcessorOrchestrator + LocalMemoryProcessor + MemoryAssembler +
 ConversationMemoryCore + 全部 SQL Service + SQLite, 仅 Mock 真正的外部依赖
-(推理协调器的 LLM 调用 + 索引/置顶 LLM 分析器 + 向量服务).
+(推理协调器的 LLM 调用 + 索引 LLM 分析器 + 向量服务).
 """
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.agent.memory.local_memory import pinned_memory_service
 from src.agent.processors.processor_orchestrator import ProcessorOrchestrator
 from src.config.agent_config import AgentConfig
 from src.core.context import (
@@ -32,13 +30,6 @@ from src.storage.service.service_factory import (
 )
 
 _AGENT_ID = "test-agent"
-
-
-async def _drain_pinned_bg_tasks() -> None:
-    """等待所有置顶后台任务完成 (fire-and-forget)."""
-    pending = list(pinned_memory_service.get_bg_tasks())
-    if pending:
-        await asyncio.gather(*pending, return_exceptions=True)
 
 
 def _make_orchestrator() -> ProcessorOrchestrator:
@@ -103,8 +94,6 @@ class TestProcessorOrchestratorIntegration:
                 agent_id=_AGENT_ID,
             )
 
-        await _drain_pinned_bg_tasks()
-
         assert response == "这是推理后的回复内容"
 
         call_kwargs = mock_inference.call_args
@@ -142,7 +131,6 @@ class TestProcessorOrchestratorIntegration:
             processor_config=_make_processor_config(),
             agent_id=_AGENT_ID,
         )
-        await _drain_pinned_bg_tasks()
 
         assert conv_data is not None
         assert conv_data.round_number == 1, "空库应自动分配 round 1"
@@ -197,7 +185,6 @@ class TestProcessorOrchestratorIntegration:
                 processor_config=_make_processor_config(),
                 agent_id=_AGENT_ID,
             )
-            await _drain_pinned_bg_tasks()
         finally:
             reset_user_context(token)
 
@@ -247,7 +234,6 @@ class TestProcessorOrchestratorIntegration:
                 processor_config=_make_processor_config(),
                 agent_id=_AGENT_ID,
             )
-            await _drain_pinned_bg_tasks()
         finally:
             reset_user_context(token)
 
@@ -286,8 +272,6 @@ class TestProcessorOrchestratorIntegration:
                     processor_config=_make_processor_config(),
                     agent_id=_AGENT_ID,
                 )
-
-        await _drain_pinned_bg_tasks()
 
         conv_svc = await create_conversation_service(
             test_user, test_thread_id, agent_id=_AGENT_ID

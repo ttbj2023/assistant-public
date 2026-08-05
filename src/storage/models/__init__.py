@@ -15,10 +15,6 @@ from .scheduled_message import (
     ScheduledMessage,
     ScheduledMessageBase,
 )
-from .simple_pinned_memory import (
-    SimplePinnedMemory,
-    SimplePinnedMemoryType,
-)
 from .todo import TodoItem, TodoItemBase, TodoPriority, TodoStatus
 from .usage import UsageRecord, UsageRecordBase, UsageRecordCreate
 from .user_channel_config import (
@@ -32,8 +28,6 @@ __all__ = [
     "PinnedMemoryBlock",
     "ScheduledMessage",
     "ScheduledMessageBase",
-    "SimplePinnedMemory",
-    "SimplePinnedMemoryType",
     "TodoItem",
     "TodoItemBase",
     "TodoPriority",

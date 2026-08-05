@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING, Any, override
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.shared.base_internal_tool import BaseInternalTool
+from langchain_core.tools import BaseTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 if TYPE_CHECKING:
     from src.tools.skills.skill_bridge import SkillBridge
@@ -47,7 +48,8 @@ class LoadSkillRequest(BaseModel):
     )
 
 
-class LoadSkillTool(BaseInternalTool):
+@sync_runnable
+class LoadSkillTool(BaseTool):
     """加载指定技能的使用说明(领域知识).
 
     三级渐进式披露:
@@ -89,13 +91,9 @@ class LoadSkillTool(BaseInternalTool):
 
     def __init__(
         self,
-        user_id: str = "",
-        thread_id: str = "",
-        *,
-        agent_id: str = "",
         **kwargs: Any,
     ) -> None:
-        super().__init__(user_id, thread_id, agent_id=agent_id, **kwargs)
+        super().__init__(**kwargs)
         self._skill_bridge: SkillBridge | None = None
         self._available_skills: list[str] = []
 

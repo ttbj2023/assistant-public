@@ -12,11 +12,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.tools.internal.async_round_detail_tool import AsyncRoundDetailTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool():
-    return AsyncRoundDetailTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = AsyncRoundDetailTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 @pytest.fixture
@@ -46,18 +49,6 @@ def _make_conv(round_number, user_message="", assistant_response=""):
     conv.summary = None
     conv.created_at = None
     return conv
-
-
-class TestInit:
-    """测试初始化."""
-
-    def test_empty_user_id_raises(self):
-        with pytest.raises(ValueError, match="用户ID不能为空"):
-            AsyncRoundDetailTool(user_id="", thread_id="t1", agent_id="a1")
-
-    def test_empty_thread_id_raises(self):
-        with pytest.raises(ValueError, match="线程ID不能为空"):
-            AsyncRoundDetailTool(user_id="u1", thread_id="", agent_id="a1")
 
 
 class TestArun:

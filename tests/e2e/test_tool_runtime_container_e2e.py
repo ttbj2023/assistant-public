@@ -148,7 +148,6 @@ class TestToolRuntimeContainerE2E:
                 style="default",
                 output_format="docx",
                 filename="e2e_doc",
-                summary=None,
                 user_id="e2e_user",
                 thread_id="e2e_thread",
             )
@@ -180,7 +179,6 @@ class TestToolRuntimeContainerE2E:
                 style="default",
                 output_format="pdf",
                 filename="e2e_pdf",
-                summary=None,
                 user_id="e2e_user",
                 thread_id="e2e_thread",
             )

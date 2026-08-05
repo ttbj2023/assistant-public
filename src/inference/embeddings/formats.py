@@ -39,6 +39,7 @@ class OpenAIFormatEmbeddings(Embeddings):
         self.model = model
         self.api_key = api_key
         self.timeout = timeout
+        self._owns_client = http_client is None
 
         if http_client:
             self._client = http_client
@@ -54,7 +55,9 @@ class OpenAIFormatEmbeddings(Embeddings):
             )
 
         logger.info(
-            f"🔧 初始化 OpenAI 格式嵌入客户端: model={model}, base_url={self.base_url}",
+            "🔧 初始化 OpenAI 格式嵌入客户端: model=%s, base_url=%s",
+            model,
+            self.base_url,
         )
 
     def _get_headers(self) -> dict[str, str]:
@@ -65,26 +68,70 @@ class OpenAIFormatEmbeddings(Embeddings):
         return headers
 
     async def _request_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """异步请求嵌入 - 使用复用的 HTTP 客户端."""
+        """异步请求嵌入 - 使用复用的 HTTP 客户端.
+
+        对 503/5xx/429/连接错误/超时做指数退避重试(复用 retry_config.http_api),
+        兜住 Ollama 等本地服务的瞬时抖动.
+        """
+        from src.config.retry_config import get_http_retry_params
         from src.inference.usage import arecord_embedding_usage
+
+        retry = get_http_retry_params()
+        max_retries = retry["max_retries"]
+        retryable_status = retry["retryable_status"]
+        base_delay = retry["base_delay"]
+        rate_limit_delay = retry["rate_limit_delay"]
 
         started_at = time.time()
         usage: dict | None = None
         success = False
         try:
-            response = await self._client.post(
-                f"{self.base_url}/embeddings",
-                json={
-                    "model": self.model,
-                    "input": texts,
-                },
-                headers=self._get_headers(),
-            )
-            response.raise_for_status()
-            data = response.json()
-            usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
-            success = True
-            return [item["embedding"] for item in data["data"]]
+            for attempt in range(1, max_retries + 1):
+                try:
+                    response = await self._client.post(
+                        f"{self.base_url}/embeddings",
+                        json={
+                            "model": self.model,
+                            "input": texts,
+                        },
+                        headers=self._get_headers(),
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    usage = (
+                        data.get("usage")
+                        if isinstance(data.get("usage"), dict)
+                        else None
+                    )
+                    success = True
+                    return [item["embedding"] for item in data["data"]]
+                except httpx.HTTPStatusError as e:
+                    status = e.response.status_code
+                    if status not in retryable_status or attempt == max_retries:
+                        raise
+                    delay = rate_limit_delay if status == 429 else base_delay * attempt
+                    logger.warning(
+                        "嵌入请求失败(status=%s), %s/%s 重试, 等待 %.1fs",
+                        status,
+                        attempt,
+                        max_retries,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                except (httpx.ConnectError, httpx.TimeoutException) as e:
+                    if attempt == max_retries:
+                        raise
+                    delay = base_delay * attempt
+                    logger.warning(
+                        "嵌入请求连接异常(%s), %s/%s 重试, 等待 %.1fs",
+                        type(e).__name__,
+                        attempt,
+                        max_retries,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+            # max_retries<1 时循环不执行, 需显式兜底
+            raise RuntimeError("嵌入重试循环未产生结果")
         finally:
             await arecord_embedding_usage(
                 provider="openai_compatible",
@@ -127,8 +174,8 @@ class OpenAIFormatEmbeddings(Embeddings):
         return await self._request_embeddings(texts)
 
     async def close(self) -> None:
-        """关闭 HTTP 客户端连接."""
-        if hasattr(self, "_client"):
+        """关闭自建的 HTTP 客户端连接(共享客户端不关闭)."""
+        if self._owns_client and hasattr(self, "_client"):
             await self._client.aclose()
             logger.debug(f"🔌 关闭 OpenAI 格式嵌入客户端: {self.model}")
 
@@ -152,6 +199,7 @@ class GeminiFormatEmbeddings(Embeddings):
         self.model = model
         self.api_key = api_key
         self.timeout = timeout
+        self._owns_client = http_client is None
 
         if http_client:
             self._client = http_client
@@ -235,6 +283,7 @@ class GeminiFormatEmbeddings(Embeddings):
         return await self._request_embeddings(texts)
 
     async def close(self) -> None:
-        if hasattr(self, "_client"):
+        """关闭自建的 HTTP 客户端连接(共享客户端不关闭)."""
+        if self._owns_client and hasattr(self, "_client"):
             await self._client.aclose()
             logger.debug(f"🔌 关闭 Gemini 原生嵌入客户端: {self.model}")

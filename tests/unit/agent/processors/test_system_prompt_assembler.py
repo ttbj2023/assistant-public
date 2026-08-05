@@ -78,11 +78,52 @@ def test_should_strip_section_whitespace() -> None:
     assert result == "你是助手\n\n记忆内容"
 
 
-def test_order_table_is_base_tools_skills_memory() -> None:
-    """顺序表锁定为 base -> tools -> skills -> memory."""
-    assert SYSTEM_PROMPT_SECTION_ORDER == ("base", "tools", "skills", "memory")
+def test_order_table_is_base_tools_skills_memory_domain_data() -> None:
+    """顺序表锁定为 base -> tools -> skills -> memory -> domain_data."""
+    assert SYSTEM_PROMPT_SECTION_ORDER == (
+        "base",
+        "tools",
+        "skills",
+        "memory",
+        "domain_data",
+    )
 
 
 def test_should_handle_base_only() -> None:
     """仅有 base 时直接返回 base (向后兼容流式测试的裸 system_prompt 场景)."""
     assert assemble_system_prompt({"base": "You are helpful"}) == "You are helpful"
+
+
+def test_domain_data_appends_after_memory() -> None:
+    """domain_data 段拼在 memory 之后, 包含长期记忆内容."""
+    sections = {
+        "base": "你是助手",
+        "memory": "<current_context>上下文</current_context>",
+        "domain_data": "以下是你需要长期记住的关键信息:\n<pinned_memory>\n用户吃素\n</pinned_memory>",
+    }
+
+    result = assemble_system_prompt(sections)
+
+    assert result == (
+        "你是助手\n"
+        "\n"
+        "<current_context>上下文</current_context>\n"
+        "\n"
+        "以下是你需要长期记住的关键信息:\n"
+        "<pinned_memory>\n"
+        "用户吃素\n"
+        "</pinned_memory>"
+    )
+
+
+def test_blank_domain_data_is_skipped() -> None:
+    """domain_data 为空白时跳过, 不产生多余空行."""
+    sections = {
+        "base": "你是助手",
+        "memory": "<current_context>上下文</current_context>",
+        "domain_data": "   \n  ",
+    }
+
+    result = assemble_system_prompt(sections)
+
+    assert result == "你是助手\n\n<current_context>上下文</current_context>"

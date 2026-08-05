@@ -16,14 +16,14 @@ Mock策略: Mock SQLAlchemy引擎、文件系统、路径解析器，保留业�
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, PropertyMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.storage.dao.async_database_manager import (
-    AsyncDatabaseManager,
     _DEFAULT_MAX_OVERFLOW,
     _DEFAULT_POOL_SIZE,
+    AsyncDatabaseManager,
     create_async_conversation_history_db_manager,
     create_async_pinned_memory_db_manager,
     create_async_todo_db_manager,
@@ -273,32 +273,16 @@ class TestFactoryFunctions:
     async def test_create_async_pinned_memory_db_manager_should_create_manager(
         self, mock_get_path
     ):
-        """测试置顶记忆管理器：应创建管理器并调用create_tables + 迁移OTHER_INFO"""
+        """测试置顶记忆管理器：应创建管理器并调用create_tables"""
         mock_get_path.return_value = "/data/user/thread/pinned_memory.db"
 
-        mock_conn = AsyncMock()
-        mock_conn.execute.return_value = Mock(rowcount=0)
-        mock_engine = Mock()
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_conn
-        mock_cm.__aexit__.return_value = None
-        mock_engine.begin = Mock(return_value=mock_cm)
-
-        with (
-            patch.object(AsyncDatabaseManager, "create_tables", new=AsyncMock()),
-            patch.object(
-                AsyncDatabaseManager, "engine", new_callable=PropertyMock
-            ) as mock_engine_prop,
-        ):
-            mock_engine_prop.return_value = mock_engine
-
+        with patch.object(AsyncDatabaseManager, "create_tables", new=AsyncMock()):
             manager = await create_async_pinned_memory_db_manager(
                 "user1", "thread1", agent_id="test-agent"
             )
 
             assert isinstance(manager, AsyncDatabaseManager)
             manager.create_tables.assert_called_once()
-            mock_conn.execute.assert_called_once()
 
     @patch("src.storage.dao.async_database_manager.get_database_path")
     async def test_create_async_conversation_history_db_manager_should_create_manager(

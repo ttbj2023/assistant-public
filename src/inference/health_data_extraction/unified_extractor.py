@@ -1,6 +1,6 @@
 """统一健康数据提取器 - 单次 LLM 调用完成检测+分类+转录.
 
-通过项目标准 LLM 调用体系 (model_loader.create_llm) 调用模型.
+通过项目标准 LLM 调用体系 (model_loader.invoke_with_fallback) 调用模型.
 只需在 config.yaml 中修改 model 即可切换模型.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, override
 
@@ -30,6 +31,7 @@ _VALID_DATA_TYPES = {
 }
 
 
+@lru_cache(maxsize=1)
 def _load_prompt_template() -> str:
     """从 YAML 加载统一提取 prompt 模板."""
     if not _PROMPTS_PATH.exists():
@@ -79,7 +81,7 @@ class ExtractionResult:
 class UnifiedHealthExtractor:
     """统一健康数据提取器.
 
-    通过项目标准 LLM 调用体系 (model_loader.create_llm) 调用模型,
+    通过项目标准 LLM 调用体系 (model_loader.invoke_with_fallback) 调用模型,
     自动适配所有 provider.
     """
 

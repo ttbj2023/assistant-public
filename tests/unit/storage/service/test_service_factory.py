@@ -105,3 +105,58 @@ class TestRetrievalServiceFactoryBranch:
         assert svc.enable_vector_search is False
         assert svc.vector_service is None
         assert svc.enable_sql_search is True
+
+    def test_vector_service_cache_hit_returns_same_instance(self) -> None:
+        """相同参数重复调用 create_vector_service 应返回同一缓存实例."""
+        from src.storage.service.service_factory import (
+            _vector_cache,
+            create_vector_service,
+        )
+
+        fake_vector_store = MagicMock()
+        fake_vector_service = MagicMock()
+
+        with (
+            patch(
+                "src.storage.langchain_vector_store.create_langchain_vector_store",
+                return_value=fake_vector_store,
+            ),
+            patch(
+                "src.storage.service.vector_service.VectorService",
+                return_value=fake_vector_service,
+            ),
+        ):
+            svc1 = create_vector_service("u1", "t1", agent_id="a1")
+            svc2 = create_vector_service("u1", "t1", agent_id="a1")
+
+        assert svc1 is svc2
+        assert svc1 is fake_vector_service
+        assert len(_vector_cache) == 1
+
+    @pytest.mark.asyncio
+    async def test_retrieval_service_config_exception_falls_back(self) -> None:
+        """读取 inference_config 异常时应回退创建向量服务."""
+        from src.storage.service.service_factory import create_retrieval_service
+
+        mock_conv_service = MagicMock(name="conv_service")
+        mock_vector_service = MagicMock(name="vector_service")
+
+        with (
+            patch(
+                "src.storage.service.service_factory.create_conversation_service",
+                new=AsyncMock(return_value=mock_conv_service),
+            ),
+            patch(
+                "src.config.inference_config.get_config",
+                side_effect=Exception("配置读取失败"),
+            ),
+            patch(
+                "src.storage.service.service_factory.create_vector_service",
+                return_value=mock_vector_service,
+            ),
+        ):
+            svc = await create_retrieval_service("u1", "t1", agent_id="a1")
+
+        assert svc.vector_service is mock_vector_service
+        assert svc.enable_vector_search is True
+        assert svc.enable_sql_search is True

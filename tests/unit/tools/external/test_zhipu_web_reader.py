@@ -320,7 +320,10 @@ class TestCheckUrlReachable:
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client.head = AsyncMock(return_value=mock_response)
 
-        with patch("httpx.AsyncClient", return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client), patch(
+            "src.tools.external.zhipu_web_reader.is_safe_url",
+            return_value=(True, "ok"),
+        ):
             reachable, reason, is_hard_fail = await _check_url_reachable(
                 "https://example.com/bad"
             )
@@ -341,7 +344,10 @@ class TestCheckUrlReachable:
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client.head = AsyncMock(return_value=mock_response)
 
-        with patch("httpx.AsyncClient", return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client), patch(
+            "src.tools.external.zhipu_web_reader.is_safe_url",
+            return_value=(True, "ok"),
+        ):
             reachable, reason, is_hard_fail = await _check_url_reachable(
                 "https://example.com"
             )
@@ -366,7 +372,10 @@ class TestCheckUrlReachable:
         mock_client.head = AsyncMock(return_value=head_response)
         mock_client.get = AsyncMock(return_value=get_response)
 
-        with patch("httpx.AsyncClient", return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client), patch(
+            "src.tools.external.zhipu_web_reader.is_safe_url",
+            return_value=(True, "ok"),
+        ):
             reachable, reason, is_hard_fail = await _check_url_reachable(
                 "https://example.com"
             )
@@ -375,3 +384,32 @@ class TestCheckUrlReachable:
         assert reason == ""
         assert is_hard_fail is False
         mock_client.get.assert_called_once()
+
+
+class TestCheckUrlReachableSsrf:
+    """_check_url_reachable SSRF 防护 (IP 字面量, 无 DNS 依赖)."""
+
+    @pytest.mark.asyncio
+    async def test_should_block_private_ip_as_hard_fail(self):
+        reachable, reason, is_hard_fail = await _check_url_reachable(
+            "http://10.0.0.1/admin"
+        )
+        assert reachable is False
+        assert is_hard_fail is True
+        assert "10.0.0.1" in reason
+
+    @pytest.mark.asyncio
+    async def test_should_block_metadata_endpoint(self):
+        reachable, _, is_hard_fail = await _check_url_reachable(
+            "http://169.254.169.254/latest/meta-data/"
+        )
+        assert reachable is False
+        assert is_hard_fail is True
+
+    @pytest.mark.asyncio
+    async def test_should_block_loopback(self):
+        reachable, _, is_hard_fail = await _check_url_reachable(
+            "http://127.0.0.1:9000/"
+        )
+        assert reachable is False
+        assert is_hard_fail is True

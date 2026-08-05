@@ -1,17 +1,16 @@
 """MemoryAssembler 记忆组装集成测试.
 
-验证记忆组装器协调多数据源 (ConversationService/MemoryService) +
-字符预算分配 + 缓存协同的真实行为, 补充单元测试过度 Mock 的部分:
+验证记忆组装器协调多数据源 (ConversationService) + 字符预算分配 +
+缓存协同的真实行为, 补充单元测试过度 Mock 的部分:
 
 - 首轮空历史边界
-- 组装格式 (pinned XML / Human-AI 交替历史)
+- 组装格式 (Human-AI 交替历史)
 - 字符预算分配 (主历史/索引区独立预算) 与索引区伪对话轮生成
-- pinned 缓存命中跳过 DB
 - 增量 fetch (新轮次不全量重读)
 
 测试策略: 灰盒且零外部 Mock - 全部真实组件 (MemoryAssembler / ConversationService /
-MemoryService / SQLite / SplittableMemoryCache), 组装过程不调 LLM、
-不涉及向量, 故无需任何 Mock, 是真实度最高的集成测试.
+SQLite / SplittableMemoryCache), 组装过程不调 LLM、不涉及向量, 故无需任何 Mock,
+是真实度最高的集成测试.
 """
 
 from __future__ import annotations
@@ -21,7 +20,6 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.memory.local_memory.assembler import MemoryAssembler
 from src.config.agent_config import AgentConfig, AgentMemoryConfig
-from src.storage.service import create_pinned_memory_block_service
 from src.storage.service.service_factory import create_conversation_service
 
 _AGENT_ID = "test-agent"
@@ -90,27 +88,19 @@ class TestMemoryAssemblyIntegration:
         assert ctx.system_prompt_extension == ""
 
     @pytest.mark.asyncio
-    async def test_integration_assembler_pinned_and_history_format(
+    async def test_integration_assembler_history_format(
         self,
         test_user,
         test_thread_id,
     ):
-        """测试组装格式 (pinned XML + Human/AI 交替历史).
+        """测试组装格式 (Human/AI 交替历史).
 
-        协作场景: 预置 5 轮对话 + 1 条置顶 → MemoryAssembler
+        协作场景: 预置 5 轮对话 → MemoryAssembler
         Mock 边界: 无
-        验证重点: history_messages 为 Human/AIMessage 交替;
-                  extension 含 <pinned_memory>...</pinned_memory> XML 包裹
+        验证重点: history_messages 为 Human/AIMessage 交替
         业务价值: 记忆组装输出格式契约, 供 LLM 正确解析
         """
         await _seed_conversations(test_user, test_thread_id, count=5)
-
-        block_service = await create_pinned_memory_block_service(
-            test_user, test_thread_id, agent_id=_AGENT_ID
-        )
-        await block_service.set_content(
-            test_user, test_thread_id, "用户是软件工程师"
-        )
 
         assembler = _make_assembler(test_user, test_thread_id)
         ctx = await assembler.assemble_memory_context(test_user, test_thread_id)
@@ -119,10 +109,6 @@ class TestMemoryAssemblyIntegration:
         for i in range(0, 10, 2):
             assert isinstance(ctx.history_messages[i], HumanMessage)
             assert isinstance(ctx.history_messages[i + 1], AIMessage)
-
-        assert "<pinned_memory>" in ctx.system_prompt_extension
-        assert "</pinned_memory>" in ctx.system_prompt_extension
-        assert "用户是软件工程师" in ctx.system_prompt_extension
 
     @pytest.mark.asyncio
     async def test_integration_assembler_budget_split_and_index_pseudo_round(
@@ -163,37 +149,6 @@ class TestMemoryAssemblyIntegration:
             if isinstance(m, AIMessage) and "<conversation_index>" in str(m.content)
         )
         assert "</conversation_index>" in str(index_msg.content)
-
-    @pytest.mark.asyncio
-    async def test_integration_assembler_pinned_cache_hit_skips_db(
-        self,
-        test_user,
-        test_thread_id,
-    ):
-        """测试 pinned 缓存命中后跳过 DB 读取.
-
-        协作场景: 预置置顶 → assemble (缓存未命中, 读 DB 写缓存) →
-                  直接 DB 改置顶 (绕过缓存) → 再 assemble (缓存命中, 不读新 DB 值)
-        Mock 边界: 无
-        验证重点: 第二次 assemble 返回缓存旧值, 不含 DB 新值 (证明缓存命中)
-        业务价值: 缓存协同正确, 避免每轮重复读 DB
-        """
-        await _seed_conversations(test_user, test_thread_id, count=2)
-
-        block_service = await create_pinned_memory_block_service(
-            test_user, test_thread_id, agent_id=_AGENT_ID
-        )
-        await block_service.set_content(test_user, test_thread_id, "原始置顶内容")
-
-        assembler = _make_assembler(test_user, test_thread_id)
-        ctx1 = await assembler.assemble_memory_context(test_user, test_thread_id)
-        assert "原始置顶内容" in ctx1.system_prompt_extension
-
-        await block_service.set_content(test_user, test_thread_id, "被绕过缓存的新内容")
-
-        ctx2 = await assembler.assemble_memory_context(test_user, test_thread_id)
-        assert "原始置顶内容" in ctx2.system_prompt_extension, "应命中缓存返回旧值"
-        assert "被绕过缓存的新内容" not in ctx2.system_prompt_extension
 
     @pytest.mark.asyncio
     async def test_integration_assembler_cold_start_then_cache_hit(

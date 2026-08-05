@@ -13,11 +13,14 @@ import pytest
 
 from src.files import AttachmentDTO
 from src.tools.internal.read_file_tool import ReadFileTool
+from src.tools.shared.tool_runtime import inject_identity
 
 
 @pytest.fixture
 def tool() -> ReadFileTool:
-    return ReadFileTool(user_id="u1", thread_id="t1", agent_id="a1")
+    tool = ReadFileTool()
+    inject_identity(tool, "u1", "t1", "a1")
+    return tool
 
 
 def make_entry(**overrides) -> AttachmentDTO:

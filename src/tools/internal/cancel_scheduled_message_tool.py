@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.tools.internal.scheduled_messenger_base import ScheduledMessengerBase
+from src.tools.internal.scheduled_message_helper import ScheduledMessageHelper
+from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,8 @@ class CancelScheduledMessageRequest(BaseModel):
     message_id: str = Field(..., description="要取消的消息ID")
 
 
-class CancelScheduledMessageTool(ScheduledMessengerBase):
+@sync_runnable
+class CancelScheduledMessageTool(BaseTool):
     """取消一条待发送的定时消息."""
 
     name: str = "cancel_scheduled_message"
@@ -31,15 +34,20 @@ class CancelScheduledMessageTool(ScheduledMessengerBase):
     description: str = "取消一条待发送的定时消息(需提供message_id)."
     args_schema: type[CancelScheduledMessageRequest] = CancelScheduledMessageRequest
 
-    @override
-    def _apply_description(self, *, has_wechat: bool, has_email: bool) -> None:
-        self.description = "取消一条待发送的定时消息(需提供message_id)."
+    def _get_helper(self) -> ScheduledMessageHelper:
+        if not hasattr(self, "_messenger_helper"):
+            helper = ScheduledMessageHelper(self.user_id, self.thread_id, self.agent_id)
+            object.__setattr__(self, "_messenger_helper", helper)
+        return self._messenger_helper
+
+    async def is_available(self) -> bool:
+        return await self._get_helper().has_any_channel()
 
     @override
     async def _arun(self, **kwargs: Any) -> str:
         try:
             request = CancelScheduledMessageRequest(**kwargs)
-            service = await self._get_service()
+            service = await self._get_helper().get_service()
             success = await service.cancel_message(request.message_id)
 
             if success:
@@ -48,7 +56,7 @@ class CancelScheduledMessageTool(ScheduledMessengerBase):
 
         except Exception as e:
             logger.error("取消定时消息失败: %s", e)
-            return self._format_error(e)
+            return format_tool_error(e)
 
 
 __all__ = ["CancelScheduledMessageTool"]

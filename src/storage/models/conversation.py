@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
+from src.core.datetime_utils import now_utc
+
 
 class ConversationData(BaseModel):
     """统一对话数据结构 - 四个并行操作的数据源.
@@ -97,12 +99,12 @@ class ConversationIndex(ConversationIndexBase, table=True):
     thread_id: str = Field(..., description="线程ID")
     agent_id: str = Field(..., description="Agent ID(数据溯源字段)")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),
@@ -162,12 +164,12 @@ class ConversationIndexGroup(ConversationIndexGroupBase, table=True):
     thread_id: str = Field(..., description="线程ID")
     agent_id: str = Field(..., description="Agent ID(数据溯源字段)")
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP")),
         description="创建时间",
     )
     updated_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),

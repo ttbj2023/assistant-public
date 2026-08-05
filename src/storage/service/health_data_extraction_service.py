@@ -19,6 +19,7 @@ import logging
 from datetime import datetime
 from typing import Any, ClassVar
 
+from src.core.datetime_utils import now_utc
 from src.storage.dao.async_database_manager import create_async_health_data_db_manager
 from src.storage.dao.async_health_dao import AsyncHealthDAO
 
@@ -118,7 +119,7 @@ class HealthDataExtractionService:
         round_number: int | None = None,
     ) -> dict[str, Any]:
         """将提取的数据存储到数据库."""
-        now = datetime.now()
+        now = now_utc()
 
         if data_type == "weight_record":
             record_data = {
@@ -134,6 +135,13 @@ class HealthDataExtractionService:
                 "source": "conversation_extraction",
             }
             weight_record = await dao.create_weight_record(record_data)
+            # 同步更新 daily_summary.body_mass_kg, 使对话提取体重对管理工具可见
+            recorded_at = getattr(weight_record, "recorded_at", None)
+            weight_date = recorded_at.date() if recorded_at else now.date()
+            await dao.upsert_daily_summary({
+                "record_date": weight_date,
+                "body_mass_kg": weight_record.weight_kg,
+            })
             return {"id": weight_record.id, "weight": weight_record.weight_kg}
 
         if data_type == "workout_record":

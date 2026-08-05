@@ -44,11 +44,11 @@ dependencies = [
     "aiosqlite>=0.19.0",       # SQLite异步驱动, code直接import
     "aiofiles>=24.0.0",        # ✅ 实际使用: 异步文件操作支持
     "chromadb>=1.2.0",         # ✅ 实际使用: 向量数据库、语义搜索
+    "pandas>=2.0.0",           # ✅ 实际使用: Apple Health CSV数据导入 (health_auto_export_importer)
 
     # === AI/ML 核心依赖 ===
     # "openai>=1.3.0",           # ⚠️ 暂未使用: OpenAI API客户端、GPT模型，通过langchain[openai]集成
     "langchain[openai]>=1.3.0,<2.0", # ✅ 实际使用: OpenAI模型集成、嵌入服务
-    "langchain-chroma>=1.0.0",   # ✅ 实际使用: ChromaDB向量存储集成
 
     # === 向量计算和重排序 ===
     # "numpy>=1.24.0",           # ⚠️ 暂未直接使用: 数值计算、向量操作
@@ -81,40 +81,9 @@ dependencies = [
     ]
 
 [project.optional-dependencies]
-# === 核心开发工具 - 代码质量和测试 ===
-dev = [
-    # 测试框架 - 单元测试、集成测试、E2E测试
-    "pytest>=8.4.0",            # ✅ 实际使用: 主要测试框架
-    "pytest-asyncio>=0.21.0",   # ✅ 实际使用: 异步测试支持
-    "pytest-cov>=4.1.0",        # ✅ 实际使用: 测试覆盖率统计
-    "pytest-mock>=3.12.0",      # ✅ 实际使用: Mock和fixture支持
-    "pytest-timeout>=2.1.0",    # ✅ 实际使用: 测试超时控制
-    "pytest-xdist>=3.5.0",      # ✅ 实际使用: 并行测试执行
-    "pytest-dotenv>=0.5.2",     # ✅ 实际使用: 测试环境变量加载
-    "httpx>=0.25.0",            # ✅ 实际使用: HTTP客户端测试和脚本使用
-
-    # 静态分析工具 - 代码质量、类型安全、安全检查
-    "ruff>=0.15.0",             # ✅ 实际使用: 代码格式化和linting
-    "mypy>=2.0",             # ✅ 实际使用: 类型检查和渐进式类型化
-    "bandit>=1.7.0",            # ✅ 实际使用: 安全漏洞检查
-    "vulture>=2.0",             # ✅ 实际使用: 死代码检测和未使用代码清理
-
-    # 依赖安全和管理
-    "safety>=3.8.1",            # ✅ 实际使用: 依赖漏洞扫描
-
-    # 数据导入工具
-    "pandas>=2.0.0",            # ✅ 实际使用: Apple Health CSV数据导入
-
-    # 文档模板生成
-    "python-docx>=1.1.0",       # ✅ 实际使用: DOCX reference-doc 模板生成脚本
-
-    # 移除的依赖说明（已移除，保留注释作为参考）:
-    # - pip-audit: 功能重复（safety已覆盖）
-    # - rich/typer: CLI美化工具（脚本中未广泛使用）
-    # - ipython/ipdb: 交互式调试（开发环境自带）
-    # - jupyter*: Jupyter支持（移至jupyter分组）
-    # - profiler: 性能分析（当前阶段不需要）
-]
+# 核心开发工具 (pytest/ruff/mypy/bandit/vulture/safety/python-docx) 已迁至
+# [dependency-groups] dev (PEP 735), uv sync 默认安装; 详见文件末尾
+# httpx/pandas 为运行时依赖, 已归入 [project] dependencies
 
 # === AI/ML 扩展依赖 - 高级AI功能支持 ===
 ai-extended = [
@@ -156,8 +125,9 @@ jupyter = [
 ]
 
 # === 完整开发环境 - 包含所有开发和扩展功能 ===
+# dev 已迁至 [dependency-groups] (uv sync 默认安装), dev-full 仅聚合可选 extras
 dev-full = [
-    "personal-memory-enhance[dev,ai-extended,distributed-cache,docs,jupyter]",
+    "personal-memory-enhance[ai-extended,distributed-cache,docs,jupyter]",
 ]
 
 # === 生产环境部署 - 最小化依赖集合 ===
@@ -165,6 +135,31 @@ production = [
     # 注意: 生产环境依赖与主dependencies相同
     # 此分组为未来的生产环境特殊需求预留
     # 可能包含: 监控、日志、性能优化等专用依赖
+]
+
+# PEP 735 开发依赖分组 - uv sync 默认安装, 生产镜像 (pip install .) 不装
+[dependency-groups]
+dev = [
+    # 测试框架 - 单元测试、集成测试、E2E测试
+    "pytest>=8.4.0",            # ✅ 实际使用: 主要测试框架
+    "pytest-asyncio>=0.21.0",   # ✅ 实际使用: 异步测试支持
+    "pytest-cov>=4.1.0",        # ✅ 实际使用: 测试覆盖率统计
+    "pytest-mock>=3.12.0",      # ✅ 实际使用: Mock和fixture支持
+    "pytest-timeout>=2.1.0",    # ✅ 实际使用: 测试超时控制
+    "pytest-xdist>=3.5.0",      # ✅ 实际使用: 并行测试执行
+    "pytest-dotenv>=0.5.2",     # ✅ 实际使用: 测试环境变量加载
+
+    # 静态分析工具 - 代码质量、类型安全、安全检查
+    "ruff>=0.15.0",             # ✅ 实际使用: 代码格式化和linting
+    "mypy>=2.0",                # ✅ 实际使用: 类型检查和渐进式类型化
+    "bandit>=1.7.0",            # ✅ 实际使用: 安全漏洞检查
+    "vulture>=2.0",             # ✅ 实际使用: 死代码检测和未使用代码清理
+
+    # 依赖安全扫描
+    "safety>=3.8.1",            # ✅ 实际使用: 依赖漏洞扫描
+
+    # 文档模板生成脚本
+    "python-docx>=1.1.0",       # ✅ 实际使用: DOCX reference-doc 模板生成脚本
 ]
 
 [project.urls]

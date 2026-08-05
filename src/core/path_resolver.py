@@ -32,14 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class UserDataPathResolver:
-    """用户数据路径解析器 - Agent物理隔离版本
+    """用户数据路径解析器 - Agent物理隔离版本.
 
-    存储规范 (三级物理隔离):
-    基础路径/用户ID/线程ID/agentID/
-      database/: todo.db, pinned_memory.db, conversation_history.db
-      vector/: 向量存储目录
-    基础路径/用户ID/线程ID/shared/
-      files/images/: 共享附件
+    存储规范见模块 docstring. 三级物理隔离: 用户 -> 线程 -> Agent,
+    每个agent拥有独立的 database/ 与 vector/ 目录, 附件走线程级 shared/.
     """
 
     _instance: UserDataPathResolver | None = None

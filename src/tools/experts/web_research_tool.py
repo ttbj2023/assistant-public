@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import ClassVar, override
+from typing import Any, ClassVar, override
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.tools.experts.web_research.service import run_web_research
-from src.tools.shared.base_expert_tool import BaseExpertTool
+from src.tools.shared.tool_runtime import sync_runnable
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,8 @@ class WebResearchInput(BaseModel):
     language: str = Field(default="zh", description="回答语言: zh/en")
 
 
-class WebResearchTool(BaseExpertTool):
+@sync_runnable
+class WebResearchTool(BaseTool):
     """Web研究工具 - 自主搜索+抓取+综合分析."""
 
     name: str = "web_research"
@@ -53,6 +55,7 @@ class WebResearchTool(BaseExpertTool):
 
     model_id: str = ""
     timeout: float = 360.0
+    mcp_bridge: Any = None
 
     @override
     async def _arun(

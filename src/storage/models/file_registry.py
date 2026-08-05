@@ -17,6 +17,8 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, text
 from sqlmodel import Field, SQLModel
 
+from src.core.datetime_utils import now_utc
+
 
 class FileEntry(SQLModel, table=True):
     """用户级文件注册表记录 (替代旧 AttachmentRegistryEntry + FileHashIndex)."""
@@ -68,7 +70,7 @@ class FileEntry(SQLModel, table=True):
         description="首次产生的 Agent ID (溯源)",
     )
     created_at: datetime | None = Field(
-        default_factory=datetime.utcnow,
+        default_factory=now_utc,
         sa_column=Column(
             DateTime,
             server_default=text("CURRENT_TIMESTAMP"),

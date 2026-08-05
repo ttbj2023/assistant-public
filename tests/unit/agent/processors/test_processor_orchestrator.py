@@ -767,10 +767,39 @@ class TestFinalizeConversation:
         assert result is not None
         assert result.round_number == 1
 
+    @pytest.mark.asyncio
+    @quick_test
+    async def test_finalize_uses_provided_round_number_not_reallocate(
+        self,
+        orchestrator: ProcessorOrchestrator,
+        basic_processor_config: dict[str, Any],
+    ) -> None:
+        """显式传入 round_number 时应使用它, 不重新分配 (流式 finalize 路径)."""
+        conv_memory = Mock()
+        conv_memory.add_conversation_round = AsyncMock()
+        orchestrator._mock_memory.get_or_create_conversation_memory = AsyncMock(
+            return_value=conv_memory
+        )
 
-# ---------------------------------------------------------------------------
-# _build_conversation_data 测试
-# ---------------------------------------------------------------------------
+        mock_conv_svc = _mock_conv_service(999, 0)
+
+        with patch(
+            "src.agent.processors.processor_orchestrator.create_conversation_service",
+            return_value=mock_conv_svc,
+        ):
+            result = await orchestrator.finalize_conversation(
+                user_input="Hello",
+                response_content="Hi",
+                user_id="u1",
+                thread_id="t1",
+                processor_config=basic_processor_config,
+                agent_id="a1",
+                round_number=5,
+            )
+
+        assert result is not None
+        assert result.round_number == 5
+        mock_conv_svc.allocate_round_number.assert_not_called()
 
 
 class TestBuildConversationData:

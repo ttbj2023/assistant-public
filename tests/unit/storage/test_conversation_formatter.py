@@ -8,7 +8,6 @@ from unittest.mock import patch
 import pytest
 
 from src.storage.formatters.conversation_formatter import (
-    ConversationFormatter,
     create_conversation_formatter,
 )
 from src.utils import format_date_short, format_timestamp
