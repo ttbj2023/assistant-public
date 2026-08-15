@@ -107,10 +107,9 @@ Content-Type: application/json
 | `tea_knowledge` / `knowledge_base` | **接** | cross-encoder 对长文档 chunks 精排价值显著; 调用低频 + 有 semantic_cache 兜底, 单次 1-2s 可接受. |
 
 **当前状态**: `inference.reranker.enabled = false` (默认关). 接入点已就绪:
-- `src/storage/service/service_factory.py:224` (search_memories 路径)
 - `src/knowledge_base/retriever.py:49` + `src/tools/external/tea_knowledge_tool.py:128` (知识库路径)
 
-启用只需配 `.env` 的 `RERANKER_BASE_URL=http://127.0.0.1:8768` 并打开 `enabled`, **但建议同时改 service_factory 让 search_memories 路径不传 reranker** (落实分治策略).
+启用只需配 `.env` 的 `RERANKER_BASE_URL=http://127.0.0.1:8768` 并打开 `enabled`, **search_memories 路径仍不传 reranker** (落实分治策略).
 
 ## 常用运维
 

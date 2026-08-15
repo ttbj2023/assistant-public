@@ -35,7 +35,8 @@ def main() -> None:
     args = parse_args()
     config = build_config(args)
 
-    mode_label = "60轮完整版" if args.all else "24轮精简版"
+    # 轮数取自实际对话数据, 避免硬编码漂移
+    mode_label = f"{len(config.conversations)}轮{'完整版' if args.all else '精简版'}"
     print(_cyan(SEPARATOR))
     print(_cyan(f"  Personal Assistant 对话测试脚本 ({mode_label})"))
     print(_cyan(f"  Agent: {config.agent_id}  对话轮数: {len(config.conversations)}"))

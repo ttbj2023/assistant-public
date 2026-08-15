@@ -151,14 +151,6 @@ PROVIDER_CONFIGS = {
         requires_auth=True,
         description="阿里云百炼Token Plan订阅(OpenAI兼容端点, Qwen3.7系列/DeepSeek三方模型)",
     ),
-    "scnet": ProviderConfig(
-        name="scnet",
-        base_url="https://api.scnet.cn/api/llm/v1",
-        base_url_env="SCNET_BASE_URL",
-        api_key_env="SCNET_API_KEY",
-        requires_auth=True,
-        description="超算互联网(scnet.cn)多模型聚合订阅(OpenAI兼容端点, Kimi/MiniMax/MiMo/GLM等)",
-    ),
 }
 
 

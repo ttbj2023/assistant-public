@@ -12,7 +12,6 @@ from .builtin_data import (
     create_aliyun_token_plan_models,
     create_ark_agent_plan_models,
     create_builtin_models,
-    create_scnet_models,
 )
 
 _logger = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ def _build_caches() -> tuple[list[ModelMetadata], dict[str, ModelMetadata]]:
             create_builtin_models()
             + create_ark_agent_plan_models()
             + create_aliyun_token_plan_models()
-            + create_scnet_models()
         )
         _BUILTIN_MODELS_CACHE = models
         _MODEL_INDEX = {m.id: m for m in models}

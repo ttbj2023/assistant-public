@@ -34,6 +34,11 @@ _FAILOVER_FAILURE_THRESHOLD = 3
 _PROBE_TIMEOUT = 1.5
 # best-IP 探测并发数
 _PROBE_WORKERS = 32
+# 通达信行情标准端口. hq_hosts 内置列表混有 2 个 :80 的 HTTP 行情入口,
+# 其 TCP 握手极快 (1ms) 会骗过纯 TCP 测速被选为"最优", 但 pytdx 二进制协议
+# 无法与之握手 → 连接超时 → 故障转移重测速又选 :80 → 死循环. 测速候选必须
+# 只保留 7709 标准端口.
+_TDX_STANDARD_PORT = 7709
 
 
 @dataclass
@@ -68,8 +73,15 @@ def _probe(host_entry: tuple) -> tuple[str, int, float, bool]:
 
 
 def select_best_ip(candidates: list | None = None) -> tuple[str, int] | None:
-    """并发测速, 返回最快服务器的 (ip, port), 全部不可达返回 None."""
-    candidates = candidates if candidates is not None else list(hq_hosts)
+    """并发测速, 返回最快服务器的 (ip, port), 全部不可达返回 None.
+
+    仅探测通达信标准端口 (7709) 服务器: hq_hosts 混有的 :80 HTTP 入口虽 TCP
+    延迟最低, 但 pytdx 协议无法握手, 必须排除 (见 _TDX_STANDARD_PORT).
+    """
+    raw = candidates if candidates is not None else list(hq_hosts)
+    candidates = [h for h in raw if int(h[2]) == _TDX_STANDARD_PORT]
+    if len(candidates) < len(raw):
+        logger.info("best-IP: 过滤非标准端口候选 %d -> %d", len(raw), len(candidates))
     with ThreadPoolExecutor(max_workers=_PROBE_WORKERS) as pool:
         probed = list(pool.map(_probe, candidates))
     reachable = [(ip, port, d) for ip, port, d, ok in probed if ok]

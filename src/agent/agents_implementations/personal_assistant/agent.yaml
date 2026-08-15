@@ -5,10 +5,10 @@ name: "Personal Agent Assistant"
 description: "个人助手Agent，支持记忆管理、TODO任务等"
 
 # 模型配置
-model_id: "aliyun-token-plan:qwen3.8-max-preview"
+model_id: "deepseek:deepseek-v4-pro"
 
 # 备选方案（需要对应的API密钥或服务）:
-# - Qwen3.8-Max Preview: model_id: "aliyun-token-plan:qwen3.8-max-preview" (阿里云 Token Plan 订阅独享旗舰预览, 强制思考模式)
+# - Qwen3.8-Max: model_id: "aliyun-token-plan:qwen3.8-max" (阿里云 Token Plan 订阅独享旗舰模型, 强制思考模式)
 # - Kimi K2.6: model_id: "ark-agent-plan:kimi-k2.6" (火山引擎 Ark Agent Plan 订阅)
 # - Qwen3.7-Plus: model_id: "aliyun-token-plan:qwen3.7-plus" (阿里云 Token Plan 订阅, 多模态, 1M上下文)
 # - DeepSeek V4 Pro: model_id: "deepseek:deepseek-v4-pro" (旗舰推理, 1M上下文)

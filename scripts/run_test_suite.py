@@ -651,9 +651,9 @@ class CIParallelRunner:
 
             # 在线程池中执行同步命令
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                lambda: subprocess.run(
+
+            def _run_pytest() -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
                     cmd,
                     cwd=project_root,
                     capture_output=True,
@@ -661,8 +661,25 @@ class CIParallelRunner:
                     check=False,
                     timeout=600,  # 10分钟超时
                     env={**os.environ, "TEST_PROCESS_PREFIX": "integration"},
-                ),
-            )
+                )
+
+            # xdist worker 崩溃 (exit code 3) 属基础设施故障而非测试失败,
+            # 保留崩溃现场后自动重试一次; 真实测试失败 (exit 1) 不重试.
+            max_attempts = 2
+            for attempt in range(1, max_attempts + 1):
+                result = await loop.run_in_executor(None, _run_pytest)
+                if result.returncode != 3 or attempt == max_attempts:
+                    break
+                self.console.print(
+                    "[yellow]⚠️ 集成测试 pytest 内部错误 (exit 3, 疑似 xdist worker 崩溃), "
+                    "保留现场后重试一次[/yellow]"
+                )
+                self._save_integration_pytest_log(
+                    result, filename="integration_pytest_crash.log"
+                )
+
+            # 保存完整 pytest 输出, 便于排查偶发失败 (仿 unit_tests_quick_full.log)
+            self._save_integration_pytest_log(result)
 
             # 解析pytest输出
             passed, failed, skipped = self._parse_pytest_summary(result.stdout)
@@ -746,6 +763,24 @@ class CIParallelRunner:
                 output=f"集成测试执行异常: {e!s}",
                 error_message=str(e),
             )
+
+    def _save_integration_pytest_log(
+        self,
+        result: subprocess.CompletedProcess[str],
+        filename: str = "integration_pytest_full.log",
+    ) -> None:
+        """保存集成测试完整 pytest 输出, 仿 unit_tests_quick_full.log / e2e_pytest_full.log."""
+        try:
+            current_dir = self.reports_dir / "current"
+            current_dir.mkdir(exist_ok=True)
+            log_path = current_dir / filename
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(result.stdout)
+                if result.stderr:
+                    f.write("\n\n=== STDERR ===\n")
+                    f.write(result.stderr)
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ 保存集成测试完整日志失败: {e}[/yellow]")
 
     async def run_e2e_tests(self) -> TaskResult:
         """运行E2E测试 - quick/full 模式均执行, 结果纳入 CI 门禁."""

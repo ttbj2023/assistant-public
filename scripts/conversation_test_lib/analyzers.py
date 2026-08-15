@@ -32,18 +32,6 @@ _FILE_DOWNLOAD_URL_RE = re.compile(r"https?://[^\s\"')]+/v1/files/dl/[^\s\"')]+"
 # [file: file_id] 标记
 _ATTACHMENT_MARK_RE = re.compile(r"\[file\s*[:：]\s*([0-9a-fA-F]+)\s*\]")
 
-# scnet 聚合模型名 (API 返回的裸名, 无 provider 前缀).
-_SCNET_MODEL_NAMES = {"Kimi-K2.6", "MiniMax-M3", "MiMo-V2.5-Pro", "GLM-5.2"}
-
-
-def _is_scnet_model(model_id: str | None) -> bool:
-    """判断 model_id 是否为 scnet 聚合模型."""
-    if not model_id:
-        return False
-    if model_id in _SCNET_MODEL_NAMES:
-        return True
-    return any(model_id.endswith(f":{name}") for name in _SCNET_MODEL_NAMES)
-
 
 def _extract_section(content: str, tag: str) -> str:
     """提取 XML 标签内容, 如 <tag>...</tag>."""

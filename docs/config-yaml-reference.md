@@ -1,6 +1,6 @@
 # config.yaml 参考
 
-**版本**: v2 | **更新**: 2026-07-24
+**版本**: v2 | **更新**: 2026-08-12
 
 `config.yaml` 只保存非敏感应用配置。未知字段会被 `config_doctor --strict` 拒绝。密钥不要写入本文件。
 
@@ -134,8 +134,8 @@ inference:
     web_research_synthesis_model_params: {}
     geo_research_model: ""
     geo_research_model_params: {}
-    professional_database_model: ""
-    professional_database_model_params: {}
+    datapro_model: ""
+    datapro_model_params: {}
     grounding_model: "gemini:gemini-2.5-flash-lite"
     grounding_model_params: {}
     grounding_timeout: 90.0

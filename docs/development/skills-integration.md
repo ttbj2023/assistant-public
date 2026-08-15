@@ -2,7 +2,7 @@
 
 > **状态**: 已实施, 持续演进
 > **版本**: v2.1 (复用 tool-runtime 作为 skill 执行运行时)
-> **日期**: 2026-07-14
+> **日期**: 2026-08-12
 
 ## 1. 背景与动机
 
@@ -189,9 +189,9 @@ SkillBridge 运行时职责:
 
 skills 段只承载 **L1 清单**(skill 名称 + 一句话描述), **不含 L2 正文**(正文走 load_skill 按需返回). 这保持 skills 段轻量, 避免所有 skill 全量正文撑爆系统提示词, 也保证 skills 段可作为稳定的缓存前缀.
 
-`SystemPromptAssembler.SYSTEM_PROMPT_SECTION_ORDER = ("base", "tools", "skills", "memory")`(`src/agent/processors/system_prompt_assembler.py:10-15`).
+`SystemPromptAssembler.SYSTEM_PROMPT_SECTION_ORDER = ("base", "tools", "skills", "memory")`(`src/agent/processors/system_prompt_assembler.py:10-13`).
 
-注入点: `InferenceCoordinator.process_with_agent()` 的 `sections` dict 加入 `"skills"` 键(`src/agent/processors/inference_coordinator.py:675`). skills 段排在 memory 段之前, 不影响 memory 段的动态数据.
+注入点: `InferenceCoordinator.process_with_agent()` 的 `sections` dict 加入 `"skills"` 键(`src/agent/processors/inference_coordinator.py:731`). skills 段排在 memory 段之前, 不影响 memory 段的动态数据.
 
 ## 6. 运行时: 复用 tool-runtime
 
@@ -232,7 +232,7 @@ class ExecuteResponse(BaseModel):
     created_files: list[CreatedFile] = []
 ```
 
-执行流程(`app.py:144-197`):
+执行流程(`app.py:145-199`):
 
 1. 执行前 `_clean_output_dir()` 重置产物区(无状态)
 2. 代码写入 `/workspace/.exec_<pid>_<ts>.py`
@@ -260,7 +260,7 @@ RUN mkdir -p /workspace/output && chown -R toolrt:toolrt /app /workspace /skills
 
 ### 6.3 产物回收 → file_id(app 侧)
 
-tool-runtime **不碰数据库**(internal 网络, 无 DB 访问). 产物回收闭环在 app 侧(`src/tools/skills/skill_executor_tool.py:158-213`):
+tool-runtime **不碰数据库**(internal 网络, 无 DB 访问). 产物回收闭环在 app 侧(`src/tools/skills/skill_executor_tool.py:183-222`):
 
 ```
 app 收到 ExecuteResponse.created_files
@@ -379,6 +379,11 @@ skills/chart_maker/          # prompt_only
     mermaid.md               # L3: mermaid 完整语法
     vega_lite.md             # L3: Vega-Lite 完整语法
     markmap.md               # L3: markmap 完整语法
+
+skills/export_document/      # prompt_only
+  SKILL.md                   # Markdown → PDF/DOCX 导出规范 + 风格选型
+  references/
+    gfm_syntax.md            # L3: GFM 语法与图表嵌入
 ```
 
 ## 9. 案例: xlsx
@@ -427,8 +432,8 @@ app (SkillExecutorTool._register_outputs): 解码 base64 → register_tool_outpu
 | # | 工作项 | 落点 |
 |---|--------|------|
 | A1 | tool-runtime Dockerfile 加 openpyxl + libreoffice-calc + `COPY skills/ /skills/` | `docker/tool-runtime/Dockerfile` |
-| A2 | tool-runtime app.py 加 `/execute` 端点(工作目录 /workspace + 产物回收扫描) | `docker/tool-runtime/app.py:144` |
-| A3 | production compose 的 tool-runtime 服务挂 `/workspace` 可写卷 + healthcheck | `docker/docker-compose.production.yml:109` |
+| A2 | tool-runtime app.py 加 `/execute` 端点(工作目录 /workspace + 产物回收扫描) | `docker/tool-runtime/app.py:145` |
+| A3 | production compose 的 tool-runtime 服务挂 `/workspace` 可写卷 + healthcheck | `docker/docker-compose.production.yml:68-89` |
 | A4 | SkillExecutorTool: load_skill 后动态注入, 产物 → `register_tool_output` → file_id | `src/tools/skills/skill_executor_tool.py` |
 
 ### 线 B — SkillBridge 框架
@@ -436,12 +441,12 @@ app (SkillExecutorTool._register_outputs): 解码 base64 → register_tool_outpu
 | # | 工作项 | 落点 |
 |---|--------|------|
 | B1 | `SkillConfig` 模型(prompt_only / executable / associated_tools) | `src/config/tools_config.py` |
-| B2 | `config.yaml` 加 `skills` 段 + `agent.yaml` 加 `skills: [...]` 引用 | `config.yaml:436` + 各 agent.yaml |
+| B2 | `config.yaml` 加 `skills` 段 + `agent.yaml` 加 `skills: [...]` 引用 | `config.yaml:105-118` + 各 agent.yaml |
 | B3 | `skill_parser.py`(L1 frontmatter + L2 正文 + L3 references 扫描, 容错) | `src/tools/skills/skill_parser.py` |
 | B4 | `skill_bridge.py`: 解析 + L1 清单贡献 + L2/L3 返回 + skill 池管理 | `src/tools/skills/skill_bridge.py` |
 | B5 | `load_skill_tool.py`: 常驻工具, 返回 L2 正文 / L3 引用 | `src/tools/skills/load_skill_tool.py` |
 | B6 | `_skill_load.py`(SkillLoadMiddleware, 仿 ToolDiscoveryMiddleware): 动态注入关联工具 | `src/tools/middleware/_skill_load.py` |
-| B7 | skills 段(L1)注入 + SkillLoadMiddleware 装配 | `inference_coordinator.py:244,254,675` |
+| B7 | skills 段(L1)注入 + SkillLoadMiddleware 装配 | `inference_coordinator.py:278,288,731` |
 
 ### 线 C — skill 内容
 
@@ -449,6 +454,7 @@ app (SkillExecutorTool._register_outputs): 解码 base64 → register_tool_outpu
 |---|--------|
 | C1 | xlsx(executable): 适配精简(聚焦生成, 砍读取已有文件) + 完整 scripts/(recalc.py + office/) |
 | C2 | chart_maker(prompt_only): 引擎选型指南 + 3 份 L3 references(mermaid/vega_lite/markmap) |
+| C3 | export_document(prompt_only): Markdown 导出 PDF/DOCX 规范 + GFM 语法 reference |
 
 ### 线 D — python-executor: 已合并到 tool-runtime(见 §3.2)
 
@@ -511,10 +517,10 @@ python-executor 独立容器已废弃, `python_executor` 工具改调 tool-runti
 
 | 文件 | 角色 |
 |------|------|
-| `src/agent/processors/system_prompt_assembler.py:10-15` | skills 段顺序登记(SYSTEM_PROMPT_SECTION_ORDER) |
-| `src/agent/processors/inference_coordinator.py:182,244` | skills 段 L1 清单 + SkillLoadMiddleware 装配 |
-| `src/agent/processors/inference_coordinator.py:675` | skills 段注入点(sections dict) |
-| `src/agent/processors/inference_coordinator.py:457-475` | per-skill 关联工具映射构建 |
+| `src/agent/processors/system_prompt_assembler.py:10-13` | skills 段顺序登记(SYSTEM_PROMPT_SECTION_ORDER) |
+| `src/agent/processors/inference_coordinator.py:199,278` | skills 段 L1 清单 + SkillLoadMiddleware 装配 |
+| `src/agent/processors/inference_coordinator.py:731` | skills 段注入点(sections dict) |
+| `src/agent/processors/inference_coordinator.py:505-533` | per-skill 关联工具映射构建 |
 | `src/tools/mcp/mcp_tool_manager.py` | McpBridge(管理框架借鉴源) |
 | `src/tools/middleware/_tool_discovery.py` | ToolDiscoveryMiddleware(SkillLoadMiddleware 核心参考, 同构模式) |
 | `src/tools/middleware/_skill_load.py` | SkillLoadMiddleware(动态注入关联工具) |
@@ -526,9 +532,10 @@ python-executor 独立容器已废弃, `python_executor` 工具改调 tool-runti
 | `src/core/context.py` | UserContext(exported_files 透传) |
 | `src/config/tools_config.py` | SkillConfig |
 | `src/config/agent_config.py` | AgentConfig(skills 字段) |
-| `docker/tool-runtime/app.py:144` | `/execute` 端点(skill 代码执行) |
+| `docker/tool-runtime/app.py:145` | `/execute` 端点(skill 代码执行) |
 | `docker/tool-runtime/Dockerfile` | tool-runtime 镜像(openpyxl + libreoffice-calc + COPY skills/) |
-| `docker/docker-compose.production.yml:109` | tool-runtime 生产服务(网络/资源/卷) |
-| `config.yaml:436` | skills 配置段 |
+| `docker/docker-compose.production.yml:68-89` | tool-runtime 生产服务(网络/资源/卷) |
+| `config.yaml:105-118` | skills 配置段 |
 | `skills/xlsx/` | xlsx skill(executable) |
 | `skills/chart_maker/` | chart_maker skill(prompt_only + 3 references) |
+| `skills/export_document/` | export_document skill(prompt_only + gfm_syntax reference) |

@@ -785,22 +785,21 @@ def create_aliyun_token_plan_models() -> list[ModelMetadata]:
     )
 
     # ═══════════════════════════════════════════════════════════════════
-    # Qwen3.8-Max Preview (Token Plan 专属预览模型)
+    # Qwen3.8-Max (Token Plan 订阅模型)
     # 阿里云百炼 Token Plan 订阅用户独享, 不在按量计费 DashScope 模型列表中.
-    # 实测约束: 服务端强制 enable_thinking=True (预览期不可关闭, 报错
+    # 实测约束: 服务端强制 enable_thinking=True (不可关闭, 报错
     #   "The value of the enable_thinking parameter is restricted to True.").
     # ═══════════════════════════════════════════════════════════════════
 
     models.append(
         ModelMetadata(
-            id="aliyun-token-plan:qwen3.8-max-preview",
-            name="Qwen3.8-Max Preview",
+            id="aliyun-token-plan:qwen3.8-max",
+            name="Qwen3.8-Max",
             provider="aliyun-token-plan",
             model_type=ModelType.CHAT,
-            description="阿里云百炼 Qwen3.8-Max Preview 旗舰预览模型(Token Plan 订阅独享)."
+            description="阿里云百炼 Qwen3.8-Max 旗舰模型(Token Plan 订阅独享)."
             "面向智能体时代, 支持文本与图像输入, 思考推理, 工具调用, JSON 模式与流式输出."
-            "预览期间模型能力持续迭代, 后续会被下线或替换为正式版本."
-            "注意(实测约束): 服务端强制 enable_thinking=True, 预览期不可关闭思考模式."
+            "注意(实测约束): 服务端强制 enable_thinking=True, 不可关闭思考模式."
             "thinking_budget 仍可调节. 经 extra_body 透传与 Qwen3.7 系列一致.",
             model_params=qwen37_chat_params,
             capabilities=[
@@ -811,89 +810,6 @@ def create_aliyun_token_plan_models() -> list[ModelMetadata]:
                 ModelCapability.JSON_MODE,
                 ModelCapability.TOOL_CALLING,
             ],
-        ),
-    )
-
-    return models
-
-
-def create_scnet_models() -> list[ModelMetadata]:
-    """创建超算互联网(scnet.cn)聚合订阅模型列表.
-
-    scnet.cn 多模型聚合服务, 独立 API Key, OpenAI 兼容端点.
-    base_url: https://api.scnet.cn/api/llm/v1
-    """
-    models: list[ModelMetadata] = []
-
-    # 通用对话参数: OpenAI 兼容聚合端点, 采样参数保持通用保守值
-    scnet_chat_params = {
-        "temperature": {"default": 0.7},
-        "top_p": {"default": 0.95},
-        "max_tokens": {"default": 32768},
-        "stop": {"default": None},
-    }
-
-    scnet_chat_caps = [
-        ModelCapability.TEXT_INPUT,
-        ModelCapability.REASONING,
-        ModelCapability.STREAMING,
-        ModelCapability.JSON_MODE,
-        ModelCapability.TOOL_CALLING,
-    ]
-
-    # ═══════════════════════════════════════════════════════════════════
-    # Kimi-K2.6 / GLM-5.2 (共享定义)
-    # ═══════════════════════════════════════════════════════════════════
-
-    models.append(
-        bind_shared(
-            "scnet",
-            "kimi-k2.6",
-            endpoint_name="Kimi-K2.6",
-        ),
-    )
-
-    models.append(
-        bind_shared(
-            "scnet",
-            "glm-5.2",
-            endpoint_name="GLM-5.2",
-        ),
-    )
-
-    # ═══════════════════════════════════════════════════════════════════
-    # MiniMax-M3 / MiMo-V2.5-Pro (scnet.cn 独占)
-    # ═══════════════════════════════════════════════════════════════════
-
-    models.append(
-        ModelMetadata(
-            id="scnet:MiniMax-M3",
-            name="MiniMax M3",
-            provider="scnet",
-            model_type=ModelType.CHAT,
-            description="MiniMax M3模型(经scnet.cn聚合订阅)."
-            "思考推理模型, 默认返回reasoning_content, 支持工具调用, JSON模式, 流式输出."
-            "OpenAI兼容端点(scnet.cn聚合), 需配置SCNET_API_KEY环境变量.",
-            model_params=scnet_chat_params,
-            capabilities=scnet_chat_caps,
-        ),
-    )
-
-    models.append(
-        ModelMetadata(
-            id="scnet:MiMo-V2.5-Pro",
-            name="MiMo V2.5 Pro",
-            provider="scnet",
-            model_type=ModelType.CHAT,
-            description="小米MiMo V2.5 Pro模型(经scnet.cn聚合订阅)."
-            "思考推理模型, 默认返回reasoning_content, 支持工具调用, JSON模式, 流式输出."
-            "官方定价(小米): 输入3.0元/百万tokens(缓存未命中), 输出6.0元/百万tokens, 缓存命中0.025元/百万tokens."
-            "OpenAI兼容端点(scnet.cn聚合), 需配置SCNET_API_KEY环境变量.",
-            model_params=scnet_chat_params,
-            capabilities=scnet_chat_caps,
-            pricing=ModelPricing(
-                input=3.0, output=6.0, cached_input=0.025, currency="CNY"
-            ),
         ),
     )
 

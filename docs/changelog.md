@@ -1,6 +1,11 @@
 # 项目变更日志
 
-**版本**: v1.9.0 | **更新**: 2026-07-17
+**版本**: v1.9.0 | **更新**: 2026-08-12
+
+## 集成测试 xdist worker 崩溃加固 (2026-08-12)
+- **问题**: quick 门禁偶发集成测试 `exit_code=3` (xdist worker 崩溃), 7 用例丢失且报告只落盘计数, 事后无法定位堆栈; 10 轮复现未重现, 判定为并发争抢下的基础设施级偶发故障
+- **诊断改进**: 集成测试 pytest 完整输出落盘 `reports/current/integration_pytest_full.log` (仿 unit/e2e 已有机制)
+- **流程加固**: `exit_code=3` (基础设施故障) 保留崩溃现场 (`integration_pytest_crash.log`) 后自动重试一次; 真实测试失败 (exit 1) 不重试, 重试后仍崩溃则 CI 继续阻断 (确定性崩溃不掩盖)
 
 ## CI quick 模式纳入 E2E 阻断门禁 (2026-07-17)
 - **问题**: 7/2 重构 `export_document` 移除 `summary` 参数后, `tests/e2e/test_tool_runtime_container_e2e.py` 未同步更新, 导致 full 模式 E2E 失败; 因 quick 模式跳过 E2E, 回归被遗漏约两周

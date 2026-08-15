@@ -2,11 +2,11 @@
 
 Personal Agent Assistant v1.9.0 三层测试体系. 设计规范总览见 [docs/development/testing.md](../docs/development/testing.md).
 
-## 当前状态 (2026-07-24)
+## 当前状态 (2026-08-12)
 
 | 类型 | 测试数 | 文件数 | 通过率 | 性质 |
 |------|--------|--------|--------|------|
-| 单元 | 3081 | 206 | 100% | 白盒, Mock 外部依赖 |
+| 单元 | 3100 | 207 | 100% | 白盒, Mock 外部依赖 |
 | 集成 | 103 | 26 | 100% | 灰盒, 真实组件协作 |
 | E2E | 13 | 6 | 100% | 灰盒, ASGI TestClient 进程内 |
 
@@ -56,7 +56,7 @@ pytest tests/e2e/                            # E2E (进程内, 无需启动服�
 -m "unit or (not integration and not e2e)"
 ```
 
-效果: 优先跑带 `unit` 标记的，兜底跑所有非集成/非 E2E 测试; 集成/E2E 不跑 (实际 60 有标记 + 2845 无标记 = 2905 全覆盖)。集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，可直接 `pytest -m integration` 全量收集；E2E 目录要求 100% 显式标记覆盖，可直接 `pytest -m e2e`。
+效果: 优先跑带 `unit` 标记的，兜底跑所有非集成/非 E2E 测试; 集成/E2E 不跑 (实际 48 有标记 + 3052 无标记 = 3100 全覆盖)。集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，可直接 `pytest -m integration` 全量收集；E2E 目录要求 100% 显式标记覆盖，可直接 `pytest -m e2e`。
 
 ```python
 # 类级别标记 (推荐, 减少重复)

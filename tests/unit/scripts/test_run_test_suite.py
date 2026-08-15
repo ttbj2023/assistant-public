@@ -3,15 +3,21 @@
 覆盖:
 - _extract_error_type 错误分类 (回归: pytest-timeout header 不得误判 TIMEOUT_ERROR)
 - quick 模式 E2E 不再跳过 (纳入阻断门禁)
+- 集成测试加固: 完整输出落盘 + xdist worker 崩溃 (exit 3) 自动重试一次
 """
 
 from __future__ import annotations
 
+import subprocess
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
 
 from scripts.run_test_suite import CIParallelRunner, E2ETestResult
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -93,3 +99,119 @@ class TestQuickModeE2E:
         assert result.success is True
         assert result.execution_details
         assert result.execution_details.get("skipped") is not True
+
+
+@pytest.fixture
+def integration_runner(
+    runner: CIParallelRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> CIParallelRunner:
+    """隔离 reports 目录的集成测试 runner."""
+    monkeypatch.setattr(runner, "reports_dir", tmp_path)
+    return runner
+
+
+def _fake_pytest_process(
+    returncode: int, stdout: str
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(
+        args=[], returncode=returncode, stdout=stdout, stderr=""
+    )
+
+
+class TestIntegrationHardening:
+    """集成测试加固: 完整日志落盘 + xdist worker 崩溃重试.
+
+    背景: quick 门禁曾出现 exit_code=3 (xdist worker 崩溃) 导致 7 用例丢失,
+    但集成测试未落盘原始输出, 事后无法定位.
+    """
+
+    async def test_run_integration_saves_full_pytest_log(
+        self,
+        integration_runner: CIParallelRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """完整 pytest 输出落盘 integration_pytest_full.log (仿 unit/e2e 已有机制)."""
+        monkeypatch.setattr(
+            "scripts.run_test_suite.subprocess.run",
+            lambda *a, **k: _fake_pytest_process(0, "103 passed in 5.94s"),
+        )
+        monkeypatch.setattr(
+            integration_runner, "_parse_pytest_summary", lambda s: (103, 0, 0)
+        )
+
+        result = await integration_runner.run_integration_tests()
+
+        assert result.success is True
+        log = tmp_path / "current" / "integration_pytest_full.log"
+        assert log.exists()
+        assert "103 passed" in log.read_text(encoding="utf-8")
+
+    async def test_run_integration_retries_once_on_xdist_worker_crash(
+        self,
+        integration_runner: CIParallelRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """exit_code=3 (worker 崩溃, 基础设施故障) 保留崩溃现场后自动重试一次."""
+        attempts: list[int] = []
+
+        def fake_run(*a: object, **k: object) -> subprocess.CompletedProcess[str]:
+            attempts.append(len(attempts))
+            if len(attempts) == 1:
+                return _fake_pytest_process(3, "worker 'gw0' crashed")
+            return _fake_pytest_process(0, "103 passed")
+
+        monkeypatch.setattr("scripts.run_test_suite.subprocess.run", fake_run)
+        monkeypatch.setattr(
+            integration_runner, "_parse_pytest_summary", lambda s: (103, 0, 0)
+        )
+
+        result = await integration_runner.run_integration_tests()
+
+        assert len(attempts) == 2, "worker 崩溃应重试一次"
+        assert result.success is True
+        # 崩溃现场保留, 不被重试覆盖
+        crash_log = tmp_path / "current" / "integration_pytest_crash.log"
+        assert crash_log.exists()
+        assert "crashed" in crash_log.read_text(encoding="utf-8")
+
+    async def test_run_integration_no_retry_on_real_test_failure(
+        self, integration_runner: CIParallelRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """exit_code=1 (真实测试失败) 不重试, 避免掩盖问题与浪费时间."""
+        attempts: list[int] = []
+
+        def fake_run(*a: object, **k: object) -> subprocess.CompletedProcess[str]:
+            attempts.append(len(attempts))
+            return _fake_pytest_process(1, "1 failed, 102 passed")
+
+        monkeypatch.setattr("scripts.run_test_suite.subprocess.run", fake_run)
+        monkeypatch.setattr(
+            integration_runner, "_parse_pytest_summary", lambda s: (102, 1, 0)
+        )
+
+        result = await integration_runner.run_integration_tests()
+
+        assert len(attempts) == 1, "真实测试失败不得重试"
+        assert result.success is False
+
+    async def test_run_integration_retry_exhausted_still_fails(
+        self, integration_runner: CIParallelRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """重试后仍 exit_code=3 (确定性崩溃) 则判定失败, CI 仍阻断."""
+        attempts: list[int] = []
+
+        def fake_run(*a: object, **k: object) -> subprocess.CompletedProcess[str]:
+            attempts.append(len(attempts))
+            return _fake_pytest_process(3, "worker crashed again")
+
+        monkeypatch.setattr("scripts.run_test_suite.subprocess.run", fake_run)
+        monkeypatch.setattr(
+            integration_runner, "_parse_pytest_summary", lambda s: (0, 0, 0)
+        )
+
+        result = await integration_runner.run_integration_tests()
+
+        assert len(attempts) == 2, "最多重试一次"
+        assert result.success is False

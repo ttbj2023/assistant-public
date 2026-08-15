@@ -17,7 +17,6 @@ from scripts.conversation_test_lib.analyzers import (
     _evaluate_user_requirement,
     _extract_section,
     _extract_tokens,
-    _is_scnet_model,
     _pinned_evolution,
 )
 from scripts.conversation_test_lib.collectors import collect_usage_stats
@@ -46,7 +45,8 @@ def generate_report(
     )
     config.logs_dir.mkdir(parents=True, exist_ok=True)
 
-    mode_label = "60轮完整版" if use_all else "24轮精简版"
+    # 轮数取自实际对话数据, 避免硬编码漂移
+    mode_label = f"{len(config.conversations)}轮{'完整版' if use_all else '精简版'}"
 
     models_used = sorted({
         str(p.get("metadata", {}).get("model", "")).strip()
@@ -141,7 +141,7 @@ def generate_report(
                     f"**{m_reason}** | **{m_total}** |"
                 )
             else:
-                w("无 main_chat 记录 (主对话模型可能未走 scnet).")
+                w("无 main_chat 记录 (本 session 无主对话 LLM 调用).")
             w("")
 
             sub: dict[str, list[dict[str, Any]]] = {}
@@ -159,32 +159,6 @@ def generate_report(
                     c = sum(x.get("calls", 0) or 0 for x in rs)
                     t = sum(x.get("total_tok", 0) or 0 for x in rs)
                     w(f"| {src} | {c} | {t} |")
-                w("")
-
-            scnet_rows = [r for r in u_rows if _is_scnet_model(r.get("model_id"))]
-            w("### scnet 用量小计 (对应供应商 Credits)")
-            w("")
-            if scnet_rows:
-                si = sum(r.get("in_tok", 0) or 0 for r in scnet_rows)
-                so = sum(r.get("out_tok", 0) or 0 for r in scnet_rows)
-                sr = sum(r.get("reason_tok", 0) or 0 for r in scnet_rows)
-                st = sum(r.get("total_tok", 0) or 0 for r in scnet_rows)
-                w(f"- **入**: {si} tok")
-                w(f"- **出**(含推理 {sr} tok): {so} tok")
-                w(f"- **总**: {st} tok")
-                est_credits = si * 0.01 + so * 0.05
-                w(
-                    f"- **估算 Credits**: ~{est_credits:.2f} "
-                    "(按 入0.01/出0.05 token 单点拟合, 待对照后台增量校准)"
-                )
-                w("")
-                w(
-                    "> 标定: 对照 scnet 后台 Credits 增量 Δ. 若 Δ ≈ 估算值, "
-                    "单价假设成立; 否则用 Δ 与 token 量解真实单价."
-                )
-                w("")
-            else:
-                w("无 scnet 用量记录 (主模型未走 scnet, 或本 session 无 LLM 调用).")
                 w("")
 
     # ---- 2. 慢轮次与异常详情 ----

@@ -68,7 +68,6 @@ SUPPORTED_LLM_PROVIDERS = [
     "minimax",
     "ark-agent-plan",
     "aliyun-token-plan",
-    "scnet",
 ]
 
 LONG_HTTP_TIMEOUT = 120.0
@@ -175,7 +174,6 @@ class LlmFactory:
             "doubao",
             "aliyun-token-plan",
             "ark-agent-plan",
-            "scnet",
         }:
             params = self._normalize_chatopenai_params(params)
 
@@ -337,20 +335,6 @@ class LlmFactory:
             return ChatOpenAI(
                 base_url=base_url
                 or "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-                model=model_name,
-                api_key=SecretStr(api_key),
-                timeout=effective_timeout,
-                http_async_client=shared_client,
-                **usage_kwargs,
-                **params,
-                **({"streaming": True} if agent_streaming else {}),
-            )
-
-        if provider == "scnet":
-            shared_client = self._http_pool.get(provider)
-
-            return ChatOpenAI(
-                base_url=base_url or "https://api.scnet.cn/api/llm/v1",
                 model=model_name,
                 api_key=SecretStr(api_key),
                 timeout=effective_timeout,

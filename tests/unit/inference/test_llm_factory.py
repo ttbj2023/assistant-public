@@ -306,28 +306,6 @@ class TestLlmFactoryProviderRouting:
             factory.get_llm("minimax:MiniMax-M2.7")
             mock_cls.assert_called_once()
 
-    def test_scnet_provider_should_use_chat_openai(self, mock_cache):
-        """scnet provider 应使用 ChatOpenAI 并指向 scnet.cn 聚合端点."""
-        metadata = _make_chat_metadata("scnet", "scnet:GLM-5.2")
-
-        with (
-            patch.dict("os.environ", {"SCNET_API_KEY": "test-key"}),
-            patch(
-                "src.inference.llm.llm_factory.get_client_cache",
-                return_value=mock_cache,
-            ),
-            patch("src.inference.llm.llm_factory.get_model", return_value=metadata),
-            patch("src.inference.llm.llm_factory.ChatOpenAI") as mock_cls,
-        ):
-            mock_cls.return_value = Mock()
-            factory = LlmFactory()
-            factory._cache = mock_cache  # type: ignore[assignment]
-            factory.get_llm("scnet:GLM-5.2")
-            mock_cls.assert_called_once()
-            call_kwargs = mock_cls.call_args.kwargs
-            assert call_kwargs["base_url"] == "https://api.scnet.cn/api/llm/v1"
-            assert call_kwargs["model"] == "GLM-5.2"
-
     def test_gemini_provider_should_use_chat_google_generative_ai(self, mock_cache):
         """gemini provider 应使用 ChatGoogleGenerativeAI."""
         metadata = _make_chat_metadata("gemini", "gemini:test-model")

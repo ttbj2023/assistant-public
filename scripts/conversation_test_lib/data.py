@@ -48,7 +48,7 @@ CONVERSATIONS_QUICK: list[dict[str, Any]] = [
     },
     {
         "tag": "专业数据检索-金融指标",
-        "hint": "finance_data (external, 独立fastmcp.Client). 反幻觉: 单维度(盈利能力)一次命中, ROE多口径精确小数(加权1.65/平均1.6464/TTM 11.88), web仅散文. 需ARK_AGENT_PLAN_API_KEY",
+        "hint": "finance_data (external, 独立fastmcp.Client). 反幻觉: 单维度(盈利能力)一次命中, ROE多口径(加权/摊薄/TTM)均精确小数(具体值随财报更新, 不锚定数值), web仅散文. 需ARK_AGENT_PLAN_API_KEY",
         "input": "我最近在研究比亚迪(股票代码002594)的基本面, 帮我用专业数据检索查一下它的净资产收益率ROE和盈利水平",
     },
     {
