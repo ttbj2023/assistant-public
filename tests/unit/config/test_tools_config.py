@@ -345,7 +345,7 @@ class TestToolsConfigDeepMerge:
                 "scheduled_messenger": {
                     "config": {
                         "smtp_config": {"host": "smtp.test.com"},
-                        "openclaw_defaults": {"weixin": {"channel": "test-channel"}},
+                        "channel_overrides": {"weixin": {"test": True}},
                     }
                 }
             }
@@ -358,10 +358,17 @@ class TestToolsConfigDeepMerge:
         sm = config.internal_tools["scheduled_messenger"]
         # yaml 覆盖/新增的字段生效
         assert sm.config["smtp_config"]["host"] == "smtp.test.com"
-        assert sm.config["openclaw_defaults"]["weixin"]["channel"] == "test-channel"
-        # 默认 config 其余字段保留(deep merge 而非整体替换)
-        assert sm.config["max_pending_messages"] == 50
-        assert sm.config["max_schedule_ahead_hours"] == 168
+        assert sm.config["channel_overrides"]["weixin"]["test"] is True
+        # 默认 config 其余字段保留(deep merge 而非整体替换).
+        # 与 catalog 默认值动态对比, 不硬编码具体数值 (数值调整不应改本测试)
+        from src.config.tool_catalog import get_builtin_tools_config
+
+        default_config = get_builtin_tools_config()["internal_tools"][
+            "scheduled_messenger"
+        ]["config"]
+        for key in ("max_pending_messages", "max_schedule_ahead_hours"):
+            assert key in default_config, f"catalog 默认应含 {key}"
+            assert sm.config[key] == default_config[key]
 
 
 class TestNoneDefenseForDictCategories:

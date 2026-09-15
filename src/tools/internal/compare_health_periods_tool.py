@@ -42,7 +42,7 @@ class CompareHealthPeriodsRequest(BaseModel):
     period_offset: int = Field(
         default=0,
         ge=0,
-        description="时段偏移: 0=当前, 1=上一期, 2=上两期",
+        description="对比的目标期偏移: 0=当前期, 1=上一期, 以此类推; 与其前一期对比",
     )
 
 
@@ -52,8 +52,10 @@ class CompareHealthPeriodsTool(BaseTool):
 
     name: str = "compare_health_periods"
     description: str = (
-        "查询单指标时段对比(周环比/月环比). "
-        "参数: metric(必需), period_type=week/month, period_offset=0/1/2."
+        "查询单指标时段对比(周环比/月环比), 将目标期与其前一期对比. "
+        "参数: metric(必需), period_type=week/month, period_offset(0=当前期, 1=上一期).\n"
+        '示例: {"metric": "steps"} → 本周 vs 上周\n'
+        '示例: {"metric": "sleep_duration_hours", "period_type": "month", "period_offset": 1} → 上月 vs 前月'
     )
     args_schema: type[CompareHealthPeriodsRequest] = CompareHealthPeriodsRequest
 

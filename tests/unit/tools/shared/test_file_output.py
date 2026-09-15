@@ -229,3 +229,56 @@ class TestBriefParameter:
         entry = await registry.get(file_id)
         assert entry is not None
         assert entry.brief == "文档摘要"
+
+
+class TestSourceParameter:
+    """source 参数: desc = compose_desc(brief, source) 统一结构."""
+
+    @pytest.mark.asyncio
+    async def test_desc_contains_summary_and_source(self) -> None:
+        """传 source 时, .desc.md 应为 摘要+分隔符+源码 统一结构."""
+        from src.files.desc_writer import read_desc, split_desc
+
+        filename = "src_test_20260607_120000_cccc3333.png"
+        file_id = await self._register_with_source(
+            filename,
+            b"source-test-content",
+            brief="图表: 销量趋势",
+            source='{"engine": "mermaid"}',
+        )
+
+        summary, original = split_desc(read_desc("testuser", file_id))
+        assert summary == "图表: 销量趋势"
+        assert original == '{"engine": "mermaid"}'
+
+    @staticmethod
+    async def _register_with_source(
+        filename: str, content: bytes, *, brief: str | None, source: str
+    ) -> str:
+        """注册文件并返回 file_id (真实 resolver+registry+desc 落盘)."""
+        user_id = "testuser"
+        thread_id = "main"
+        resolver = get_user_path_resolver()
+        file_dir = resolver.get_shared_storage_path(
+            user_id, thread_id, "files/exports"
+        )
+        output_path = file_dir / filename
+        output_path.write_bytes(content)
+
+        mock_ctx = _make_mock_ctx(user_id, thread_id)
+        with ExitStack() as stack:
+            _apply_register_patches(stack, _make_storage_config(), mock_ctx)
+            result = await register_tool_output(
+                output_path=output_path,
+                display_filename="display.png",
+                output_filename=filename,
+                output_format="png",
+                file_type="image",
+                content="test content",
+                summary=brief,
+                user_id=user_id,
+                thread_id=thread_id,
+                brief=brief,
+                source=source,
+            )
+        return result["file_id"]

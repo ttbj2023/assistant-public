@@ -95,6 +95,73 @@ class TestRetrieve:
         assert "作者: 陈宗懋" in result.text
 
 
+class TestImageFormatting:
+    """图片块与正文块 images 字段的格式化."""
+
+    async def test_image_chunk_formatted_with_ref_and_hint(self, store):
+        await store.add_documents(
+            [
+                Document(
+                    page_content="[章节] 中国茶经 / 杀青\n[图片] 杀青机结构示意图\n画面为机械剖面图",
+                    metadata={
+                        "doc_ref": "a",
+                        "doc_title": "中国茶经",
+                        "doc_type": "book",
+                        "heading_chain": "中国茶经 / 杀青",
+                        "chunk_type": "image",
+                        "image_path": "中国茶经/images/page0415_028.jpg",
+                    },
+                ),
+            ],
+            ids=["img_0"],
+        )
+        result = await KnowledgeBaseRetriever(store, top_k=1).retrieve("杀青")
+        # 完整 image_ref (kb_name:语料相对路径) 暴露给主对话模型
+        assert "tea:中国茶经/images/page0415_028.jpg" in result.text
+        # 引导读图
+        assert "kb_read_image" in result.text
+        # 题注正文保留
+        assert "杀青机结构示意图" in result.text
+
+    async def test_text_chunk_images_listed_with_refs(self, store):
+        await store.add_documents(
+            [
+                Document(
+                    page_content="滚筒杀青说明。",
+                    metadata={
+                        "doc_ref": "a",
+                        "doc_title": "中国茶经",
+                        "doc_type": "book",
+                        "heading_chain": "中国茶经 / 杀青",
+                        "images": "中国茶经/images/a.jpg,中国茶经/images/b.jpg",
+                    },
+                ),
+            ],
+            ids=["txt_0"],
+        )
+        result = await KnowledgeBaseRetriever(store, top_k=1).retrieve("杀青")
+        assert "tea:中国茶经/images/a.jpg" in result.text
+        assert "tea:中国茶经/images/b.jpg" in result.text
+
+    async def test_text_chunk_without_images_no_image_line(self, store):
+        await store.add_documents(
+            [
+                Document(
+                    page_content="普通正文。",
+                    metadata={
+                        "doc_ref": "a",
+                        "doc_title": "中国茶经",
+                        "doc_type": "book",
+                        "heading_chain": "中国茶经 / 杀青",
+                    },
+                ),
+            ],
+            ids=["txt_0"],
+        )
+        result = await KnowledgeBaseRetriever(store, top_k=1).retrieve("普通正文")
+        assert "图片" not in result.text
+
+
 def _mock_reranker(scores: list[float]) -> AsyncMock:
     """构造 mock RerankClient, 按给定分数列表返回 RerankResult (降序, 同真实 API)."""
     mock = AsyncMock(spec=RerankClient)

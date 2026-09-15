@@ -177,6 +177,7 @@ async def run_export_document(
             user_id=user_id,
             thread_id=thread_id,
             document_meta=document_meta_json,
+            source=content,
         )
 
         if result.get("success"):

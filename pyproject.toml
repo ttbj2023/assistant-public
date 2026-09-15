@@ -65,6 +65,7 @@ dependencies = [
 
     # === 系统工具和实用库 ===
     "python-dotenv>=1.0.0",    # ✅ 实际使用: .env文件加载、环境变量管理
+    "python-dateutil>=2.8.0",  # ✅ 实际使用: 日历重复规则 (RRULE) 展开
     "bleach[css]>=6.0.0",      # ✅ 实际使用: HTML清理、XSS防护、内容安全
     # "playwright>=1.50.0",    # ⚠️ 已迁移至 tool-runtime 容器: PDF/图表渲染
     "cachetools>=5.3.0",       # ✅ 实际使用: 内存缓存、TTL缓存、LRU缓存

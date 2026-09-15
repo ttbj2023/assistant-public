@@ -135,8 +135,8 @@ async def _cleanup_orphaned_record(
 
 async def _get_registry_service(
     user_id: str,
-    thread_id: str,  # noqa: ARG001
-    agent_id: str,  # noqa: ARG001
+    thread_id: str,  # ruff: ignore[unused-function-argument]
+    agent_id: str,  # ruff: ignore[unused-function-argument]
 ) -> object:
     """获取文件注册表服务 (用户级, 复用实例)."""
     from src.storage.service.file_registry_service import (

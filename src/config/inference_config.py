@@ -112,6 +112,42 @@ class ImageDescriptionConfig(BaseModel):
     )
 
 
+class CodeDescriptionConfig(BaseModel):
+    """代码文件摘要生成配置(后台异步, desc=AI摘要+代码原文)"""
+
+    model: str = Field(
+        default="ark-agent-plan:doubao-seed-2.0-mini",
+        description="代码摘要模型(低成本文本模型)",
+    )
+    model_params: dict[str, Any] = Field(
+        default_factory=lambda: {"max_tokens": 2048},
+        description="模型bind参数(SDK原生参数名)",
+    )
+    max_input_chars: int = Field(
+        default=50000,
+        gt=0,
+        description="送入模型的代码原文截断窗口(字符)",
+    )
+
+
+class DocumentDescriptionConfig(BaseModel):
+    """文档概要生成配置(后台异步, desc=AI概要+文档原文)"""
+
+    model: str = Field(
+        default="ark-agent-plan:doubao-seed-2.0-mini",
+        description="文档概要模型(低成本文本模型)",
+    )
+    model_params: dict[str, Any] = Field(
+        default_factory=lambda: {"max_tokens": 2048},
+        description="模型bind参数(SDK原生参数名)",
+    )
+    max_input_chars: int = Field(
+        default=50000,
+        gt=0,
+        description="送入模型的文档原文截断窗口(字符)",
+    )
+
+
 class HealthDataExtractionConfig(BaseModel):
     """健康数据提取配置"""
 
@@ -147,6 +183,13 @@ class ToolFilterConfig(BaseModel):
         default="local:qwen3:4b-instruct",
         description="工具筛选模型 ID (本地小模型, 短 Prompt + JSON 输出)",
     )
+    response_format: str = Field(
+        default="numbers",
+        description=(
+            "响应形态: numbers=编号+JSON (默认, 通用模型) | "
+            "plain=名称直出 (SFT 微调模型形态, 免 JSON 减负)"
+        ),
+    )
     model_params: dict[str, Any] = Field(
         default_factory=lambda: {
             "format": "json",
@@ -172,7 +215,7 @@ class ExpertsConfig(BaseModel):
     """专家工具模型配置 - 统一管理各专家工具的LLM模型选择"""
 
     default_model: str = Field(
-        default="deepseek:deepseek-v4-flash",
+        default="deepseek:deepseek-flash",
         description="专家工具全局默认模型",
     )
     default_model_params: dict[str, Any] = Field(
@@ -313,23 +356,15 @@ class ImageGenerationConfig(BaseModel):
 
 
 class WechatPublishConfig(BaseModel):
-    """微信公众号发布配置 (摘要生成/封面提示词/校对排版)"""
+    """微信公众号发布配置 (摘要生成/封面提示词; 正文不经 LLM 重写)"""
 
     model: str = Field(
-        default="deepseek:deepseek-v4-flash",
+        default="deepseek:deepseek-flash",
         description="微信发布文字任务模型(摘要/封面提示词)",
     )
     model_params: dict[str, Any] = Field(
         default_factory=lambda: {"max_tokens": 4096},
         description="文字模型bind参数",
-    )
-    refine_model: str = Field(
-        default="deepseek:deepseek-v4-pro",
-        description="校对排版模型(错别字/断段/格式, 不改写表达)",
-    )
-    refine_model_params: dict[str, Any] = Field(
-        default_factory=lambda: {"max_tokens": 32768},
-        description="校对排版模型bind参数",
     )
 
 
@@ -341,7 +376,7 @@ class FallbackModelConfig(BaseModel):
     """
 
     text_model: str = Field(
-        default="deepseek:deepseek-v4-flash",
+        default="deepseek:deepseek-flash",
         description="文本任务 fallback 模型(纯文本, 主模型瞬时失败时切换)",
     )
     text_model_params: dict[str, Any] = Field(
@@ -426,6 +461,14 @@ class InferenceConfig(BaseConfig):
         default_factory=ImageDescriptionConfig,
         description="图片描述生成配置",
     )
+    code_description: CodeDescriptionConfig = Field(
+        default_factory=CodeDescriptionConfig,
+        description="代码文件摘要生成配置",
+    )
+    document_description: DocumentDescriptionConfig = Field(
+        default_factory=DocumentDescriptionConfig,
+        description="文档概要生成配置",
+    )
     health_data_extraction: HealthDataExtractionConfig = Field(
         default_factory=HealthDataExtractionConfig,
         description="健康数据提取配置",
@@ -495,6 +538,7 @@ def get_default_config() -> dict[str, Any]:
 # 导出接口
 __all__ = [
     "AgentRetryConfig",
+    "CodeDescriptionConfig",
     "ContentAnalyzerConfig",
     "EmbeddingsConfig",
     "ExpertsConfig",

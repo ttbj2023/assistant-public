@@ -113,7 +113,7 @@ class VideoGenerationInput(QueryAliasModel):
     )
     generate_audio: bool | None = Field(
         default=None,
-        description="是否生成有声视频, 默认true",
+        description="是否生成有声视频, 省略时默认开启",
     )
     seed: int | None = Field(
         default=None,
@@ -234,6 +234,7 @@ class VideoGenerationTool(BaseTool):
                 summary=video_brief,
                 user_id=self.user_id,
                 thread_id=self.thread_id,
+                source=detail,
             )
 
             result_data = {

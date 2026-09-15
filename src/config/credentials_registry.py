@@ -31,10 +31,15 @@ CREDENTIALS: dict[str, CredentialSpec] = {
         env_var="FILE_SIGNING_SECRET",
         description="文件下载 URL HMAC 签名密钥",
     ),
-    "openclaw_gateway_token": CredentialSpec(
-        name="openclaw_gateway_token",
-        env_var="OPENCLAW_GATEWAY_TOKEN",
-        description="OpenClaw Gateway 主动发消息鉴权 token",
+    "channel_gateway_token": CredentialSpec(
+        name="channel_gateway_token",
+        env_var="CHANNEL_GATEWAY_TOKEN",
+        description="渠道网关主动推送鉴权 token",
+    ),
+    "doc2md_token": CredentialSpec(
+        name="doc2md_token",
+        env_var="DOC2MD_TOKEN",
+        description="doc2md 文档解析服务鉴权 token",
     ),
     "baidu_api_key": CredentialSpec(
         name="baidu_api_key",

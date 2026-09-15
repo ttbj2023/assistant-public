@@ -87,6 +87,108 @@ class TestEnrichSearchToolsDescription:
         coordinator._enrich_search_tools_description([search], [])
         search.set_catalog.assert_not_called()
 
+    def test_companion_tools_excluded_from_catalog(self, coordinator):
+        """companion 工具不进 search catalog(不可独立发现), 也不出现在描述清单."""
+        search = _make_tool("search_available_tools")
+        host = _make_tool(
+            "tea_knowledge",
+            summary="茶知识库",
+            description="茶领域检索",
+            search_keywords=["茶"],
+        )
+        companion = _make_tool(
+            "kb_read_image",
+            summary="知识库读图",
+            description="读语料图片",
+            search_keywords=["读图"],
+        )
+        coordinator._enrich_search_tools_description(
+            [search],
+            [host, companion],
+            companion_names={"kb_read_image"},
+        )
+
+        catalog = search.set_catalog.call_args[0][0]
+        assert "tea_knowledge" in catalog
+        assert "kb_read_image" not in catalog
+        # 描述文本同样不暴露 companion
+        assert "kb_read_image" not in search.description
+
+
+# ========== _expand_companions ==========
+
+
+def _fake_tools_config(companions_by_tool: dict[str, list[str]]) -> MagicMock:
+    """构造 tools config Mock: get_*_tool_config 返回带 companions 的条目."""
+    cfg = MagicMock()
+    lookup = {
+        name: SimpleNamespace(name=name, companions=comps)
+        for name, comps in companions_by_tool.items()
+    }
+    cfg.get_internal_tool_config.side_effect = lambda n: lookup.get(n)
+    cfg.get_external_tool_config.side_effect = lambda n: lookup.get(n)
+    return cfg
+
+
+class TestExpandCompanions:
+    def test_appends_companions_of_dormant_hosts(self, coordinator):
+        """宿主在休眠列表时, 其 companion 追加进列表并标记为伴随身份."""
+        fake = _fake_tools_config({"tea_knowledge": ["kb_read_image"]})
+        with patch(
+            "src.agent.processors.inference_coordinator.get_tools_config",
+            return_value=fake,
+        ):
+            expanded, companion_names = coordinator._expand_companions([
+                "tea_knowledge",
+                "web_research",
+            ])
+        assert expanded == ["tea_knowledge", "web_research", "kb_read_image"]
+        assert companion_names == {"kb_read_image"}
+
+    def test_explicit_listing_takes_precedence(self, coordinator):
+        """显式列出的工具保持常规休眠身份(catalog 可见), 不作为 companion 追加."""
+        fake = _fake_tools_config({"tea_knowledge": ["kb_read_image"]})
+        with patch(
+            "src.agent.processors.inference_coordinator.get_tools_config",
+            return_value=fake,
+        ):
+            expanded, companion_names = coordinator._expand_companions([
+                "kb_read_image",
+                "tea_knowledge",
+            ])
+        assert expanded == ["kb_read_image", "tea_knowledge"]
+        assert companion_names == set()
+
+    def test_host_not_in_dormant_list_ignored(self, coordinator):
+        """宿主不在休眠列表(如常驻或未配置)时 companion 不追加."""
+        fake = _fake_tools_config({"todo": ["kb_read_image"]})
+        with patch(
+            "src.agent.processors.inference_coordinator.get_tools_config",
+            return_value=fake,
+        ):
+            expanded, companion_names = coordinator._expand_companions([
+                "tea_knowledge"
+            ])
+        assert expanded == ["tea_knowledge"]
+        assert companion_names == set()
+
+    def test_duplicate_companions_deduplicated(self, coordinator):
+        """多宿主共享同一 companion 时只追加一次."""
+        fake = _fake_tools_config({
+            "tea_knowledge": ["kb_read_image"],
+            "kb_other": ["kb_read_image"],
+        })
+        with patch(
+            "src.agent.processors.inference_coordinator.get_tools_config",
+            return_value=fake,
+        ):
+            expanded, companion_names = coordinator._expand_companions([
+                "tea_knowledge",
+                "kb_other",
+            ])
+        assert expanded.count("kb_read_image") == 1
+        assert companion_names == {"kb_read_image"}
+
     def test_should_set_catalog_and_enrich_description(self, coordinator):
         """应注入实例目录并更新 search 工具描述."""
         search = _make_tool("search_available_tools")
@@ -127,7 +229,9 @@ class TestEnrichSearchToolsDescription:
         """组成员应跳过独立catalog条目, 改由组条目代表检索."""
         search = _make_tool("search_available_tools")
         dormant = [
-            _make_tool("schedule_message_wechat", summary="发送", description="创建定时消息"),
+            _make_tool(
+                "schedule_message_wechat", summary="发送", description="创建定时消息"
+            ),
             _make_tool("list_scheduled", summary="查看", description="查看消息"),
             _make_tool("weather", summary="天气", description="天气查询"),
         ]
@@ -409,6 +513,7 @@ class TestFilterByCapability:
     @patch("src.agent.processors.inference_coordinator.get_tools_config")
     def test_should_filter_tool_with_matching_capability(self, mock_cfg):
         """skip_when_capabilities 与模型能力有交集时过滤."""
+
         def _lookup(name):
             if name == "analyze_image":
                 return SimpleNamespace(skip_when_capabilities=["image_input"])
@@ -521,6 +626,48 @@ class TestCollectPromptHints:
             tool_groups={},
         )
         assert result == ""
+
+    @patch("src.agent.processors.inference_coordinator.get_tools_config")
+    def test_should_skip_hint_when_group_fully_unavailable(self, mock_cfg):
+        """组全员不可用(渠道未配置)时跳过组级 hint, 不指挥模型用不存在的工具."""
+        group_cfg = SimpleNamespace(
+            prompt_hint="不可用组策略",
+            members=["schedule_message_wechat", "schedule_message_email"],
+        )
+        tool_groups = {"scheduled_messenger_group": group_cfg}
+        mock_cfg.return_value.get_internal_tool_config = MagicMock(return_value=None)
+        mock_cfg.return_value.get_external_tool_config = MagicMock(return_value=None)
+
+        result = InferenceCoordinator._collect_prompt_hints(
+            original_core=[],
+            original_dormant=["scheduled_messenger_group"],
+            filtered_core=[],
+            filtered_dormant=[],
+            tool_groups=tool_groups,
+            alive_tool_names=set(),  # 无任何成员存活
+        )
+        assert result == ""
+
+    @patch("src.agent.processors.inference_coordinator.get_tools_config")
+    def test_should_keep_hint_when_any_member_alive(self, mock_cfg):
+        """组内至少一个成员存活时保留组级 hint."""
+        group_cfg = SimpleNamespace(
+            prompt_hint="存活组策略",
+            members=["schedule_message_wechat", "schedule_message_email"],
+        )
+        tool_groups = {"scheduled_messenger_group": group_cfg}
+        mock_cfg.return_value.get_internal_tool_config = MagicMock(return_value=None)
+        mock_cfg.return_value.get_external_tool_config = MagicMock(return_value=None)
+
+        result = InferenceCoordinator._collect_prompt_hints(
+            original_core=[],
+            original_dormant=["scheduled_messenger_group"],
+            filtered_core=[],
+            filtered_dormant=[],
+            tool_groups=tool_groups,
+            alive_tool_names={"schedule_message_wechat"},  # 至少一个存活
+        )
+        assert "存活组策略" in result
 
     @patch("src.agent.processors.inference_coordinator.get_tools_config")
     def test_should_not_duplicate_group_and_member_hints(self, mock_cfg):

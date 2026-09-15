@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,14 +38,20 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar
 
-from rich.console import Console
-from rich.panel import Panel
-
 # 将项目根加入 sys.path, 支持脚本直接运行时绝对导入 scripts 包
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+# venv 守卫: 解释器错误时自动切换 (须在第三方依赖导入前执行)
+from scripts.venv_guard import ensure_venv
+
+ensure_venv()
+
+from rich.console import Console
+from rich.panel import Panel
+
+from scripts.dependency_direction_check import find_direction_violations
 from scripts.inheritance_depth_check import (
     find_depth_violations,
     scan_project_classes,
@@ -128,14 +135,12 @@ class StaticAnalysisRunner:
         verbose: bool = False,
         enable_cache: bool = True,
         target_path: str = "src/",
-        codex_mode: bool = False,
         args: argparse.Namespace | None = None,
     ):
         self.core_mode = core_mode
         self.verbose = verbose
         self.enable_cache = enable_cache
         self.target_path = target_path
-        self.codex_mode = codex_mode
         self.args = args if args is not None else argparse.Namespace()
         self.console = Console()
         self.results: list[TaskResult] = []
@@ -156,7 +161,7 @@ class StaticAnalysisRunner:
         self.logger = logging.getLogger(__name__)
 
         if self.verbose:
-            mode_label = "Codex" if codex_mode else ("核心" if core_mode else "完整")
+            mode_label = "核心" if core_mode else "完整"
             self.console.print(
                 f"[blue]🚀 静态分析运行器启动 (模式: {mode_label}, 缓存: {'启用' if enable_cache else '禁用'})[/blue]"
             )
@@ -167,10 +172,6 @@ class StaticAnalysisRunner:
 
         # 如果当前目录是主项目(包含pyproject.toml且不在workspace中)
         if self._is_main_project_root(current):
-            return current
-
-        # Codex sandbox可能将仓库挂载到/home/workspace,此时仍以脚本目录为准
-        if self.codex_mode and self._has_project_markers(current):
             return current
 
         # 如果当前是worktree,寻找主项目目录
@@ -279,10 +280,32 @@ class StaticAnalysisRunner:
             self.console.print(f"[dim]💾 缓存结果: {tool_name}[/dim]")
 
     def _tool_command_prefix(self, module_name: str, executable: str) -> list[str]:
-        """获取工具命令前缀."""
-        if self.codex_mode:
+        """获取工具命令前缀.
+
+        PATH 未含 .venv/bin 时回退 sys.executable -m, 避免工具缺失被误判为"零问题".
+
+        """
+        if shutil.which(executable) is None:
             return [sys.executable, "-m", module_name]
         return [executable]
+
+    def _command_failure_result(
+        self, result: dict[str, Any], task_name: str, start_time: float
+    ) -> TaskResult | None:
+        """命令未成功执行(工具缺失/超时)时返回失败 TaskResult, 正常返回 None."""
+        if result.get("returncode", 0) >= 0:
+            return None
+        message = (
+            result.get("stderr") or result.get("stdout") or "命令执行异常"
+        ).strip()
+        return TaskResult(
+            task_name=task_name,
+            task_type="static_analysis",
+            success=False,
+            duration=time.time() - start_time,
+            output=message[:200],
+            error_message=message,
+        )
 
     async def _run_async_command(
         self, cmd: list[str], description: str, env: dict[str, str] | None = None
@@ -301,12 +324,9 @@ class StaticAnalysisRunner:
                     env=env or os.environ,
                 )
 
-            if self.codex_mode:
-                result = run_command()
-            else:
-                # 使用线程池执行同步命令
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, run_command)
+            # 使用线程池执行同步命令 (任务级并行时避免阻塞 event loop)
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, run_command)
 
             return {
                 "returncode": result.returncode,
@@ -443,10 +463,9 @@ class StaticAnalysisRunner:
                 "--pretty",
             ]
 
-            # mypy 2.0 并行类型检查: 实测结果与串行一致, 非codex模式启用加速
-            # (32核8 worker约4.6x; codex沙盒资源隔离, 串行保稳定)
-            if not self.codex_mode:
-                cmd.append(f"--num-workers={min(os.cpu_count() or 4, 8)}")
+            # mypy 2.0 并行类型检查: 实测结果与串行一致, 沙盒内实测并行全绿
+            # (32核8 worker约4.6x)
+            cmd.append(f"--num-workers={min(os.cpu_count() or 4, 8)}")
 
             # 根据模式选择配置文件
             if not self.core_mode:
@@ -491,6 +510,10 @@ class StaticAnalysisRunner:
                 self.console.print("[dim]🧹 清理MyPy缓存以确保使用最新配置[/dim]")
 
             result = await self._run_async_command(cmd, task_name)
+
+            failure = self._command_failure_result(result, task_name, start_time)
+            if failure:
+                return failure
 
             # 解析MyPy输出
             issues = []
@@ -638,6 +661,10 @@ class StaticAnalysisRunner:
                 return cached_result
 
             result = await self._run_async_command(cmd, task_name)
+
+            failure = self._command_failure_result(result, task_name, start_time)
+            if failure:
+                return failure
 
             # 读取报告
             issues = []
@@ -1092,6 +1119,78 @@ class StaticAnalysisRunner:
                 error_message=str(e),
             )
 
+    async def run_dependency_direction_check(self) -> TaskResult:
+        """运行依赖方向检查.
+
+        架构约束: scripts/ 可 import src/, 禁止 src/ import scripts/.
+        AST 级扫描 src/ 下所有指向 scripts 包的 import, 命中即 STRICT issue.
+        """
+        task_name = "依赖方向检查"
+        start_time = time.time()
+
+        try:
+            src_dir = self.project_root / self.target_path
+
+            def _rel_path(file_path: Path) -> str:
+                try:
+                    return str(file_path.relative_to(self.project_root))
+                except ValueError:
+                    return str(file_path)
+
+            violations = find_direction_violations(src_dir)
+
+            issues = [
+                {
+                    "module": v.module,
+                    "file": _rel_path(v.file_path),
+                    "line": v.line,
+                }
+                for v in violations
+            ]
+
+            strict_count = len(violations)
+            success = strict_count == 0
+
+            report_data = {
+                "tool": "dependency_direction_check",
+                "timestamp": time.time(),
+                "success": success,
+                "files_scanned": len(list(src_dir.rglob("*.py"))),
+                "violation_count": strict_count,
+                "issues": issues,
+            }
+            report_path = await self._save_static_analysis_report(
+                "dependency_direction", report_data
+            )
+
+            execution_details = {
+                "files_scanned": report_data["files_scanned"],
+                "strict_issues": strict_count,
+            }
+
+            return TaskResult(
+                task_name=task_name,
+                task_type="static_analysis",
+                success=success,
+                duration=time.time() - start_time,
+                output=f"依赖方向检查完成, 发现 {strict_count} 个 src->scripts 反向依赖",
+                report_path=report_path,
+                structured_data={
+                    **report_data,
+                    "execution_details": execution_details,
+                },
+                execution_details=execution_details,
+            )
+
+        except Exception as e:
+            return TaskResult(
+                task_name=task_name,
+                task_type="static_analysis",
+                success=False,
+                duration=time.time() - start_time,
+                error_message=str(e),
+            )
+
     def _validate_mypy_config(self, config_path: Path) -> bool:
         """验证MyPy配置文件是否有效"""
         try:
@@ -1148,7 +1247,7 @@ class StaticAnalysisRunner:
 
         try:
             # 构建命令 - 使用pyproject.toml配置
-            cmd = ["vulture"]
+            cmd = [*self._tool_command_prefix("vulture", "vulture")]
 
             # 添加配置文件参数
             config_file = self.project_root / "pyproject.toml"
@@ -1165,6 +1264,10 @@ class StaticAnalysisRunner:
 
             # 执行命令
             result = await self._run_async_command(cmd, task_name)
+
+            failure = self._command_failure_result(result, task_name, start_time)
+            if failure:
+                return failure
 
             # 解析输出
             output_lines = result["stdout"].split("\n")
@@ -1490,56 +1593,8 @@ class StaticAnalysisRunner:
 
     # ==================== 并行执行协调 ====================
 
-    async def run_codex_static_analysis(self) -> dict[str, Any]:
-        """顺序执行Codex sandbox安全静态分析."""
-        self.console.print("[bold blue]🚀 开始Codex静态分析[/bold blue]")
-
-        task_specs = [
-            ("ruff", self.run_ruff_analysis),
-            ("mypy", self.run_mypy_analysis),
-            ("bandit", self.run_bandit_analysis),
-        ]
-
-        self.console.print(f"[cyan]📋 顺序启动 {len(task_specs)} 个Codex任务:[/cyan]")
-        for task_name, _ in task_specs:
-            self.console.print(f"  🔍 {task_name.title()}")
-
-        start_time = time.time()
-        self.results = []
-        for task_name, task_func in task_specs:
-            try:
-                task_result = await task_func()
-            except Exception as e:
-                self.console.print(f"[red]❌ {task_name.title()} 执行异常: {e}[/red]")
-                self.results.append(
-                    TaskResult(
-                        task_name=task_name.title(),
-                        task_type="static_analysis",
-                        success=False,
-                        duration=0,
-                        output="执行异常",
-                        error_message=str(e),
-                    )
-                )
-                continue
-
-            self.results.append(task_result)
-            status = "✅" if task_result.success else "❌"
-            cache_indicator = " (缓存)" if task_result.cached else ""
-            self.console.print(
-                f"{status} {task_result.task_name}: {task_result.output}{cache_indicator}"
-            )
-
-        total_time = time.time() - start_time
-        summary = self._generate_execution_summary(total_time)
-        await self._save_summary_report(summary)
-        return summary
-
     async def run_parallel_static_analysis(self) -> dict[str, Any]:
         """并行执行所有静态分析工具"""
-        if self.codex_mode:
-            return await self.run_codex_static_analysis()
-
         self.console.print(
             f"[bold blue]🚀 开始并行静态分析 ({'核心模式' if self.core_mode else '完整模式'})[/bold blue]"
         )
@@ -1570,6 +1625,12 @@ class StaticAnalysisRunner:
         # 继承深度检查: 业务继承深度 > 2 记为 STRICT, 进核心模式门禁
         static_tasks.append(
             asyncio.create_task(self.run_inheritance_depth_check(), name="inheritance")
+        )
+        # 依赖方向检查: src -> scripts 反向依赖记为 STRICT, 进核心模式门禁
+        static_tasks.append(
+            asyncio.create_task(
+                self.run_dependency_direction_check(), name="dependency_direction"
+            )
         )
         tasks.extend(static_tasks)
 
@@ -1752,17 +1813,13 @@ class StaticAnalysisRunner:
                     warning_issues += details["warning_issues"]
 
         # 质量门禁判断
-        if self.codex_mode:
-            passed = static_total > 0 and static_success == static_total
-        elif self.core_mode:
+        if self.core_mode:
             passed = critical_issues == 0 and strict_issues < 5 and warning_issues < 30
         else:
             # full模式非CI流程, 无门禁, 仅出报告供人工审阅(改进信号)
             passed = True
 
-        execution_mode = (
-            "codex" if self.codex_mode else ("core" if self.core_mode else "full")
-        )
+        execution_mode = "core" if self.core_mode else "full"
 
         summary = {
             "execution_mode": execution_mode,
@@ -1892,11 +1949,6 @@ def main() -> None:
         help="启用核心模式(默认)",
     )
     parser.add_argument("--full-mode", action="store_true", help="启用完整模式")
-    parser.add_argument(
-        "--codex",
-        action="store_true",
-        help="启用Codex sandbox兼容模式(顺序核心检查,跳过网络/重型任务)",
-    )
     parser.add_argument("--verbose", action="store_true", help="详细输出")
     parser.add_argument("--no-cache", action="store_true", help="禁用缓存")
     parser.add_argument(
@@ -1930,7 +1982,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # 设置模式
-    core_mode = True if args.codex else (False if args.full_mode else args.core_mode)
+    core_mode = False if args.full_mode else args.core_mode
 
     # 创建运行器
     target_path = args.file if hasattr(args, "file") else "src/"
@@ -1939,7 +1991,6 @@ def main() -> None:
         verbose=args.verbose,
         enable_cache=not args.no_cache,
         target_path=target_path,
-        codex_mode=args.codex,
         args=args,
     )
 

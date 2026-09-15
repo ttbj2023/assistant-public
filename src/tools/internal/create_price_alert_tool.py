@@ -110,11 +110,15 @@ class CreatePriceAlertTool(BaseTool):
 - email_address: 收件邮箱 (delivery_method=email 时必填)
 
 说明:
-- 仅在交易时段(工作日 9:30-11:30 / 13:00-15:00)轮询
+- 仅在交易时段(工作日 9:30-11:30 / 13:00-15:00)检测价格
 - 一次性: 价格触发阈值即提醒一次, 规则自动结束, 不重复提醒
-- 创建时若价格已穿越阈值, 下次轮询立即触发
+- 创建时若价格已穿越阈值, 将立即触发提醒
 - 需上下双线监控(如某区间)请分别创建 above 和 below 两条规则
-- 微信渠道需已配置接收凭证; 邮件需提供 email_address"""
+- 微信渠道需已配置接收凭证; 邮件需提供 email_address
+
+示例:
+- 用户: "贵州茅台涨到1700提醒我" → {"stock_code": "600519", "direction": "above", "threshold_price": 1700, "stock_name": "贵州茅台"}
+- 用户: "平安银行跌破10块告诉我" → {"stock_code": "000001", "direction": "below", "threshold_price": 10}"""
     args_schema: type[CreatePriceAlertRequest] = CreatePriceAlertRequest
 
     async def is_available(self) -> bool:
@@ -163,12 +167,11 @@ class CreatePriceAlertTool(BaseTool):
             if delivery is None:
                 return (
                     "错误: 未检测到可用的微信接收渠道, 无法创建价格监控. "
-                    "请先配置微信接收(target 与 openclaw_account), "
+                    "请先配置微信接收(target 与 account_id), "
                     "或改用 delivery_method=email 并提供 email_address."
                 )
             fields["account_id"] = delivery.account_id
             fields["target"] = delivery.target
-            fields["openclaw_channel"] = delivery.openclaw_channel
             channel_label = "微信"
 
         try:

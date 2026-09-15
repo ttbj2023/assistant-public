@@ -65,16 +65,11 @@ def format_user_message_with_attachments(
     return user_text
 
 
-def build_media_lines(exported_files: list[dict]) -> str:
-    """为 OpenClaw 构建 MEDIA: 指令行, 供微信等渠道识别文件下载链接."""
-    lines = []
-    for file_info in exported_files:
-        lines.append(f"MEDIA:{file_info['url']}")
-    return "\n".join(lines)
-
-
 def build_file_links(exported_files: list[dict]) -> str:
-    """为 Web 前端构建文件链接行: 图片用 ![]() 内联, 其他用 []() 下载链接."""
+    """为消费端构建文件链接行: 图片用 ![]() 内联, 其他用 []() 下载链接.
+
+    单一 markdown 格式 (Web 前端与渠道网关共用), 渠道网关自行解析链接段.
+    """
     lines = []
     for file_info in exported_files:
         url = file_info["url"]
@@ -92,6 +87,5 @@ def build_file_links(exported_files: list[dict]) -> str:
 __all__ = [
     "IMAGE_EXTENSIONS",
     "build_file_links",
-    "build_media_lines",
     "format_user_message_with_attachments",
 ]

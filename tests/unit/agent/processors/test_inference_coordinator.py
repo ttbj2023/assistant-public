@@ -412,6 +412,222 @@ class TestBuildHumanMessage:
         assert "测试图片描述" in result.content
 
 
+class TestBuildHumanMessageDocuments:
+    """测试_build_human_message 的 document 附件分支 (纯文本文档)."""
+
+    @pytest.fixture
+    def coordinator(self):
+        return InferenceCoordinator(config=None)
+
+    @pytest.fixture
+    def multimodal_model(self):
+        model = Mock()
+        model.supports_multimodal.return_value = True
+        return model
+
+    @pytest.fixture
+    def text_model(self):
+        model = Mock()
+        model.supports_multimodal.return_value = False
+        return model
+
+    @staticmethod
+    def _document_dto(
+        file_id: str = "doc00001", filename: str = "报告.md", brief: str = "报告: 标题"
+    ):
+        from src.files.models import AttachmentDTO
+
+        return AttachmentDTO(
+            file_id=file_id,
+            file_type="document",
+            internal_path="files/documents/x.md",
+            filename=filename,
+            brief=brief,
+            file_format="md",
+            file_size=100,
+        )
+
+    def test_small_document_inlined_in_multimodal_path(
+        self, coordinator, multimodal_model
+    ):
+        """小文档 (≤4000字符): 全文内联为 document 块."""
+        content = "# 标题\n正文" * 10
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value=content),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="总结这个文档",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        assert isinstance(result.content, list)
+        doc_block = result.content[1]
+        assert doc_block["type"] == "text"
+        assert "[file: doc00001]" in doc_block["text"]
+        assert "<document>" in doc_block["text"]
+        assert "# 标题" in doc_block["text"]
+
+    def test_large_document_marker_only_with_read_file_hint(
+        self, coordinator, multimodal_model
+    ):
+        """大文档 (>4000字符): 仅标记 + read_file 提示, 不内联全文."""
+        big_content = "字" * 4001
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value=big_content),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="读一下",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        doc_block = result.content[1]["text"]
+        assert "[file: doc00001]" in doc_block
+        assert "<document>" not in doc_block
+        assert "read_file" in doc_block
+
+    def test_document_only_non_multimodal_appended_as_text(
+        self, coordinator, text_model
+    ):
+        """纯文本模型: 文档块以文本拼接 (无 image 依赖)."""
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=text_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value="文档内容ABC"),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="总结这个文档",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        assert isinstance(result.content, str)
+        assert "总结这个文档" in result.content
+        assert "[file: doc00001]" in result.content
+        assert "文档内容ABC" in result.content
+
+    def test_mixed_images_and_documents_images_first(
+        self, coordinator, multimodal_model
+    ):
+        """图片与文档混合: 图片块在前, 文档块在后."""
+        from src.files.models import AttachmentDTO
+
+        image_dto = AttachmentDTO(
+            file_id="img00001",
+            file_type="image",
+            internal_path="files/images/a.jpg",
+            filename="a.jpg",
+            brief="图片",
+            file_format="jpg",
+            file_size=10,
+        )
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value="DOC"),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="看图和文档",
+                llm_model="local:qwen3.5:9b",
+                image_datas=[{"data": b"img", "mime_type": "image/jpeg"}],
+                attachment_infos=[image_dto, self._document_dto()],
+            )
+
+        # [text, image_url, image-id, document-block]
+        assert len(result.content) == 4
+        assert result.content[1]["type"] == "image_url"
+        assert result.content[2]["text"] == "[file: img00001]"
+        assert "<document>" in result.content[3]["text"]
+
+    def test_desc_missing_falls_back_to_marker(self, coordinator, multimodal_model):
+        """desc 读取失败/缺失: 仅标记 + brief."""
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value=None),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="总结",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        doc_block = result.content[1]["text"]
+        assert "[file: doc00001]" in doc_block
+        assert "<document>" not in doc_block
+
+    def test_no_context_user_marker_only(self, coordinator, multimodal_model):
+        """无用户上下文: 无法读 desc, 降级为标记."""
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.core.context.get_user_context_or_none", return_value=None),
+        ):
+            result = coordinator._build_human_message(
+                user_content="总结",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        assert "[file: doc00001]" in result.content[1]["text"]
+        assert "<document>" not in result.content[1]["text"]
+
+    def test_inline_threshold_boundary_4000_inlined(
+        self, coordinator, multimodal_model
+    ):
+        """边界: 恰好 4000 字符仍内联."""
+        content = "字" * 4000
+        with (
+            patch(
+                "src.inference.llm.definitions.model_registry.get_model",
+                return_value=multimodal_model,
+            ),
+            patch("src.files.desc_writer.read_desc", return_value=content),
+            patch("src.core.context.get_user_context_or_none") as mock_ctx,
+        ):
+            mock_ctx.return_value = Mock(user_id="u1")
+            result = coordinator._build_human_message(
+                user_content="读",
+                llm_model="local:qwen3.5:9b",
+                image_datas=None,
+                attachment_infos=[self._document_dto()],
+            )
+
+        assert "<document>" in result.content[1]["text"]
+
+
 class TestBuildAgentAndConfig:
     """测试 _build_agent_and_config 装配 system prompt."""
 
@@ -520,7 +736,7 @@ class TestProcessWithAgentDebugBranch:
                 return_value=True,
             ),
             patch(
-                "scripts.debug.tool_call_tracker.create_tool_call_tracker",
+                "src.debug.tool_call_tracker.create_tool_call_tracker",
                 return_value=fake_tracker,
             ),
             patch.object(

@@ -112,3 +112,21 @@ class TestArun:
         ):
             await tool._arun("龙井")
         store.close.assert_called_once()
+
+
+class TestBuildReranker:
+    def test_base_url_resolved_via_env(self, monkeypatch):
+        """RERANKER_BASE_URL 环境变量覆盖 config.yaml 的 localhost."""
+        from src.inference.rerank.client import RerankClient
+
+        monkeypatch.setenv("RERANKER_BASE_URL", "http://host.docker.internal:8768")
+        reranker, _ = TeaKnowledgeTool._build_reranker()
+        assert isinstance(reranker, RerankClient)
+        assert reranker._base_url == "http://host.docker.internal:8768"  # noqa: SLF001
+
+    def test_base_url_falls_back_to_config(self, monkeypatch):
+        """环境变量未设置时保持 config.yaml 的 base_url."""
+        monkeypatch.delenv("RERANKER_BASE_URL", raising=False)
+        reranker, _ = TeaKnowledgeTool._build_reranker()
+        assert reranker is not None
+        assert reranker._base_url  # noqa: SLF001

@@ -12,10 +12,21 @@ from dataclasses import dataclass
 import httpx
 
 from src.core.http_pool import get_http_pool
+from src.inference.llm.definitions.provider_registry import get_provider_config
 
 logger = logging.getLogger(__name__)
 
 _PROVIDER_NAME = "local-reranker"
+
+
+def resolve_rerank_base_url(fallback: str) -> str:
+    """解析 reranker 生效地址, RERANKER_BASE_URL 环境变量优先于 fallback.
+
+    容器部署时 fallback (config.yaml 的 localhost) 指向容器自身,
+    经 provider registry 的 base_url_env 覆盖为 host.docker.internal.
+    """
+    effective = get_provider_config(_PROVIDER_NAME).get_effective_base_url()
+    return effective or fallback
 
 
 @dataclass(frozen=True, slots=True)

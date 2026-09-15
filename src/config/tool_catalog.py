@@ -20,7 +20,8 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "description": (
                 "消息发送与提醒, Agent唯一能脱离对话循环向用户发送消息的渠道.\n"
                 "通过微信或邮件发送通知/提醒/报告, 支持定时发送.\n"
-                "唤醒后提供创建/查看/取消定时消息三个子工具."
+                "唤醒后提供四个子工具: schedule_message_wechat/schedule_message_email/"
+                "list_scheduled_messages/cancel_scheduled_message."
             ),
             "keywords": [
                 "定时",
@@ -30,6 +31,8 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "微信",
                 "邮件",
                 "提醒我",
+                "叫醒",
+                "闹钟",
             ],
             "members": [
                 "schedule_message_wechat",
@@ -37,6 +40,13 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "list_scheduled_messages",
                 "cancel_scheduled_message",
             ],
+            "prompt_hint": (
+                "凡到点主动送达或脱离会话发消息, 一律用本组; "
+                "挂在事件上的提醒应先建日程再设消息并传 related_event_id 关联; "
+                "任务性提醒(待办/处理事项)走待办工具+本组, 不建日程; "
+                "单次发送不支持周期重复, 周期性提醒建重复日程由手机日历承担; "
+                "创建后以返回的 message_id 与发送时间如实汇报"
+            ),
         },
         "todo_manager_group": {
             "name": "todo_manager_group",
@@ -47,7 +57,7 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "唤醒后提供四个子工具: "
                 "create_todo/list_todos/update_todo/delete_todo."
             ),
-            "keywords": ["待办", "任务", "todo", "计划", "提醒事项"],
+            "keywords": ["待办", "任务", "todo", "计划", "备忘", "记一下"],
             "members": ["create_todo", "list_todos", "update_todo", "delete_todo"],
             "prompt_hint": (
                 "写操作(create_todo/update_todo/delete_todo)完成后, 必须以数据库最新真实状态"
@@ -56,9 +66,46 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "严禁在未实际执行写操作时声称已完成创建/更新/删除"
             ),
         },
+        "calendar_manager_group": {
+            "name": "calendar_manager_group",
+            "summary": "日程管理, 创建/查询/修改日程(支持重复规则), 可订阅到手机日历",
+            "description": (
+                "日程管理工具.\n"
+                "支持创建/查询/更新/删除日程, 支持全天事件与重复日程(每天/每周/每月/每年), "
+                "日程可经 ICS 订阅同步到手机日历.\n"
+                "唤醒后提供四个子工具: "
+                "create_calendar_event/list_calendar_events/"
+                "update_calendar_event/delete_calendar_event."
+            ),
+            "keywords": [
+                "日程",
+                "日历",
+                "安排",
+                "行程",
+                "会议",
+                "约",
+                "改期",
+                "开会",
+                "日历订阅",
+            ],
+            "members": [
+                "create_calendar_event",
+                "list_calendar_events",
+                "update_calendar_event",
+                "delete_calendar_event",
+            ],
+            "prompt_hint": (
+                "时间输入使用用户时区的本地时间(ISO格式); 全天事件只传日期(如 2026-10-01)并置 "
+                "all_day=true. 写操作完成后, 必须以工具返回的 event 数据(数据库真实状态)向用户"
+                "汇报; 严禁凭记忆描述日程; 修改/删除前先 list_calendar_events 定位 event_id. "
+                "日程仅作记录与查看, 系统不因日程到点主动通知用户; 用户陈述带明确时间点的事件"
+                "(会议/约见/生日/航班)先登记日程, 需到点提醒再配合定时消息工具; "
+                "改期/删除日程会自动同步关联的定时消息, 以工具返回的真实级联结果汇报"
+            ),
+        },
         "stock_watch_group": {
             "name": "stock_watch_group",
-            "summary": "A股个股实时行情查询与价格监控告警, 突破阈值时消息提醒",
+            "summary": "A股个股实时股价查询与价格监控告警, 突破阈值时消息提醒",
             "description": (
                 "A股个股实时行情与价格监控工具.\n"
                 "支持查询实时行情(现价/涨跌幅/五档), 设定价格阈值在突破或跌破时消息提醒.\n"
@@ -156,6 +203,27 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
                 "list_shopping_items",
             ],
         },
+        "msgraph_sync_group": {
+            "name": "msgraph_sync_group",
+            "summary": "Outlook(Microsoft) 同步: 授权连接与同步状态查询",
+            "description": (
+                "Microsoft Graph 同步工具组.\n"
+                "把 TODO 与日程同步到用户本人的 Outlook 个人账户, "
+                "手机原生 To Do / Outlook 应用可见可改 (日历为只读镜像).\n"
+                "唤醒后提供两个子工具: msgraph_connect(发起授权) / "
+                "msgraph_sync_status(查询状态)."
+            ),
+            "keywords": [
+                "Outlook",
+                "微软",
+                "Microsoft",
+                "To Do",
+                "同步",
+                "授权",
+                "绑定账户",
+            ],
+            "members": ["msgraph_connect", "msgraph_sync_status"],
+        },
     },
     "internal_tools": {
         "create_todo": {
@@ -163,7 +231,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.create_todo_tool.CreateTodoTool",
             "enabled": True,
             "timeout": 30.0,
-            "description": "创建TODO任务",
             "config": {},
         },
         "list_todos": {
@@ -171,7 +238,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_todos_tool.ListTodosTool",
             "enabled": True,
             "timeout": 30.0,
-            "description": "查看TODO任务列表",
             "config": {},
         },
         "update_todo": {
@@ -179,7 +245,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.update_todo_tool.UpdateTodoTool",
             "enabled": True,
             "timeout": 30.0,
-            "description": "更新TODO任务",
             "config": {},
         },
         "delete_todo": {
@@ -187,7 +252,48 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.delete_todo_tool.DeleteTodoTool",
             "enabled": True,
             "timeout": 30.0,
-            "description": "删除TODO任务",
+            "config": {},
+        },
+        "create_calendar_event": {
+            "name": "create_calendar_event",
+            "class_path": "src.tools.internal.create_calendar_event_tool.CreateCalendarEventTool",
+            "enabled": True,
+            "timeout": 30.0,
+            "config": {},
+        },
+        "list_calendar_events": {
+            "name": "list_calendar_events",
+            "class_path": "src.tools.internal.list_calendar_events_tool.ListCalendarEventsTool",
+            "enabled": True,
+            "timeout": 30.0,
+            "config": {},
+        },
+        "update_calendar_event": {
+            "name": "update_calendar_event",
+            "class_path": "src.tools.internal.update_calendar_event_tool.UpdateCalendarEventTool",
+            "enabled": True,
+            "timeout": 30.0,
+            "config": {},
+        },
+        "delete_calendar_event": {
+            "name": "delete_calendar_event",
+            "class_path": "src.tools.internal.delete_calendar_event_tool.DeleteCalendarEventTool",
+            "enabled": True,
+            "timeout": 30.0,
+            "config": {},
+        },
+        "msgraph_connect": {
+            "name": "msgraph_connect",
+            "class_path": "src.tools.internal.msgraph_connect_tool.MsGraphConnectTool",
+            "enabled": True,
+            "timeout": 30.0,
+            "config": {},
+        },
+        "msgraph_sync_status": {
+            "name": "msgraph_sync_status",
+            "class_path": "src.tools.internal.msgraph_sync_status_tool.MsGraphSyncStatusTool",
+            "enabled": True,
+            "timeout": 30.0,
             "config": {},
         },
         "search_memories": {
@@ -195,7 +301,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.async_memory_retrieval_tool.AsyncMemoryRetrievalTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "异步记忆检索和对话历史搜索工具",
             "config": {"max_results": 20, "enable_vector_search": True},
         },
         "get_round_detail": {
@@ -203,7 +308,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.async_round_detail_tool.AsyncRoundDetailTool",
             "enabled": True,
             "timeout": 30.0,
-            "description": "按轮次号获取对话完整原文(索引区下钻 fetch 工具)",
             "config": {},
         },
         "view_health_snapshot": {
@@ -211,7 +315,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.view_health_snapshot_tool.ViewHealthSnapshotTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "健康快照: 最新日数据 + 7日均值 + 数据新鲜度 + 近期运动 + 最新体检报告",
             "config": {},
         },
         "query_daily_health": {
@@ -219,7 +322,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.query_daily_health_tool.QueryDailyHealthTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "每日健康明细: 活动/体征/睡眠/7日均值",
             "config": {},
         },
         "query_metric_trend": {
@@ -227,7 +329,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.query_metric_trend_tool.QueryMetricTrendTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "单指标趋势: 日/周维度, 含均值/变化/极值/断档",
             "config": {},
         },
         "compare_health_periods": {
@@ -235,7 +336,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.compare_health_periods_tool.CompareHealthPeriodsTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "单指标时段对比: 周环比/月环比",
             "config": {},
         },
         "list_workout_records": {
@@ -243,7 +343,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_workout_records_tool.ListWorkoutRecordsTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "运动记录: 列表或统计汇总, 支持类型筛选",
             "config": {},
         },
         "list_meal_records": {
@@ -251,7 +350,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_meal_records_tool.ListMealRecordsTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "饮食记录和营养摄入: 单日明细或最近N天汇总",
             "config": {},
         },
         "view_medical_report": {
@@ -259,7 +357,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.view_medical_report_tool.ViewMedicalReportTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "体检报告详情: 最新报告与历史趋势",
             "config": {},
         },
         "list_shopping_items": {
@@ -267,7 +364,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_shopping_items_tool.ListShoppingItemsTool",
             "enabled": True,
             "timeout": 45.0,
-            "description": "购物清单/食材库存: 最近N天购买记录",
             "config": {},
         },
         "health_data_manager": {
@@ -275,7 +371,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.health_data_manager_tool.HealthDataManagerTool",
             "enabled": False,
             "timeout": 45.0,
-            "description": "旧版单工具聚合入口(已拆分为 health_data_group 工具组), 不再使用",
             "config": {},
         },
         "scheduled_messenger": {
@@ -285,10 +380,9 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.schedule_message_wechat_tool.ScheduleMessageWechatTool",
             "enabled": False,
             "timeout": 15.0,
-            "description": "定时消息共享配置载体(已拆分为渠道子工具)",
             "config": {
                 "max_pending_messages": 50,
-                "max_schedule_ahead_hours": 168,
+                "max_schedule_ahead_hours": 8760,
             },
         },
         "schedule_message_wechat": {
@@ -296,7 +390,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.schedule_message_wechat_tool.ScheduleMessageWechatTool",
             "enabled": True,
             "timeout": 15.0,
-            "description": "通过微信创建定时消息/提醒",
             "config": {},
         },
         "schedule_message_email": {
@@ -304,7 +397,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.schedule_message_email_tool.ScheduleMessageEmailTool",
             "enabled": True,
             "timeout": 15.0,
-            "description": "通过邮件创建定时消息/提醒",
             "config": {},
         },
         "list_scheduled_messages": {
@@ -312,7 +404,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_scheduled_messages_tool.ListScheduledMessagesTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "查看待发送的定时消息",
             "config": {},
         },
         "cancel_scheduled_message": {
@@ -320,18 +411,15 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.cancel_scheduled_message_tool.CancelScheduledMessageTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "取消一条定时消息",
             "config": {},
         },
         "price_alert": {
             "name": "price_alert",
             # 配置载体: 保留 base_url 供 PriceAlertEngine / QueryStockPriceTool 读取
-            # (openclaw 渠道默认已统一到 openclaw.notification_defaults).
             # enabled=False 因已拆分为3子工具, 不再独立创建.
             "class_path": "src.tools.internal.create_price_alert_tool.CreatePriceAlertTool",
             "enabled": False,
             "timeout": 15.0,
-            "description": "价格监控共享配置载体(已拆分为3子工具)",
             "config": {
                 # 开发默认值; 生产由 QUOTE_SERVICE_BASE_URL env 覆盖
                 "base_url": "http://127.0.0.1:8767",
@@ -342,7 +430,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.create_price_alert_tool.CreatePriceAlertTool",
             "enabled": True,
             "timeout": 15.0,
-            "description": "创建A股个股价格监控, 突破阈值时微信提醒",
             "config": {},
         },
         "list_price_alerts": {
@@ -350,7 +437,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.list_price_alerts_tool.ListPriceAlertsTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "查看活跃的价格监控规则",
             "config": {},
         },
         "cancel_price_alert": {
@@ -358,7 +444,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.cancel_price_alert_tool.CancelPriceAlertTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "取消一条价格监控规则",
             "config": {},
         },
         "query_stock_price": {
@@ -366,7 +451,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.query_stock_price_tool.QueryStockPriceTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "查询A股个股实时行情(现价/涨跌幅/五档)",
             "config": {},
         },
         "search_available_tools": {
@@ -374,7 +458,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.search_available_tools.SearchAvailableTools",
             "enabled": True,
             "timeout": 10.0,
-            "description": "搜索可用工具, 帮助Agent发现休眠工具",
             "config": {},
         },
         "load_skill": {
@@ -382,7 +465,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.skills.load_skill_tool.LoadSkillTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "加载指定技能的完整使用说明(领域知识), 渐进式披露入口",
             "config": {},
         },
         "read_file": {
@@ -390,7 +472,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.read_file_tool.ReadFileTool",
             "enabled": True,
             "timeout": 15.0,
-            "description": "按文件ID读取文件描述内容 (图片画面描述/文档摘要)",
             "config": {},
         },
         "analyze_image": {
@@ -398,7 +479,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.analyze_image_tool.AnalyzeImageTool",
             "enabled": True,
             "timeout": 60.0,
-            "description": "按具体需求分析用户上传过的图片原图 (OCR/表格/细节)",
             "config": {},
             "skip_when_capabilities": ["image_input"],
         },
@@ -407,7 +487,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.regenerate_download_link_tool.RegenerateDownloadLinkTool",
             "enabled": True,
             "timeout": 15.0,
-            "description": "按文件ID重新生成文件下载链接",
             "config": {},
             "prompt_hint": (
                 "对话历史中 [file: file_id] 代表任意附件(图片/文档/系统生成文件), "
@@ -421,7 +500,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.image_generation_tool.ImageGenerationTool",
             "enabled": True,
             "timeout": 120.0,
-            "description": "根据文字提示词生成图片, 保存为共享图片附件并返回下载链接",
             "config": {
                 "timeout": 120.0,
             },
@@ -431,7 +509,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.video_generation_tool.VideoGenerationTool",
             "enabled": True,
             "timeout": 600.0,
-            "description": "根据文字提示词生成有声视频, 保存为共享视频附件并返回下载链接 (耗时1-3分钟)",
             "config": {
                 "model_id": "ark-agent-plan:doubao-seedance-2.0",
                 "timeout": 600.0,
@@ -442,7 +519,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.internal.wechat_publish.tool.WechatPublishTool",
             "enabled": True,
             "timeout": 300.0,
-            "description": "将Markdown文章发布到微信公众号草稿箱",
             "config": {},
         },
     },
@@ -452,7 +528,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.weather_tool.WeatherQueryTool",
             "enabled": True,
             "timeout": 10.0,
-            "description": "查询指定城市实时天气(温度/湿度/风力/空气质量), 毫秒级响应",
             "config": {},
         },
         "mermaid_chart": {
@@ -460,7 +535,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.chart_maker.mermaid_chart_tool.MermaidChartTool",
             "enabled": True,
             "timeout": 60.0,
-            "description": "渲染mermaid流程图/时序图/甘特图为PNG图片",
             "config": {},
         },
         "vega_chart": {
@@ -468,7 +542,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.chart_maker.vega_chart_tool.VegaChartTool",
             "enabled": True,
             "timeout": 60.0,
-            "description": "渲染Vega-Lite数据图表(折线/柱状/饼/散点/堆叠)为PNG图片",
             "config": {},
         },
         "markmap_chart": {
@@ -476,7 +549,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.chart_maker.markmap_chart_tool.MarkmapChartTool",
             "enabled": True,
             "timeout": 60.0,
-            "description": "渲染markmap思维导图(Markdown层级结构)为PNG图片",
             "config": {},
         },
         "export_document": {
@@ -484,7 +556,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.export_document.tool.ExportDocumentTool",
             "enabled": True,
             "timeout": 120.0,
-            "description": "文档导出, Markdown → PDF/DOCX, 支持4种风格模板",
             "config": {},
         },
         "python_executor": {
@@ -492,7 +563,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.python_executor_tool.PythonExecutorTool",
             "enabled": True,
             "timeout": 35.0,
-            "description": "精确计算与数据分析工具, 预装numpy/pandas; code必须是可执行Python代码, 结果需print()输出; 经 tool-runtime 执行",
             "config": {
                 "default_timeout_seconds": 5.0,
                 "max_timeout_seconds": 30.0,
@@ -507,7 +577,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.datapro.finance_data_tool.FinanceDataTool",
             "enabled": True,
             "timeout": 120.0,
-            "description": "金融数据查询(A股/港股基本面/估值/行情/财报), DataPro金融数据库",
             "config": {},
         },
         "business_registry": {
@@ -515,7 +584,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.datapro.business_registry_tool.BusinessRegistryTool",
             "enabled": True,
             "timeout": 120.0,
-            "description": "企业工商数据查询(登记/股东/变更/知识产权/经营), DataPro企业工商数据库",
             "config": {},
         },
         "enterprise_risk": {
@@ -523,7 +591,6 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.datapro.enterprise_risk_tool.EnterpriseRiskTool",
             "enabled": True,
             "timeout": 120.0,
-            "description": "企业风险数据查询(司法诉讼/行政处罚/经营异常/失信), DataPro企业风险数据库",
             "config": {},
         },
         "tea_knowledge": {
@@ -531,7 +598,14 @@ _BUILTIN_TOOLS_CONFIG: dict[str, Any] = {
             "class_path": "src.tools.external.tea_knowledge_tool.TeaKnowledgeTool",
             "enabled": True,
             "timeout": 60.0,
-            "description": "茶领域知识库检索(中国茶经等书籍/论文/审评), 离线索引+向量召回, 茶领域问题优先于网络搜索",
+            "config": {},
+            "companions": ["kb_read_image"],
+        },
+        "kb_read_image": {
+            "name": "kb_read_image",
+            "class_path": "src.tools.external.kb_read_image_tool.KbReadImageTool",
+            "enabled": True,
+            "timeout": 60.0,
             "config": {},
         },
     },

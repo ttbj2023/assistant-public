@@ -143,9 +143,9 @@ class TodoServiceAccessor:
         """写操作后获取最新活跃任务快照 (硬保证降级)."""
         try:
             service = await self.get_service()
+            # 用户级统一视图: 不按 thread_id 过滤
             todos = await service.list_todos(
                 self._user_id,
-                self._thread_id,
                 statuses=[TodoStatus.PENDING, TodoStatus.IN_PROGRESS],
                 limit=50,
             )

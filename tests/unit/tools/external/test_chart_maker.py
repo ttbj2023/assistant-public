@@ -752,7 +752,6 @@ class TestRunChartMaker:
                 "src.tools.external.chart_maker.service.register_tool_output",
                 mock_register,
             ),
-            patch("src.files.desc_writer.write_desc") as mock_write_desc,
         ):
             self._setup_resolver(mock_resolver_fn, export_dir)
 
@@ -773,11 +772,9 @@ class TestRunChartMaker:
         assert call_kwargs["engine"] == "mermaid"
         assert call_kwargs["scale"] == 3
 
-        # 验证 spec 写入 .desc.md (write_desc(user_id, file_id, spec_json))
-        mock_write_desc.assert_called_once()
-        assert mock_write_desc.call_args.args[0] == "test_user"
-        assert mock_write_desc.call_args.args[1] == "test"
-        spec_data = json.loads(mock_write_desc.call_args.args[2])
+        # spec 经 register_tool_output(source=) 写入 desc, 不再单独 write_desc
+        reg_kwargs = mock_register.call_args.kwargs
+        spec_data = json.loads(reg_kwargs["source"])
         assert spec_data["engine"] == "mermaid"
         assert spec_data["code"] == "graph TD\nA-->B"
         assert spec_data["title"] == "流程图"
@@ -813,8 +810,7 @@ class TestRunChartMaker:
                     "format": "png",
                     "size_bytes": 13,
                 },
-            ),
-            patch("src.files.desc_writer.write_desc") as mock_write_desc,
+            ) as mock_register,
         ):
             self._setup_resolver(mock_resolver_fn, export_dir)
 
@@ -830,9 +826,9 @@ class TestRunChartMaker:
         assert result["success"] is True
         assert result["engine"] == "vega_lite"
 
-        # 验证 spec 写入 .desc.md
-        mock_write_desc.assert_called_once()
-        spec_data = json.loads(mock_write_desc.call_args.args[2])
+        # spec 经 register_tool_output(source=) 写入 desc
+        reg_kwargs = mock_register.call_args.kwargs
+        spec_data = json.loads(reg_kwargs["source"])
         assert spec_data["engine"] == "vega_lite"
         assert spec_data["width"] is None
         assert spec_data["height"] is None
@@ -870,8 +866,7 @@ class TestRunChartMaker:
                     "format": "png",
                     "size_bytes": 13,
                 },
-            ),
-            patch("src.files.desc_writer.write_desc") as mock_write_desc,
+            ) as mock_register,
         ):
             self._setup_resolver(mock_resolver_fn, export_dir)
 
@@ -896,9 +891,9 @@ class TestRunChartMaker:
         assert call_kwargs["scale"] == 4
         assert call_kwargs["title"] == "项目计划"
 
-        # 验证 spec 写入 .desc.md
-        mock_write_desc.assert_called_once()
-        spec_data = json.loads(mock_write_desc.call_args.args[2])
+        # spec 经 register_tool_output(source=) 写入 desc
+        reg_kwargs = mock_register.call_args.kwargs
+        spec_data = json.loads(reg_kwargs["source"])
         assert spec_data["engine"] == "markmap"
         assert spec_data["code"] == markdown
         assert spec_data["title"] == "项目计划"

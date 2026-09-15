@@ -12,11 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .api_config import APIConfig
 from .auth_config import AuthConfig
+from .calendar_sync_config import CalendarSyncConfig
+from .channel_push_config import ChannelPushConfig
 from .config_loader import load_base_config_sync
 from .core_config import CoreConfig
 from .inference_config import InferenceConfig
 from .logging_config import LoggingConfig
-from .openclaw_config import OpenClawConfig
 from .retry_config import RetryConfig
 from .smtp_config import SmtpConfig
 from .storage_config import StorageConfig
@@ -36,8 +37,9 @@ class AppConfig(BaseModel):
     retry: RetryConfig = Field(default_factory=RetryConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
-    openclaw: OpenClawConfig = Field(default_factory=OpenClawConfig)
+    channel_push: ChannelPushConfig = Field(default_factory=ChannelPushConfig)
     smtp: SmtpConfig = Field(default_factory=SmtpConfig)
+    calendar_sync: CalendarSyncConfig = Field(default_factory=CalendarSyncConfig)
 
 
 _cached: AppConfig | None = None

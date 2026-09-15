@@ -145,7 +145,11 @@ class TestConversationFormatter:
         conversation_rounds = [
             None,
             "not_a_dict",
-            {"round_number": 1, "user_message": "有效", "assistant_response": "有效回复"},
+            {
+                "round_number": 1,
+                "user_message": "有效",
+                "assistant_response": "有效回复",
+            },
         ]
 
         result = await formatter.format_conversation_range(conversation_rounds)
@@ -212,11 +216,13 @@ class TestConversationFormatter:
             side_effect=ValueError("格式化日期失败"),
         ):
             result = await formatter.format_index_range(
-                [{
-                    "round_number": 1,
-                    "summary": "test",
-                    "created_at": "2023-01-01T10:00:00",
-                }],
+                [
+                    {
+                        "round_number": 1,
+                        "summary": "test",
+                        "created_at": "2023-01-01T10:00:00",
+                    }
+                ],
             )
         assert result == ""
 

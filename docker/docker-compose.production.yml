@@ -30,7 +30,8 @@ services:
       - ENVIRONMENT=production
       - LOCAL_EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
       - LOCAL_BASE_URL=http://host.docker.internal:11434/v1
-      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - CHANNEL_GATEWAY_URL=http://host.docker.internal:18789
+      - RERANKER_BASE_URL=http://host.docker.internal:8768
       - TOOL_RUNTIME_BASE_URL=http://tool-runtime:8766
       - QUOTE_SERVICE_BASE_URL=http://quote-service:8767
     networks:
@@ -83,8 +84,10 @@ services:
     mem_limit: 4g
     cpus: 2.0
     networks:
-      executor-internal:
-        ipv4_address: 172.26.0.2
+      # 动态 IP + Docker 内置 DNS 寻址 (app 经 http://tool-runtime:8766).
+      # 不要加静态 ipv4_address: 动态分配器从 .2 顺序发放, VM 重启后恢复
+      # 顺序不定, 静态地址会被抢先落座的动态容器占用 (Address already in use)
+      - executor-internal
     volumes:
       - tool-runtime-workspace:/workspace
     tmpfs:

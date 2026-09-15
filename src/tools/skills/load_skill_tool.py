@@ -69,14 +69,13 @@ class LoadSkillTool(BaseTool):
     """
 
     name: str = "load_skill"
-    summary: str = "加载指定技能的使用说明(L2总览或L3参考文档), 渐进式披露入口"
+    summary: str = "加载指定技能的使用说明(技能总览或参考文档)"
     description: str = """加载指定技能的使用说明(领域知识).
 
-三级渐进式披露:
-- 不传reference: 返回技能总览(L2, 概览+选型+参考文档索引)
-- 传reference: 返回特定参考文档(L3, 单引擎/子主题的详细知识)
+- 不传reference: 返回技能总览(概览+选型+参考文档索引)
+- 传reference: 返回特定参考文档(单引擎/子主题的详细知识)
 
-加载L2后, 关联工具会自动注入后续可用.
+加载技能总览后, 该技能的关联工具会自动加载到工具列表中.
 
 参数:
 - skill_name: 技能名称(来自"可用技能"清单)
@@ -84,8 +83,8 @@ class LoadSkillTool(BaseTool):
 
 示例:
 - load_skill(skill_name="xlsx")
-- load_skill(skill_name="chart_maker")  # L2总览
-- load_skill(skill_name="chart_maker", reference="mermaid")  # L3详细语法
+- load_skill(skill_name="chart_maker")  # 技能总览
+- load_skill(skill_name="chart_maker", reference="mermaid")  # mermaid详细语法
 """
     args_schema: type[LoadSkillRequest] = LoadSkillRequest
 

@@ -32,7 +32,7 @@ class PythonExecutorInput(QueryAliasModel):
         min_length=1,
         max_length=20000,
         description=(
-            "要在隔离沙箱中执行的 Python 代码. "
+            "要执行的 Python 代码. "
             "必须是语法正确的,可直接运行的 Python 代码, 不能是自然语言描述,需求说明或伪代码. "
             "如果需要把结果返回给用户, 代码中必须使用 print() 将结果输出到标准输出."
         ),
@@ -79,7 +79,9 @@ class PythonExecutorTool(BaseTool):
         "如需将结果返回给用户, 代码中必须使用 print() 将结果输出到标准输出.\n"
         "\n"
         "适用场景: 复杂多步运算,浮点/大数计算,数据清洗与聚合等需要确定性的任务.\n"
-        "限制: 无法访问网络, 无法读写你的文件, 仅输出文本不生成图片. 简单运算可直接心算, 无需调用本工具."
+        "限制: 无法访问网络, 无法读写你的文件, 仅输出文本不生成图片. 简单运算可直接心算, 无需调用本工具.\n\n"
+        '示例: {"code": "print(sum(range(1, 101)))"}\n'
+        '示例: {"code": "import pandas as pd\\ndf = pd.DataFrame({\\"a\\": [1, 2, 3]})\\nprint(df.describe())"}'
     )
     args_schema: type[PythonExecutorInput] = PythonExecutorInput
 

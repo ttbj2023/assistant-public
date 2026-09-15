@@ -9,7 +9,7 @@
 #
 # 环境差异通过 .env 注入 (各环境独立维护, 不进版本控制), 涉及变量:
 #   - 模型 Provider API Key (DEEPSEEK_API_KEY / GEMINI_API_KEY 等)
-#   - 部署拓扑 (OPENCLAW_GATEWAY_URL / TOOL_RUNTIME_BASE_URL 等)
+#   - 部署拓扑 (CHANNEL_GATEWAY_URL / TOOL_RUNTIME_BASE_URL 等)
 #   - SMTP 凭据 (SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_ADDRESS)
 #   - 其他见 .env.example
 
@@ -21,6 +21,16 @@ inference:
   reranker:
     enabled: true
     base_url: "http://localhost:8768"
+
+  # 工具筛选: SFT-0.8B 微调模型 (plain 名称直出形态, 对齐训练分布;
+  # 覆盖默认 format:json — plain 与 json mode 互斥)
+  tool_filter:
+    model: local:sft08b_v4:q8_0
+    response_format: plain
+    model_params:
+      temperature: 0.0
+      num_predict: 256
+      num_ctx: 4096
 
   # 全局 fallback: 关闭 deepseek-flash 默认 high 思考(对简单任务纯浪费;
   # 判断类任务由 content_analyzer.fallback_model_params 覆盖保留思考)
@@ -117,18 +127,18 @@ tools:
       name: "export_document"
       source: "./skills/export_document/"
       associated_tools: ["export_document"]
+    wechat_official_account:
+      name: "wechat_official_account"
+      source: "./skills/wechat_official_account/"
+      associated_tools: ["wechat_publish"]
 
 # ===========================================
-# OpenClaw Gateway (主动发消息: 超长回复补发/定时消息/价格监控派发)
+# 渠道推送网关 (定时消息/价格监控/通知经渠道网关主动推送)
 # ===========================================
-# gateway.url 默认 http://127.0.0.1:18789, Docker 由 env OPENCLAW_GATEWAY_URL 覆盖
-# notification_defaults 为微信渠道系统级默认, 缺失会导致补发/定时消息静默失败
-openclaw:
+# gateway.url 默认 http://127.0.0.1:18789, 可由 env CHANNEL_GATEWAY_URL 覆盖
+channel_push:
   gateway:
     url: "http://127.0.0.1:18789"
-  notification_defaults:
-    weixin:
-      channel: "openclaw-weixin"
 
 # ===========================================
 # SMTP 邮件发送配置 (系统级共享, app 进程内发邮件工具共用)
@@ -142,3 +152,15 @@ smtp:
   username: ""
   password: ""
   from_address: ""
+
+# ===========================================
+# Graph 同步引擎 (MSA: TODO 双向 + 日历单向 push)
+# ===========================================
+# 全局默认; per-user 覆盖经 PUT /v1/sync/msgraph/settings
+# (graph_sync_settings 表: todo_list_name / calendar_name / timezone)
+calendar_sync:
+  enabled: true
+  interval_seconds: 600
+  todo_list_name: "Assistant"
+  calendar_name: "Assistant"
+  timezone: "Asia/Shanghai"

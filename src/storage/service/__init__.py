@@ -40,12 +40,14 @@ msg_service = await create_scheduled_message_service(user_id, thread_id, agent_i
 
 from __future__ import annotations
 
+from .calendar_service import CalendarService
 from .conversation_service import ConversationService
 from .health_check_mixin import ServiceHealthCheckMixin
 from .pinned_memory_block_service import PinnedMemoryBlockService
 from .retrieval_service import DualStageRetrievalService, RetrievalService
 from .scheduled_message_service import ScheduledMessageService
 from .service_factory import (
+    create_calendar_service,
     create_conversation_service,
     create_health_service,
     create_pinned_memory_block_service,
@@ -62,6 +64,7 @@ from .user_channel_config_service import UserChannelConfigService
 from .vector_service import VectorService
 
 __all__ = [
+    "CalendarService",
     "ConversationService",
     "DualStageRetrievalService",
     "PinnedMemoryBlockService",
@@ -73,6 +76,7 @@ __all__ = [
     "UsageService",
     "UserChannelConfigService",
     "VectorService",
+    "create_calendar_service",
     "create_conversation_service",
     "create_health_service",
     "create_pinned_memory_block_service",

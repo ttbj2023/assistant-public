@@ -64,6 +64,20 @@ def list_tool():
     return tool
 
 
+@pytest.mark.asyncio
+async def test_list_todos_uses_user_level_view(list_tool, mock_service):
+    """用户级存储迁移后, list_todos 不再按 thread_id 过滤 (统一视图)."""
+    with patch.object(
+        list_tool,
+        "_get_accessor",
+        return_value=_mock_acc(mock_service),
+    ):
+        await list_tool._arun()
+    kwargs = mock_service.list_todos.call_args.kwargs
+    assert "thread_id" not in kwargs or kwargs.get("thread_id") is None
+    assert mock_service.list_todos.call_args.args == ("u1",)
+
+
 @pytest.fixture
 def update_tool():
     tool = UpdateTodoTool()

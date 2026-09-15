@@ -18,10 +18,13 @@ from fastapi.responses import JSONResponse
 
 from src.agent.manager import get_agent_manager
 from src.api.error_handling import ErrorHandlingMiddleware
-from src.api.middleware.openclaw_filter import OpenClawFilterMiddleware
+from src.api.routes.calendar import router as calendar_router
+from src.api.routes.calendar_ics import router as calendar_ics_router
 from src.api.routes.chat import router as chat_router
 from src.api.routes.files import router as files_router
 from src.api.routes.health import router as health_router
+from src.api.routes.sync import router as sync_router
+from src.api.routes.todos import router as todos_router
 from src.api.routes.usage import router as usage_router
 from src.auth import get_auth_manager
 from src.config import runtime_env
@@ -187,6 +190,24 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         await get_price_alert_engine().start()
         logger.info("📊 价格监控引擎已启动")
 
+        # 启动 Graph 同步引擎 (TODO 双向 + 日历单向 push, 遍历已授权用户)
+        from src.config.calendar_sync_config import get_config as get_sync_config
+        from src.sync.graph_sync_engine import get_graph_sync_engine
+
+        sync_cfg = get_sync_config()
+        if sync_cfg.enabled:
+            engine = get_graph_sync_engine()
+            engine.apply_config(
+                interval_seconds=sync_cfg.interval_seconds,
+                todo_list_name=sync_cfg.todo_list_name,
+                calendar_name=sync_cfg.calendar_name,
+                default_timezone=sync_cfg.timezone,
+            )
+            await engine.start()
+            logger.info("🔄 Graph 同步引擎已启动")
+        else:
+            logger.info("⏸️ Graph 同步引擎已禁用 (calendar_sync.enabled=false)")
+
         # 健康检查系统已简化,无需初始化注册
         logger.info("🏥 健康检查系统使用简化设计,无需预注册")
 
@@ -200,7 +221,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("❌ Agent系统初始化失败: %s", e)
         # 不阻止应用启动,只记录错误
 
-    yield  # noqa: RUF075
+    yield  # ruff: ignore[fallible-context-manager]
 
     # 关闭时的清理逻辑
     try:
@@ -232,6 +253,16 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         register_resource("scheduled_messages", shutdown_all_scheduled_services)
         register_resource("price_alert", shutdown_price_alert_engine)
         register_resource("vector_cache", clear_vector_cache)
+
+        # Graph 授权服务: 停止 device flow 轮询并释放 http 客户端
+        from src.sync.graph_auth_service import shutdown_graph_auth_service
+
+        register_resource("graph_auth", shutdown_graph_auth_service)
+
+        # Graph 同步引擎: 停止周期 tick 并释放 http 客户端
+        from src.sync.graph_sync_engine import shutdown_graph_sync_engine
+
+        register_resource("graph_sync", shutdown_graph_sync_engine)
 
         # 3. 按注册逆序关闭全部已注册资源 (异常隔离)
         await get_lifecycle_registry().close_all()
@@ -315,7 +346,6 @@ app.add_middleware(
 app.add_middleware(ErrorHandlingMiddleware)
 
 # 添加 OpenClaw 注入过滤中间件 (在 ErrorHandling 之后, Auth 之前)
-app.add_middleware(OpenClawFilterMiddleware)
 
 # 初始化统一认证管理器
 auth_manager = get_auth_manager()
@@ -350,8 +380,13 @@ async def unified_auth_middleware(
         )
         or "/v1/files/dl/" in request_path
     )
+    # ICS 订阅 feed: 持久 token 即凭证 (手机日历无法携带 API key)
+    is_calendar_ics = (
+        request_path.startswith("/v1/calendar/ics/")
+        or "/v1/calendar/ics/" in request_path
+    )
 
-    if request_path in public_paths or is_file_download:
+    if request_path in public_paths or is_file_download or is_calendar_ics:
         logger.info(f"[MIDDLEWARE] 公开端点,跳过认证: {request_path}")
         return await call_next(http_request)  # pyright: ignore[reportGeneralTypeIssues]
 
@@ -496,6 +531,10 @@ app.include_router(chat_router)
 app.include_router(files_router)
 app.include_router(health_router)
 app.include_router(usage_router)
+app.include_router(calendar_router)
+app.include_router(calendar_ics_router)
+app.include_router(todos_router)
+app.include_router(sync_router)
 
 
 # 简化的全局异常处理器 - 主要用于特殊格式的异常

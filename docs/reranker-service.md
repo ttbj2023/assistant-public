@@ -106,10 +106,10 @@ Content-Type: application/json
 | `search_memories` | **不接** | 双路检索 (SQL + 向量) 的 `smart_deduplication` 已经按向量分排序, rerank 冗余. 且该工具一轮可被 LLM 多次并行调用, 任何额外延迟都放大 N 倍. |
 | `tea_knowledge` / `knowledge_base` | **接** | cross-encoder 对长文档 chunks 精排价值显著; 调用低频 + 有 semantic_cache 兜底, 单次 1-2s 可接受. |
 
-**当前状态**: `inference.reranker.enabled = false` (默认关). 接入点已就绪:
-- `src/knowledge_base/retriever.py:49` + `src/tools/external/tea_knowledge_tool.py:128` (知识库路径)
+**当前状态**: `inference.reranker.enabled = true` (`config.yaml` 已启用, 代码默认 `false`). 接入点:
+- `src/knowledge_base/retriever.py` + `src/tools/external/tea_knowledge_tool.py` (知识库路径, `resolve_rerank_base_url` 解析服务地址)
 
-启用只需配 `.env` 的 `RERANKER_BASE_URL=http://127.0.0.1:8768` 并打开 `enabled`, **search_memories 路径仍不传 reranker** (落实分治策略).
+服务地址解析优先级: `.env` 的 `RERANKER_BASE_URL` (经 `provider_registry.py` 的 `local-reranker`) > `config.yaml` 的 `inference.reranker.base_url` (默认 `http://localhost:8768`). Docker 部署时 app 容器内 `localhost` 无法达宿主机服务, 生产 compose 注入 `RERANKER_BASE_URL=http://host.docker.internal:8768` 覆盖 (同 `LOCAL_EMBEDDING_BASE_URL` 模式). **search_memories 路径仍不传 reranker** (落实分治策略).
 
 ## 常用运维
 

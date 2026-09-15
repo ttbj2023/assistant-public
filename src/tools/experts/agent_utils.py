@@ -9,6 +9,10 @@ from langchain_core.messages import ToolMessage
 
 logger = logging.getLogger(__name__)
 
+# 专家子 Agent 的 recursion_limit (web_research / geo_research 共用).
+# 主对话 run_limit 放宽后, 专家内部循环相应收窄, 防止整体耗时失控.
+EXPERT_AGENT_RECURSION_LIMIT = 30
+
 
 def extract_tool_calls(messages: list[Any]) -> list[str]:
     """从Agent执行结果的消息列表中提取所有工具调用名称."""

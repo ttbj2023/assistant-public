@@ -310,7 +310,7 @@ class TestCallAuditLlm:
             patch(
                 "src.agent.agents_implementations.health_assistant.health_data_audit"
                 "._get_model_id",
-                return_value="deepseek:deepseek-v4-flash",
+                return_value="deepseek:deepseek-flash",
             ),
             patch(
                 "src.inference.llm.model_loader.invoke_with_fallback",
@@ -342,7 +342,7 @@ class TestCallAuditLlm:
             patch(
                 "src.agent.agents_implementations.health_assistant.health_data_audit"
                 "._get_model_id",
-                return_value="deepseek:deepseek-v4-flash",
+                return_value="deepseek:deepseek-flash",
             ),
             patch(
                 "src.inference.llm.model_loader.invoke_with_fallback",
@@ -376,7 +376,7 @@ class TestCallAuditLlm:
             patch(
                 "src.agent.agents_implementations.health_assistant.health_data_audit"
                 "._get_model_id",
-                return_value="deepseek:deepseek-v4-flash",
+                return_value="deepseek:deepseek-flash",
             ),
             patch(
                 "src.inference.llm.model_loader.invoke_with_fallback",
@@ -414,7 +414,7 @@ class TestCallAuditLlm:
             patch(
                 "src.agent.agents_implementations.health_assistant.health_data_audit"
                 "._get_model_id",
-                return_value="deepseek:deepseek-v4-flash",
+                return_value="deepseek:deepseek-flash",
             ),
             patch(
                 "src.inference.llm.model_loader.invoke_with_fallback",

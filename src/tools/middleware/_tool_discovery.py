@@ -22,6 +22,9 @@ class ToolDiscoveryMiddleware(AgentMiddleware):
                        只能通过search_available_tools发现后激活
         group_members_map: 工具组名 -> 成员工具名映射. search命中组名时,
                            展开为整组成员激活(组对主对话模型透明).
+        companion_map: 宿主工具名 -> companion工具名列表. 宿主激活时伴随激活
+                       companion(辅助工具, 不进search catalog不可独立发现).
+                       companion须在dormant_tools池中, 激活为集合语义天然幂等.
 
     """
 
@@ -29,10 +32,12 @@ class ToolDiscoveryMiddleware(AgentMiddleware):
         self,
         dormant_tools: list[BaseTool],
         group_members_map: dict[str, list[str]] | None = None,
+        companion_map: dict[str, list[str]] | None = None,
     ) -> None:
         self._dormant_tools: dict[str, BaseTool] = {t.name: t for t in dormant_tools}
         self._activated_tools: set[str] = set()
-        self._group_members_map: dict[str, list[str]] = group_members_map or {}
+        self._group_members_map = group_members_map or {}
+        self._companion_map = companion_map or {}
 
         logger.info(
             f"ToolDiscoveryMiddleware初始化: "
@@ -116,7 +121,26 @@ class ToolDiscoveryMiddleware(AgentMiddleware):
         if tool_name in self._dormant_tools:
             request = request.override(tool=self._dormant_tools[tool_name])
             logger.info("🔧 中间件路由休眠工具调用: %s", tool_name)
+
+        # 同轮重试免过滤: 本轮已有一次 search 结果时, 第二次 search
+        # 跳过 LLM 降噪直接返回全部 keyword 候选 (降级阶梯: 精确 → 召回)
+        if (
+            tool_name == "search_available_tools"
+            and request.tool is not None
+            and self._has_prior_search_result(request)
+        ):
+            object.__setattr__(request.tool, "_bypass_llm_filter", True)
+            logger.info("🔧 检测到同轮第二次 search, 标记跳过降噪")
         return await handler(request)
+
+    @staticmethod
+    def _has_prior_search_result(request: ToolCallRequest) -> bool:
+        """检查本轮消息历史中是否已有 search_available_tools 的结果."""
+        messages = request.state.get("messages", [])
+        return any(
+            isinstance(msg, ToolMessage) and msg.name == "search_available_tools"
+            for msg in messages
+        )
 
     def _check_and_activate(self, request: ModelRequest) -> None:
         """检查消息历史中的search_available_tools调用结果, 激活匹配工具.
@@ -148,12 +172,18 @@ class ToolDiscoveryMiddleware(AgentMiddleware):
                 if names_to_activate is None:
                     names_to_activate = [matched_name]
                 for tool_name in names_to_activate:
-                    if (
-                        tool_name in self._dormant_tools
-                        and tool_name not in self._activated_tools
-                    ):
-                        self._activated_tools.add(tool_name)
-                        logger.info("🔧 激活休眠工具: %s", tool_name)
+                    if self._activate(tool_name):
+                        # 宿主激活后, 伴随激活其 companion(不在池中则忽略)
+                        for companion in self._companion_map.get(tool_name, []):
+                            self._activate(companion)
+
+    def _activate(self, tool_name: str) -> bool:
+        """激活单个休眠工具, 已激活或不在池中返回 False."""
+        if tool_name in self._dormant_tools and tool_name not in self._activated_tools:
+            self._activated_tools.add(tool_name)
+            logger.info("🔧 激活休眠工具: %s", tool_name)
+            return True
+        return False
 
     @staticmethod
     def _parse_matched_tools(content: Any) -> list[str]:

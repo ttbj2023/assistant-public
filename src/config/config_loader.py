@@ -21,12 +21,13 @@ _config_cache: dict[str, Any] = {}
 # 使用模块级 _cached 缓存的配置模块名 (reset_config_cache 据此清理)
 # 新增配置模块若采用 _cached 模式, 必须在此注册, 否则测试间缓存不会被清理
 _CACHED_MODULE_NAMES: tuple[str, ...] = (
-    "app_config",
     "api_config",
+    "app_config",
     "auth_config",
+    "calendar_sync_config",
+    "channel_push_config",
     "core_config",
     "inference_config",
-    "openclaw_config",
     "smtp_config",
     "storage_config",
     "tools_config",

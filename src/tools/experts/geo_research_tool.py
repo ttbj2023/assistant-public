@@ -26,8 +26,8 @@ class GeoResearchInput(BaseModel):
         default="quick",
         description=(
             "研究深度: "
-            "quick(快速, Gemini一步回答, 约3秒, 适合简单查询), "
-            "deep(深度, Gemini+百度API补充核实, 约15秒, 适合复杂出行规划)"
+            "quick(快速回答, 约3秒, 适合简单查询), "
+            "deep(深度, 约15秒, 补充实时路况核实, 适合复杂出行规划)"
         ),
     )
     language: str = Field(default="zh", description="回答语言: zh/en")
@@ -53,10 +53,8 @@ class GeoResearchTool(BaseTool):
     description: str = (
         "地理出行研究工具, 接收自然语言地理/出行查询.\n"
         "支持: 搜索POI/规划驾车公交步行路线/查实时路况/距离计算.\n"
-        "搜索POI,规划路线,查询实时路况等.\n"
-        "支持两种深度:\n"
-        "- quick(默认): 快速回答, 约3秒, 适合简单查询\n"
-        "- deep: 深度研究, 约15秒, 用百度API补充实时路况/精确路线\n\n"
+        "两种深度: quick(默认, 快速回答约3秒) / "
+        "deep(约15秒, 补充实时路况核实与精确路线, 适合复杂出行规划).\n\n"
         '示例: {"query": "北京南站附近有什么好吃的", "depth": "quick"}\n'
         '示例: {"query": "从北京到上海自驾怎么走", "depth": "deep"}'
     )

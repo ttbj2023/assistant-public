@@ -52,6 +52,35 @@ def _mocked_conversation_construction() -> Iterator[list[MagicMock]]:
         yield created
 
 
+class TestCreateCalendarService:
+    """create_calendar_service 用户级签名与构造."""
+
+    @pytest.mark.asyncio
+    async def test_creates_service_with_user_level_db(self) -> None:
+        """应走用户级 DB manager 并传入 user_id."""
+        from src.storage.service.service_factory import create_calendar_service
+
+        mock_manager = MagicMock()
+        mock_manager.session_factory = MagicMock()
+
+        with (
+            patch(
+                "src.storage.dao.async_database_manager.create_async_calendar_db_manager",
+                new=AsyncMock(return_value=mock_manager),
+            ) as mock_db_factory,
+            patch(
+                "src.storage.service.calendar_service.CalendarService",
+            ) as mock_service_cls,
+        ):
+            await create_calendar_service("user1")
+
+        mock_db_factory.assert_called_once_with("user1")
+        mock_service_cls.assert_called_once_with(
+            mock_manager.session_factory,
+            user_id="user1",
+        )
+
+
 class TestServiceFactoryCreation:
     """Service 工厂每次调用创建独立实例."""
 

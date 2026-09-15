@@ -151,6 +151,7 @@ class ImageGenerationTool(BaseTool):
                 summary=brief,
                 user_id=self.user_id,
                 thread_id=self.thread_id,
+                source=detail,
             )
 
             return format_tool_success(

@@ -29,7 +29,7 @@ class MemorySearchRequest(BaseModel):
 
     query: str = Field(
         ...,
-        description="搜索关键词或问题, 向量检索跨语言, 专有名词建议保留原文",
+        description="搜索关键词或问题, 支持跨语言, 专有名词建议保留原文",
     )
     time_filter: str = Field(
         default="",
@@ -44,7 +44,7 @@ class MemorySearchRequest(BaseModel):
     round_start: int | None = Field(
         default=None,
         ge=1,
-        description="轮次区间起始(包含), 与 round_end 配合限定搜索范围, 用于索引区下钻",
+        description="轮次区间起始(包含), 与 round_end 配合限定搜索范围",
     )
     round_end: int | None = Field(
         default=None,
@@ -59,9 +59,8 @@ class AsyncMemoryRetrievalTool(BaseTool):
     name: str = "search_memories"
     description: str = """搜索历史对话记录和记忆内容, 返回概览钩子 [轮X] topic: summary.
 
-向量语义检索支持跨语言, 单一语言通常即可命中.
+语义检索支持跨语言.
 对于专有名词/技术术语(如 decorator/Kubernetes), 建议保留原文以提升精确匹配.
-需要完整原文时, 用返回的轮次号调用 get_round_detail.
 
 示例: {"query": "项目进度", "time_filter": "last_week", "max_results": 5}
 """

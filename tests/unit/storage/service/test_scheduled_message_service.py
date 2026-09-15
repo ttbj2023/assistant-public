@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.channel_push_client import SendOutcome
 from src.core.notification import DeliverySpec
 from src.storage.models.scheduled_message import MessageStatus, ScheduledMessage
 from src.storage.service.scheduled_message_service import ScheduledMessageService
@@ -49,7 +50,6 @@ def service():
 def _wechat_delivery() -> DeliverySpec:
     return DeliverySpec(
         method="wechat",
-        openclaw_channel="openclaw-weixin",
         account_id="bot-1",
         target="user-123",
     )
@@ -118,12 +118,96 @@ class TestScheduleMessage:
         assert now_utc <= created_send_time <= now_utc + timedelta(seconds=60)
 
     @pytest.mark.asyncio
-    async def test_should_reject_too_far_ahead_time(self, service):
-        """超出最大提前时间应被拒绝."""
-        future_time = datetime.now(UTC) + timedelta(hours=200)
+    async def test_should_pass_related_event_id_through(self, service):
+        """关联日程ID应透传存储到消息行."""
+        future_time = datetime.now(UTC) + timedelta(hours=1)
+        service.dao.count_pending = AsyncMock(return_value=0)
+        captured_kwargs = {}
+
+        async def mock_create(**kwargs):
+            captured_kwargs.update(kwargs)
+            return ScheduledMessage(
+                id=1,
+                message_id="msg-1",
+                message=kwargs["message"],
+                send_time=kwargs["send_time"],
+                status=MessageStatus.PENDING,
+                channel="wechat",
+                user_id=kwargs["user_id"],
+                thread_id=kwargs["thread_id"],
+                agent_id=kwargs["agent_id"],
+                related_event_id=kwargs.get("related_event_id"),
+            )
+
+        service.dao.create_message = AsyncMock(side_effect=mock_create)
+
+        result = await service.schedule_message(
+            "会前提醒",
+            future_time,
+            related_event_id=42,
+        )
+
+        assert captured_kwargs["related_event_id"] == 42
+        assert result.related_event_id == 42
+
+    @pytest.mark.asyncio
+    async def test_should_default_related_event_id_to_none(self, service):
+        """不传关联日程ID时消息行该字段为空."""
+        future_time = datetime.now(UTC) + timedelta(hours=1)
+        service.dao.count_pending = AsyncMock(return_value=0)
+        captured_kwargs = {}
+
+        async def mock_create(**kwargs):
+            captured_kwargs.update(kwargs)
+            return ScheduledMessage(
+                id=1,
+                message_id="msg-1",
+                message=kwargs["message"],
+                send_time=kwargs["send_time"],
+                status=MessageStatus.PENDING,
+                channel="wechat",
+                user_id=kwargs["user_id"],
+                thread_id=kwargs["thread_id"],
+                agent_id=kwargs["agent_id"],
+            )
+
+        service.dao.create_message = AsyncMock(side_effect=mock_create)
+
+        await service.schedule_message("普通提醒", future_time)
+
+        assert captured_kwargs.get("related_event_id") is None
+
+
+    @pytest.mark.asyncio
+    async def test_should_reject_time_beyond_one_year(self, service):
+        """超过一年的时间应被拒绝."""
+        future_time = datetime.now(UTC) + timedelta(days=366)
 
         with pytest.raises(ValueError, match="不能超过"):
             await service.schedule_message("测试消息", future_time)
+
+    @pytest.mark.asyncio
+    async def test_should_accept_time_within_one_year(self, service):
+        """一年以内的时间应被允许."""
+        future_time = datetime.now(UTC) + timedelta(days=364)
+        service.dao.count_pending = AsyncMock(return_value=0)
+        service.dao.create_message = AsyncMock(
+            return_value=ScheduledMessage(
+                id=1,
+                message_id="msg-1",
+                message="测试",
+                send_time=future_time,
+                status=MessageStatus.PENDING,
+                channel="wechat",
+                user_id="user-1",
+                thread_id="thread-1",
+                agent_id="personal-assistant",
+            )
+        )
+
+        result = await service.schedule_message("测试消息", future_time)
+
+        assert result.message_id == "msg-1"
 
 
 class TestCancelMessage:
@@ -209,6 +293,26 @@ class TestSendMessageDispatch:
         service.dao.update_status.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_send_message_should_reregister_when_not_due(self, service, mock_msg):
+        """到点复查: DB时间未到(被外部顺延)时应重挂定时器而非发送."""
+        mock_msg.status = MessageStatus.PENDING
+        mock_msg.send_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(
+            hours=2
+        )
+        service.dao.get_by_message_id = AsyncMock(return_value=mock_msg)
+        service.dao.update_status = AsyncMock()
+        service._register_timer = MagicMock()
+
+        with patch(
+            "src.core.notification.resolve_delivery", new=AsyncMock()
+        ) as mock_resolve:
+            await service._send_message(mock_msg.message_id)
+
+        mock_resolve.assert_not_awaited()
+        service.dao.update_status.assert_not_called()
+        service._register_timer.assert_called_once_with(mock_msg)
+
+    @pytest.mark.asyncio
     async def test_send_message_should_skip_when_not_found(self, service):
         """消息不存在时应跳过发送."""
         service.dao.get_by_message_id = AsyncMock(return_value=None)
@@ -222,7 +326,7 @@ class TestSendMessageDispatch:
     async def test_send_message_should_mark_failed_when_no_delivery(
         self, service, mock_msg
     ):
-        """resolve_delivery 返回 None (渠道缺失/无效) 应标记 FAILED."""
+        """resolve_delivery 返回 None (渠道缺失/无效) 应标记 FAILED 并落原因."""
         service.dao.get_by_message_id = AsyncMock(return_value=mock_msg)
         service.dao.update_status = AsyncMock()
 
@@ -232,16 +336,18 @@ class TestSendMessageDispatch:
             await service._send_message(mock_msg.message_id)
 
         service.dao.update_status.assert_called_once_with(
-            mock_msg.message_id, MessageStatus.FAILED
+            mock_msg.message_id,
+            MessageStatus.FAILED,
+            last_error="渠道wechat配置缺失或无效",
         )
 
     @pytest.mark.asyncio
     async def test_send_message_should_mark_sent_on_success(self, service, mock_msg):
-        """发送成功应标记为SENT."""
+        """发送成功应标记为SENT并清空历史失败原因."""
         service.dao.get_by_message_id = AsyncMock(return_value=mock_msg)
         service.dao.update_status = AsyncMock()
         mock_notifier = MagicMock()
-        mock_notifier.send = AsyncMock(return_value=True)
+        mock_notifier.send = AsyncMock(return_value=SendOutcome(ok=True))
 
         with (
             patch(
@@ -257,15 +363,18 @@ class TestSendMessageDispatch:
 
         call_args = service.dao.update_status.call_args
         assert call_args[0][1] == MessageStatus.SENT
+        assert call_args.kwargs.get("last_error") is None
         mock_notifier.send.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_send_message_should_mark_failed_on_failure(self, service, mock_msg):
-        """NotificationService.send 返回 False 应标记 FAILED."""
+        """发送失败应标记 FAILED 并将失败原因落库."""
         service.dao.get_by_message_id = AsyncMock(return_value=mock_msg)
         service.dao.update_status = AsyncMock()
         mock_notifier = MagicMock()
-        mock_notifier.send = AsyncMock(return_value=False)
+        mock_notifier.send = AsyncMock(
+            return_value=SendOutcome(ok=False, error="网关投递失败: prepare failed")
+        )
 
         with (
             patch(
@@ -281,6 +390,33 @@ class TestSendMessageDispatch:
 
         call_args = service.dao.update_status.call_args
         assert call_args[0][1] == MessageStatus.FAILED
+        assert "prepare failed" in call_args.kwargs.get("last_error", "")
+
+    @pytest.mark.asyncio
+    async def test_send_message_should_record_error_on_exception(
+        self, service, mock_msg
+    ):
+        """发送抛异常应标记 FAILED 并将异常信息落库."""
+        service.dao.get_by_message_id = AsyncMock(return_value=mock_msg)
+        service.dao.update_status = AsyncMock()
+        mock_notifier = MagicMock()
+        mock_notifier.send = AsyncMock(side_effect=RuntimeError("连接重置"))
+
+        with (
+            patch(
+                "src.core.notification.resolve_delivery",
+                new=AsyncMock(return_value=_wechat_delivery()),
+            ),
+            patch(
+                "src.core.notification.get_notification_service",
+                return_value=mock_notifier,
+            ),
+        ):
+            await service._send_message(mock_msg.message_id)
+
+        call_args = service.dao.update_status.call_args
+        assert call_args[0][1] == MessageStatus.FAILED
+        assert "连接重置" in call_args.kwargs.get("last_error", "")
 
 
 class TestScheduleMessageEdgeCases:

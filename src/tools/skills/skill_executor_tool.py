@@ -189,7 +189,6 @@ class SkillExecutorTool(BaseTool):
         """回收产物: base64解码 → 落盘 → register_tool_output → file_id."""
         from src.core.context import get_user_context_or_none
         from src.core.path_resolver import get_user_path_resolver
-        from src.files.desc_writer import write_desc
         from src.tools.shared.file_output import register_tool_output
 
         ctx = get_user_context_or_none()
@@ -230,11 +229,8 @@ class SkillExecutorTool(BaseTool):
                     user_id=ctx.user_id,
                     thread_id=ctx.thread_id,
                     brief=title,
+                    source=source_code,
                 )
-                # 源码即描述: code 写入 .desc.md
-                file_id = reg.get("file_id")
-                if file_id:
-                    write_desc(ctx.user_id, file_id, source_code)
                 results.append(reg)
             except Exception as e:
                 logger.warning("skill产物回收失败 %s: %s", f.get("filename"), e)

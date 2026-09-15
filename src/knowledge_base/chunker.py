@@ -3,8 +3,9 @@
 按标题层级切分文档, 每个块注入"标题链"上下文(如 "中国茶经 / 第一章 茶树 / 一、品种"),
 使块自包含 —— 脱离原文仍能被 embedding 准确表征, 这是召回精度的核心杠杆.
 
-入库前预处理: 剥离整行图片引用(embedding 纯噪声), <br> 转空格,
-单行 HTML 表格转 GFM pipe 行(去标签噪声, 表格事实整行进入 embedding).
+入库前预处理: <br> 转空格, 单行 HTML 表格转 GFM pipe 行(去标签噪声, 表格事实整行进入 embedding).
+整行图片引用从正文剥离(embedding 噪声), 但原始路径按所在节记录进 chunk metadata 的
+images 字段(逗号分隔), 供索引层解析为语料相对路径并暴露给读图工具.
 
 超长节按段落边界二次切分并保留 overlap; 超长表格块按行边界切分且续块重复表头
 (与标题链同哲学: 块自包含), 绝不在行中间截断; 单段仍超长则硬切兜底.
@@ -18,7 +19,7 @@ from langchain_core.documents import Document
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 _PARAGRAPH_SEP_RE = re.compile(r"\n\s*\n")
-_IMAGE_LINE_RE = re.compile(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$")
+_IMAGE_LINE_RE = re.compile(r"^\s*!\[([^\]]*)\]\(([^)]*)\)\s*$")
 _BR_RE = re.compile(r"<br\s*/?>")
 _TABLE_LINE_RE = re.compile(r"^\s*<table[^>]*>(.*)</table>\s*$")
 _TR_RE = re.compile(r"<tr[^>]*>(.*?)</tr>")
@@ -48,7 +49,8 @@ class MarkdownChunker:
 
         Returns:
             Document 列表; page_content = 标题链上下文行 + 节正文,
-            metadata 含 heading_chain / section_title / chunk_index
+            metadata 含 heading_chain / section_title / chunk_index,
+            节内含图片引用时另含 images(逗号分隔的原始引用路径)
 
         """
         if not text or not text.strip():
@@ -56,52 +58,75 @@ class MarkdownChunker:
 
         text = self._preprocess(text)
         documents: list[Document] = []
-        for chain, body in self._split_sections(text):
+        for chain, body, images in self._split_sections(text):
             for piece in self._split_body(body):
+                metadata = {
+                    "heading_chain": _CHAIN_SEP.join(chain),
+                    "section_title": chain[-1] if chain else "",
+                    "chunk_index": len(documents),
+                }
+                if images:
+                    metadata["images"] = ",".join(images)
                 documents.append(
                     Document(
                         page_content=self._compose(chain, piece),
-                        metadata={
-                            "heading_chain": _CHAIN_SEP.join(chain),
-                            "section_title": chain[-1] if chain else "",
-                            "chunk_index": len(documents),
-                        },
+                        metadata=metadata,
                     )
                 )
         return documents
 
+    def extract_image_anchors(self, text: str) -> list[tuple[list[str], str]]:
+        """提取全文图片锚点: (标题链, 原始引用路径) 列表, 与正文块无关.
+
+        供索引层解析为语料相对路径并生成图片块;
+        仅含图片无正文的节也能由此获得锚点.
+        """
+        if not text or not text.strip():
+            return []
+        text = self._preprocess(text)
+        anchors: list[tuple[list[str], str]] = []
+        for chain, _body, images in self._split_sections(text):
+            for raw_path in images:
+                anchors.append((list(chain), raw_path))
+        return anchors
+
     @staticmethod
     def _preprocess(text: str) -> str:
-        """入库前清洗: <br> 转空格, 剥离整行图片引用, 单行 HTML 表格转 GFM pipe 行."""
+        """入库前清洗: <br> 转空格, 单行 HTML 表格转 GFM pipe 行."""
         text = _BR_RE.sub(" ", text)
         lines = []
         for line in text.split("\n"):
-            if _IMAGE_LINE_RE.match(line):
-                continue
             lines.append(_convert_table_line(line))
         return "\n".join(lines)
 
-    def _split_sections(self, text: str) -> list[tuple[list[str], str]]:
-        """按标题边界切分为 (标题链, 节正文) 序列.
+    def _split_sections(self, text: str) -> list[tuple[list[str], str, list[str]]]:
+        """按标题边界切分为 (标题链, 节正文, 节内图片引用路径) 序列.
 
         用标题栈维护层级: 遇到新标题时弹出 >= 当前层级的栈顶, 栈内标题即标题链.
         首个标题前的内容以空标题链独立成节(前言).
+        整行图片引用从正文剥离(embedding 噪声), 原始路径按所在节记录进 images.
         """
-        sections: list[tuple[list[str], str]] = []
+        sections: list[tuple[list[str], str, list[str]]] = []
         stack: list[tuple[int, str]] = []
         current_chain: list[str] = []
         body_lines: list[str] = []
+        section_images: list[str] = []
 
         def flush() -> None:
             body = "\n".join(body_lines).strip()
-            if body:
-                sections.append((list(current_chain), body))
+            if body or section_images:
+                sections.append((list(current_chain), body, list(section_images)))
 
         for line in text.split("\n"):
+            image_match = _IMAGE_LINE_RE.match(line)
+            if image_match:
+                section_images.append(image_match.group(2))
+                continue
             match = _HEADING_RE.match(line)
             if match:
                 flush()
                 body_lines = []
+                section_images = []
                 level = len(match.group(1))
                 title = match.group(2).strip()
                 while stack and stack[-1][0] >= level:
@@ -168,11 +193,30 @@ class MarkdownChunker:
         return groups
 
     def _hard_split(self, text: str) -> list[str]:
-        """单段超长硬切(滑动窗口 + overlap)."""
+        """超长块兜底切分.
+
+        多行块(段落+表格混合/含超长表格行)按行边界切: 行是表格事实的原子单位,
+        绝不在行中间截断; 单行超长(如编年史单元格)允许整行成块, 略超预算可容忍.
+        无换行的纯文本段落维持字符级滑窗 + overlap.
+        """
         if len(text) <= self.max_chunk_chars:
             return [text]
-        step = max(1, self.max_chunk_chars - self.overlap_chars)
-        return [text[i : i + self.max_chunk_chars] for i in range(0, len(text), step)]
+        if "\n" not in text:
+            step = max(1, self.max_chunk_chars - self.overlap_chars)
+            return [
+                text[i : i + self.max_chunk_chars] for i in range(0, len(text), step)
+            ]
+        pieces: list[str] = []
+        buf = ""
+        for ln in text.split("\n"):
+            if buf and len(buf) + len(ln) + 1 > self.max_chunk_chars:
+                pieces.append(buf)
+                buf = ln
+            else:
+                buf = f"{buf}\n{ln}" if buf else ln
+        if buf:
+            pieces.append(buf)
+        return pieces
 
     @staticmethod
     def _compose(chain: list[str], piece: str) -> str:

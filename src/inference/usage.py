@@ -294,6 +294,7 @@ class UsageTrackingCallback(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         del serialized
+        del prompts
         self._record_start(run_id)
 
     @override

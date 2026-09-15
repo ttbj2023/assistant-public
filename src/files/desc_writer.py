@@ -26,6 +26,41 @@ from src.files.paths import FILES_DESC
 
 logger = logging.getLogger(__name__)
 
+# 统一描述结构分隔符: 摘要区与原文/源码区之间的边界标记
+_DESC_SEPARATOR = "\n\n---\n\n"
+
+
+def compose_desc(summary: str, original: str) -> str:
+    """组装统一描述结构: 摘要 + 分隔符 + 原文/源码.
+
+    Args:
+        summary: 摘要区内容 (一句话概要)
+        original: 原文/源码区内容 (上传文件=原文, 生成文件=源码)
+
+    Returns:
+        统一格式的描述内容; summary 为空时仅返回原文区
+    """
+    if not summary:
+        return original
+    return f"{summary}{_DESC_SEPARATOR}{original}"
+
+
+def split_desc(content: str | None) -> tuple[str, str]:
+    """解析统一描述结构为 (摘要, 原文/源码).
+
+    Args:
+        content: desc 文件内容; None 或旧格式 (无分隔符) 均可解析
+
+    Returns:
+        (summary, original) 元组; 无分隔符时 summary="", 全文为 original
+    """
+    if not content:
+        return "", ""
+    if _DESC_SEPARATOR in content:
+        summary, _, original = content.partition(_DESC_SEPARATOR)
+        return summary.strip("\n"), original
+    return "", content
+
 
 def desc_relative_path(file_id: str) -> str:
     """返回描述文件相对路径 (相对于 user_base)."""
@@ -79,9 +114,11 @@ def delete_desc(user_id: str, file_id: str) -> bool:
 
 
 __all__ = [
+    "compose_desc",
     "delete_desc",
     "desc_abs_path",
     "desc_relative_path",
     "read_desc",
+    "split_desc",
     "write_desc",
 ]

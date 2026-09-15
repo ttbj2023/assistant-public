@@ -32,3 +32,12 @@ def test_api_port_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("API_PORT", "bad")
     with pytest.raises(ValueError, match="API_PORT"):
         runtime_env.get_api_port_override()
+
+
+def test_doc2md_base_url_optional(monkeypatch: pytest.MonkeyPatch) -> None:
+    """doc2md 服务地址: 未配置返回 None (功能降级), 配置后去尾斜杠."""
+    monkeypatch.delenv("DOC2MD_BASE_URL", raising=False)
+    assert runtime_env.get_doc2md_base_url() is None
+
+    monkeypatch.setenv("DOC2MD_BASE_URL", "http://host.docker.internal:8769/")
+    assert runtime_env.get_doc2md_base_url() == "http://host.docker.internal:8769"

@@ -5,12 +5,15 @@
     python scripts/build_knowledge_base.py --corpus data/tea --kb-name tea
     python scripts/build_knowledge_base.py --corpus data/tea --rebuild
     python scripts/build_knowledge_base.py --corpus data/tea --max-chunk-chars 600 --overlap-chars 80
+    python scripts/build_knowledge_base.py --corpus data/tea --skip-image-describe
 
 说明:
 - 语料根下每个含 >=1 个 Markdown 的一级子目录即一部资料(书/论文/评测),
   book.yaml 提供书目元数据(缺省时 title=目录名, type=book).
 - kb_name 默认取语料根目录名(如 data/tea → tea), 与运行时领域工具共享向量库.
 - 增量幂等: 未变更文档跳过; 文档变更自动删旧块重建; --rebuild 全量重建.
+- 图片: 默认对文中引用图片调用视觉模型生成题注(sidecar 缓存幂等)并作为
+  独立图片块入库; --skip-image-describe 跳过图片块.
 - 向量库落 BASE_DATA_PATH/_knowledge_base/{kb_name}/.
 """
 
@@ -22,12 +25,18 @@ import logging
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # 允许脚本直接运行时导入 src 包
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+# 图片题述生成依赖视觉模型 API, 需加载 .env 凭据
+load_dotenv(_PROJECT_ROOT / ".env")
+
 from src.knowledge_base.chunker import MarkdownChunker  # noqa: E402
+from src.knowledge_base.image_describer import KnowledgeImageDescriber  # noqa: E402
 from src.knowledge_base.indexer import KnowledgeBaseIndexer  # noqa: E402
 from src.knowledge_base.store import KnowledgeBaseStore  # noqa: E402
 
@@ -54,6 +63,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--overlap-chars", type=int, default=100, help="块重叠字符数(默认 100)"
     )
+    parser.add_argument(
+        "--skip-image-describe",
+        action="store_true",
+        help="跳过图片题注生成与图片块索引 (默认启用)",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="详细日志")
     return parser.parse_args()
 
@@ -72,18 +86,22 @@ async def _run(args: argparse.Namespace, corpus_root: Path, kb_name: str) -> int
             max_chunk_chars=args.max_chunk_chars,
             overlap_chars=args.overlap_chars,
         )
-        indexer = KnowledgeBaseIndexer(store, chunker)
+        image_describer = (
+            None if args.skip_image_describe else KnowledgeImageDescriber()
+        )
+        indexer = KnowledgeBaseIndexer(store, chunker, image_describer=image_describer)
         stats = await indexer.build(corpus_root, rebuild=args.rebuild)
     finally:
         store.close()
 
     logger.info(
-        "索引完成: 共%d | 新增%d | 更新%d | 跳过%d | 失败%d | 库内总块数已由向量库持久化",
+        "索引完成: 共%d | 新增%d | 更新%d | 跳过%d | 失败%d | 图片块%d | 库内总块数已由向量库持久化",
         stats.total,
         stats.indexed,
         stats.updated,
         stats.skipped,
         stats.failed,
+        stats.images,
     )
     if stats.errors:
         for err in stats.errors:

@@ -56,7 +56,6 @@ class InternalToolConfig(BaseModel):
     class_path: str = Field(description="工具类路径")
     enabled: bool = Field(default=True, description="是否启用")
     timeout: float = Field(default=30.0, gt=0, description="工具超时时间(秒)")
-    description: str = Field(default="", description="工具描述")
     config: dict[str, Any] = Field(default_factory=dict, description="工具特定配置参数")
     prompt_hint: str = Field(
         default="",
@@ -65,6 +64,14 @@ class InternalToolConfig(BaseModel):
     skip_when_capabilities: list[str] = Field(
         default_factory=list,
         description="主对话模型具备这些能力时跳过注入该工具(如 image_input)",
+    )
+    companions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "伴随工具名列表: 本工具激活时伴随激活它们. "
+            "companion 不进search catalog(不可独立发现), "
+            "仅随宿主激活注入; 显式列出的工具优先保持常规身份"
+        ),
     )
 
     @field_validator("name")

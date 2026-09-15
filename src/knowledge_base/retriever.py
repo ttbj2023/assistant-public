@@ -78,7 +78,7 @@ class KnowledgeBaseRetriever:
         kept: list[Document] = []
         used = 0
         for doc in docs:
-            block = self._format(doc)
+            block = self._format(doc, self.store.kb_name)
             if used + len(block) > self.budget_chars and kept:
                 break
             formatted.append(block)
@@ -114,8 +114,12 @@ class KnowledgeBaseRetriever:
         return reordered or docs
 
     @staticmethod
-    def _format(doc: Document) -> str:
-        """格式化单块: 出处行(标题/类型/作者/章节) + 正文."""
+    def _format(doc: Document, kb_name: str) -> str:
+        """格式化单块: 出处行(标题/类型/作者/章节) + 图片引用行 + 正文.
+
+        图片块(chunk_type=image)输出完整 image_ref(kb_name:语料相对路径)与读图引导;
+        正文块携带 images 元数据时在正文末尾列出本节图片 ref.
+        """
         meta = doc.metadata
         parts = [f"标题: {meta.get('doc_title', '未知')}"]
         if meta.get("doc_type"):
@@ -125,7 +129,22 @@ class KnowledgeBaseRetriever:
         if meta.get("heading_chain"):
             parts.append(f"章节: {meta['heading_chain']}")
         header = "出处 | " + " | ".join(parts)
-        return f"{header}\n{doc.page_content}"
+
+        lines = [header]
+        if meta.get("chunk_type") == "image" and meta.get("image_path"):
+            lines.append(
+                f"图片: {kb_name}:{meta['image_path']} "
+                f"(可用 kb_read_image 工具传入此 image_ref 精读原图)"
+            )
+        body = doc.page_content
+        if meta.get("images"):
+            refs = ", ".join(
+                f"{kb_name}:{p}" for p in str(meta["images"]).split(",") if p
+            )
+            if refs:
+                body = f"{body}\n本节图片: {refs}"
+        lines.append(body)
+        return "\n".join(lines)
 
 
 __all__ = ["KnowledgeBaseRetriever", "RetrievalResult"]

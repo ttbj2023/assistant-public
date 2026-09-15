@@ -97,7 +97,7 @@ def load_conversations(
     return [dict(r) for r in rows]
 
 
-PRODUCTION_MODEL = "deepseek:deepseek-v4-flash"
+PRODUCTION_MODEL = "deepseek:deepseek-flash"
 PRODUCTION_MODEL_PARAMS: dict = {
     "max_tokens": 2048,
     "extra_body": {"thinking": {"type": "disabled"}},

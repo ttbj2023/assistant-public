@@ -52,6 +52,30 @@ class TestShouldExclude:
     @pytest.mark.parametrize(
         "rel_path",
         [
+            "scripts/benchmarks/",
+            "scripts/benchmarks/common/model_resolver.py",
+            "scripts/benchmarks/tool_filter/model_registry.py",
+        ],
+    )
+    def test_excludes_benchmarks_dir(self, rel_path: str) -> None:
+        """benchmark 对照脚本含内网端点兜底 (GEMINI_BASE_URL 默认值), 公开仓不需要."""
+        assert should_exclude(rel_path) is True
+
+    @pytest.mark.parametrize(
+        "rel_path",
+        [
+            ".dsh/",
+            ".dsh/skills/jack-chat.md",
+            "opencode.json",
+        ],
+    )
+    def test_excludes_internal_tooling_configs(self, rel_path: str) -> None:
+        """.dsh 沙盒 skill 与 opencode.json 引用其他私人仓库路径/内部服务端口, 排除."""
+        assert should_exclude(rel_path) is True
+
+    @pytest.mark.parametrize(
+        "rel_path",
+        [
             "README.md",
             "src/agent/factory.py",
             "scripts/prepare_public_release.py",

@@ -97,7 +97,7 @@ class BaseProcessor(ABC):
             "config": self.config is not None,
         }
 
-    def get_prompt_hint(self, agent_config: Any = None) -> str:  # noqa: ARG002
+    def get_prompt_hint(self, agent_config: Any = None) -> str:  # ruff: ignore[unused-method-argument]
         """返回注入系统提示词的记忆格式描述.
 
         描述该处理器注入到对话中的XML标签/历史格式等, 供LLM理解上下文结构.

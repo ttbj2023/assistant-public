@@ -1,13 +1,13 @@
 """微信公众号文章发布服务.
 
-编排完整发布流程:
-1. 摘要+封面提示词自动生成 (1次LLM) + 校对排版 (1次LLM) - 并行
+编排完整发布流程 (正文不经过任何 LLM 重写, 文风/格式由主 agent
+经 wechat_official_account skill 约束后产出终稿, 本服务只做机械转换):
+1. 摘要+封面提示词自动生成 (1次LLM)
 2. 封面图生成+上传
 3. 附件清理 ([file: id] 引用解析)
 4. Markdown -> 微信 HTML
 5. 附件上传到微信素材库 + CDN替换
-6. 封面图插入文章开头
-7. 创建草稿
+6. 创建草稿
 """
 
 from __future__ import annotations
@@ -56,30 +56,6 @@ _ANALYZE_PROMPT = """\
 ## 返回格式 (严格 JSON, 不要 markdown 代码块)
 {{"summary": "摘要内容", "cover_prompt": "封面图画面描述"}}"""
 
-_REFINE_PROMPT = """\
-你是一位校对编辑. 你的任务是对一篇 Markdown 草稿做校对和格式排版, 使其适合微信公众号手机端阅读.
-
-[原文内容]
-{content}
-
-[绝对禁止]
-- 禁止改写/替换/润色任何句子, 禁止调整措辞或语气
-- 禁止添加原文没有的观点/过渡句/总结句/引言/小标题
-- 禁止删除原文中的任何段落或句子
-- 禁止统一文风, 原文的口语化/不规则/个人化表达必须原样保留
-
-[允许的操作 (仅限以下)]
-1. 校对: 修错别字/标点错误/明显断句错误 (不改变表达)
-2. 断段: 过长的段落拆分, 适配手机屏幕阅读
-3. 格式整理: 调整标题层级/加粗/列表等 Markdown 格式, 使排版清晰
-4. 保留原文中的 [file: id] 标记, 不要修改或删除
-
-[格式]
-- Markdown 格式, 仅限: 标题(##/###)/加粗/无序列表/引用块
-- 不生成表格/分割线/代码块
-
-直接输出整理后的完整文章."""
-
 
 async def run_publish(
     content: str,
@@ -109,8 +85,6 @@ async def run_publish(
     wp_config = inference_cfg.wechat_publish
     text_model_id = wp_config.model
     text_model_params = wp_config.model_params
-    refine_model_id = wp_config.refine_model
-    refine_model_params = wp_config.refine_model_params
     image_model_id = inference_cfg.image_generation.model_id
 
     from src.storage.service.user_channel_config_service import (
@@ -127,13 +101,9 @@ async def run_publish(
 
     final_author = await _resolve_author(author, mp_config, config_service)
 
-    analysis, refined_content = await asyncio.gather(
-        _analyze_article(content, title, text_model_id, text_model_params),
-        _refine_content(content, refine_model_id, refine_model_params),
-    )
+    analysis = await _analyze_article(content, title, text_model_id, text_model_params)
     summary = analysis.get("summary", "")[:100]
     cover_prompt = analysis.get("cover_prompt", "")
-    content = refined_content
 
     cover_media_info: dict[str, str] | None = None
     if cover_prompt:
@@ -242,27 +212,6 @@ async def _analyze_article(
     except Exception as e:
         logger.warning("文章分析失败: %s", e)
         return {"summary": "", "cover_prompt": ""}
-
-
-async def _refine_content(
-    content: str,
-    model_id: str,
-    model_params: dict[str, Any],
-) -> str:
-    """校对 + 格式排版: 修错别字/断段/调整格式, 不改写表达. 失败返回原文."""
-    prompt = _REFINE_PROMPT.format(content=content)
-    try:
-        response = await _invoke_llm(
-            [HumanMessage(content=prompt)], model_id, model_params
-        )
-        refined = response.content.strip()
-        if refined:
-            logger.info("校对排版完成")
-            return refined
-        return content
-    except Exception as e:
-        logger.warning("校对排版失败, 使用原文: %s", e)
-        return content
 
 
 def _extract_json(text: str) -> str:

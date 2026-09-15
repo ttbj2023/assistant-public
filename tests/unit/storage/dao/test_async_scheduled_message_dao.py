@@ -108,7 +108,9 @@ class TestUpdateStatus:
         mock_session.execute = AsyncMock(return_value=mock_result)
         mock_session.commit = AsyncMock()
 
-        result = await dao.update_status("msg-001", MessageStatus.SENT, sent_at=datetime.now())
+        result = await dao.update_status(
+            "msg-001", MessageStatus.SENT, sent_at=datetime.now()
+        )
         assert result is True
 
     @pytest.mark.asyncio
@@ -121,6 +123,70 @@ class TestUpdateStatus:
 
         result = await dao.update_status("nonexist", MessageStatus.SENT)
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_last_error_written_when_provided(self, dao):
+        """传入 last_error 字符串时应写入该列."""
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.rowcount = 1
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        await dao.update_status(
+            "msg-001", MessageStatus.FAILED, last_error="网关投递失败: prepare failed"
+        )
+
+        stmt = mock_session.execute.call_args[0][0]
+        params = stmt.compile().params
+        assert params.get("last_error") == "网关投递失败: prepare failed"
+
+    @pytest.mark.asyncio
+    async def test_last_error_column_untouched_when_unset(self, dao):
+        """未传 last_error 时不应更新该列 (区分清空与不更新)."""
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.rowcount = 1
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        await dao.update_status("msg-001", MessageStatus.CANCELLED)
+
+        stmt = mock_session.execute.call_args[0][0]
+        params = stmt.compile().params
+        assert "last_error" not in params
+
+    @pytest.mark.asyncio
+    async def test_last_error_cleared_by_explicit_none(self, dao):
+        """显式传 None 应更新该列为 NULL (发送成功清空历史错误)."""
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.rowcount = 1
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        await dao.update_status("msg-001", MessageStatus.SENT, last_error=None)
+
+        stmt = mock_session.execute.call_args[0][0]
+        params = stmt.compile().params
+        assert "last_error" in params
+
+
+class TestGetFailedMessages:
+    """测试查询失败消息."""
+
+    @pytest.mark.asyncio
+    async def test_returns_failed(self, dao):
+        mock_session = _mock_session_context(dao)
+        entries = [MagicMock()]
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = entries
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        result = await dao.get_failed_messages("u1", "t1", "a1")
+        assert result == entries
 
 
 class TestMarkExpiredAsMissed:
@@ -170,3 +236,63 @@ class TestHealthCheck:
         with patch.object(dao.db_ops, "health_check", return_value=True):
             result = await dao.health_check()
         assert result is True
+
+
+class TestGetPendingByRelatedEvent:
+    """测试按关联日程查询影子消息 (跨线程级联入口)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_matching_pending(self, dao):
+        mock_session = _mock_session_context(dao)
+        mock_msg = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_msg]
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        result = await dao.get_pending_by_related_event("u1", 42)
+        assert result == [mock_msg]
+        # 断言过滤条件包含 related_event_id 与 PENDING 状态
+        stmt = mock_session.execute.call_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "related_event_id" in compiled
+        assert "PENDING" in compiled
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_when_no_shadow(self, dao):
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        result = await dao.get_pending_by_related_event("u1", 99)
+        assert result == []
+
+
+class TestUpdateSendTime:
+    """测试顺延影子消息发送时间 (改期级联)."""
+
+    @pytest.mark.asyncio
+    async def test_update_succeeds(self, dao):
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.rowcount = 1
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        new_time = datetime(2026, 6, 2, 7, 0)
+        result = await dao.update_send_time("msg-001", new_time)
+        assert result is True
+        stmt = mock_session.execute.call_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "send_time" in compiled
+
+    @pytest.mark.asyncio
+    async def test_update_not_found(self, dao):
+        mock_session = _mock_session_context(dao)
+        mock_result = MagicMock()
+        mock_result.rowcount = 0
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        result = await dao.update_send_time("nonexist", datetime(2026, 6, 2, 7, 0))
+        assert result is False

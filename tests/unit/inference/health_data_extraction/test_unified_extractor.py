@@ -151,7 +151,7 @@ class TestUnifiedHealthExtractorAvailability:
         with patch(
             "src.inference.health_data_extraction.unified_extractor._get_model_config",
             return_value={
-                "model": "deepseek:deepseek-v4-flash",
+                "model": "deepseek:deepseek-flash",
                 "timeout": 60.0,
             },
         ):
@@ -210,7 +210,7 @@ class TestUnifiedHealthExtractorExtract:
         with patch(
             "src.inference.health_data_extraction.unified_extractor._get_model_config",
             return_value={
-                "model": "deepseek:deepseek-v4-flash",
+                "model": "deepseek:deepseek-flash",
                 "timeout": 60.0,
             },
         ):
@@ -239,7 +239,7 @@ class TestUnifiedHealthExtractorExtract:
         with patch(
             "src.inference.health_data_extraction.unified_extractor._get_model_config",
             return_value={
-                "model": "deepseek:deepseek-v4-flash",
+                "model": "deepseek:deepseek-flash",
                 "timeout": 60.0,
             },
         ):

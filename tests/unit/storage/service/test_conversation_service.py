@@ -119,9 +119,7 @@ class TestConversationServiceCreate:
         )
 
         conversation_service._allocate_round_number_in_session.assert_called_once()
-        call_args = (
-            conversation_service._allocate_round_number_in_session.call_args
-        )
+        call_args = conversation_service._allocate_round_number_in_session.call_args
         assert call_args.args[1] == test_user
         assert call_args.args[2] == "test_thread"
 
@@ -491,7 +489,9 @@ class TestConversationServiceExceptionPaths:
         # Act & Assert
         with pytest.raises(Exception, match="DB error"):
             await conversation_service.get_conversation_by_round(
-                user_id=test_user, thread_id="test_thread", round_number=1,
+                user_id=test_user,
+                thread_id="test_thread",
+                round_number=1,
             )
 
     @pytest.mark.asyncio
@@ -507,8 +507,10 @@ class TestConversationServiceExceptionPaths:
         # Act & Assert
         with pytest.raises(Exception, match="DB error"):
             await conversation_service.get_formatted_index_range(
-                user_id=test_user, thread_id="test_thread",
-                start_round=1, end_round=5,
+                user_id=test_user,
+                thread_id="test_thread",
+                start_round=1,
+                end_round=5,
             )
 
     @pytest.mark.asyncio
@@ -524,7 +526,8 @@ class TestConversationServiceExceptionPaths:
         # Act & Assert
         with pytest.raises(Exception, match="DB error"):
             await conversation_service.list_conversations(
-                user_id=test_user, thread_id="test_thread",
+                user_id=test_user,
+                thread_id="test_thread",
             )
 
 
@@ -543,11 +546,15 @@ class TestConversationServiceListRecentRounds:
 
         # Act
         result = await conversation_service.list_recent_rounds(
-            user_id=test_user, thread_id="test_thread", limit=10,
+            user_id=test_user,
+            thread_id="test_thread",
+            limit=10,
         )
 
         # Assert
         assert result == [5, 3, 1]
         conversation_service.conversation_dao.list_recent_rounds.assert_awaited_once_with(
-            test_user, "test_thread", limit=10,
+            test_user,
+            "test_thread",
+            limit=10,
         )

@@ -24,6 +24,7 @@ from src.storage.dao.async_database_manager import (
     _DEFAULT_MAX_OVERFLOW,
     _DEFAULT_POOL_SIZE,
     AsyncDatabaseManager,
+    create_async_calendar_db_manager,
     create_async_conversation_history_db_manager,
     create_async_pinned_memory_db_manager,
     create_async_todo_db_manager,
@@ -254,20 +255,33 @@ class TestAsyncDatabaseManagerEnsureDirectory:
 class TestFactoryFunctions:
     """测试工厂函数"""
 
-    @patch("src.storage.dao.async_database_manager.get_database_path")
-    async def test_create_async_todo_db_manager_should_create_manager(
+    @patch("src.storage.dao.async_database_manager.get_user_database_path")
+    async def test_create_async_calendar_db_manager_should_create_manager(
         self, mock_get_path
     ):
-        """测试TODO管理器：应创建管理器并调用create_tables"""
-        mock_get_path.return_value = "/data/user/thread/todo.db"
+        """测试日历管理器：应创建用户级管理器并调用create_tables"""
+        mock_get_path.return_value = "/data/user/calendar.db"
 
         with patch.object(AsyncDatabaseManager, "create_tables", new=AsyncMock()):
-            manager = await create_async_todo_db_manager(
-                "user1", "thread1", agent_id="test-agent"
-            )
+            manager = await create_async_calendar_db_manager("user1")
 
             assert isinstance(manager, AsyncDatabaseManager)
             manager.create_tables.assert_called_once()
+            mock_get_path.assert_called_once_with("user1", "calendar")
+
+    @patch("src.storage.dao.async_database_manager.get_user_database_path")
+    async def test_create_async_todo_db_manager_should_create_user_level_manager(
+        self, mock_get_path
+    ):
+        """测试TODO管理器：用户级存储, 应调用create_tables"""
+        mock_get_path.return_value = "/data/user/todo.db"
+
+        with patch.object(AsyncDatabaseManager, "create_tables", new=AsyncMock()):
+            manager = await create_async_todo_db_manager("user1")
+
+            assert isinstance(manager, AsyncDatabaseManager)
+            manager.create_tables.assert_called_once()
+            mock_get_path.assert_called_once_with("user1", "todo")
 
     @patch("src.storage.dao.async_database_manager.get_database_path")
     async def test_create_async_pinned_memory_db_manager_should_create_manager(

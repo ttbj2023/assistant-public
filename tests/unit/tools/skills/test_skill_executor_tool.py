@@ -204,13 +204,13 @@ class TestBuildMessage:
 
 
 class TestTitleAndDescWrite:
-    """title 透传 brief + code 写入 .desc.md."""
+    """title 透传 brief + code 经 source 参数写入 desc."""
 
     @pytest.mark.asyncio
     async def test_title_propagates_to_brief_and_writes_desc(
         self, tmp_path: Path
     ) -> None:
-        """title 应透传到 brief, code 写入 .desc.md."""
+        """title 应透传到 brief, code 经 register_tool_output(source=) 写入 desc."""
         tool = SkillExecutorTool()
         resp = _make_mock_response({
             "success": True,
@@ -241,7 +241,6 @@ class TestTitleAndDescWrite:
                 "src.tools.shared.file_output.register_tool_output",
                 new_callable=AsyncMock,
             ) as mock_reg,
-            patch("src.files.desc_writer.write_desc") as mock_write_desc,
         ):
             mock_resolver.return_value.get_shared_storage_path.return_value = tmp_path
             mock_reg.return_value = {
@@ -257,11 +256,8 @@ class TestTitleAndDescWrite:
         assert data["success"] is True
         # brief 透传 title
         assert mock_reg.call_args.kwargs["brief"] == "季度销售报表"
-        # code 写入 .desc.md (write_desc(user_id, file_id, source_code))
-        mock_write_desc.assert_called_once()
-        assert mock_write_desc.call_args.args[0] == "u1"
-        assert mock_write_desc.call_args.args[1] == "abc12345"
-        assert mock_write_desc.call_args.args[2] == "import openpyxl"
+        # code 经 register_tool_output(source=) 写入 desc (统一结构)
+        assert mock_reg.call_args.kwargs["source"] == "import openpyxl"
 
     @pytest.mark.asyncio
     async def test_no_title_brief_is_none(self, tmp_path: Path) -> None:
@@ -296,7 +292,6 @@ class TestTitleAndDescWrite:
                 "src.tools.shared.file_output.register_tool_output",
                 new_callable=AsyncMock,
             ) as mock_reg,
-            patch("src.files.desc_writer.write_desc"),
         ):
             mock_resolver.return_value.get_shared_storage_path.return_value = tmp_path
             mock_reg.return_value = {

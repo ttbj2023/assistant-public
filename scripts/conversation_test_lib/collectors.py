@@ -105,8 +105,9 @@ def collect_db_data(config: ConversationTestConfig) -> dict[str, Any]:
     )
     data["pinned_memory"] = pinned_rows
 
+    # todo.db 与 file_registry.db 同为用户级库 (TODO 三级隔离迁移后)
     todo_rows = _read_sqlite(
-        db_dir / "todo.db",
+        user_db_dir / "todo.db",
         "SELECT id, title, description, status, priority, created_at, updated_at "
         "FROM todo_items WHERE status != 'DELETED' ORDER BY created_at",
     )

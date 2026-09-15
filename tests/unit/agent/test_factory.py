@@ -108,8 +108,8 @@ class TestCreateAgent:
             ("gpt_5.5", "gpt-5.5"),
             # startswith("claude-") 检测 — 保留前缀检测覆盖
             ("claude_sonnet_4", "claude-sonnet-4"),
-            # ":" 冒号检测 — 标准 provider:model 格式（对应 deepseek:deepseek-v4-flash）
-            ("deepseek:deepseek_v4_flash", "deepseek:deepseek-v4-flash"),
+            # ":" 冒号检测 — 标准 provider:model 格式（对应 deepseek:deepseek-flash）
+            ("deepseek:deepseek_flash", "deepseek:deepseek-flash"),
             # "local:" 检测 — 本地模型格式（对应 local:qwen3.5:9b）
             ("local:qwen3.5:9b", "local:qwen3.5:9b"),
             # startswith("gemini-") 检测 — 对应 gemini:gemini-3.5-flash 的裸格式误用

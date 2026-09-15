@@ -45,10 +45,9 @@ class WebResearchTool(BaseTool):
     ]
     description: str = (
         "网络搜索与研究工具, 搜索互联网获取实时信息, 返回带引用的结构化答案.\n"
-        "两种深度: quick(快速搜索, 约5秒) / deep(深度研究, 约60-200秒).\n"
-        "默认使用deep深度. 如需分析用户提供的链接, 必须把完整URL放入query.\n\n"
-        "- deep: 深度研究, 约60-200秒, Agent自主搜索+抓取+综合分析, 适合需要多源对比的复杂问题\n"
-        "默认使用deep深度.\n\n"
+        "两种深度: quick(快速搜索, 约5秒, 适合简单事实查询) / "
+        "deep(深度研究, 约60-200秒, 多源检索交叉对比, 适合复杂问题), 默认deep.\n"
+        "如需分析用户提供的链接, 必须把完整URL放入query.\n\n"
         '示例: {"query": "比较 https://example.com/a 和 https://example.com/b", "depth": "quick"}'
     )
     args_schema: type[BaseModel] = WebResearchInput

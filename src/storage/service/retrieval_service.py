@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-_TOKEN_SPLIT_RE = re.compile(r"[\s,，;；、|/\\()（）\[\]【】{}]+")  # noqa: RUF001
+_TOKEN_SPLIT_RE = re.compile(r"[\s,，;；、|/\\()（）\[\]【】{}]+")  # ruff: ignore[ambiguous-unicode-character-string]
 _MIN_TOKEN_LEN = 2
 
 

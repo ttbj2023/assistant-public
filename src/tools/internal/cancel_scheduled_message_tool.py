@@ -22,7 +22,10 @@ class CancelScheduledMessageRequest(BaseModel):
         json_schema_extra={"additionalProperties": False},
     )
 
-    message_id: str = Field(..., description="要取消的消息ID")
+    message_id: str = Field(
+        ...,
+        description="要取消的消息ID, 来自 list_scheduled_messages 的返回",
+    )
 
 
 @sync_runnable
@@ -31,7 +34,12 @@ class CancelScheduledMessageTool(BaseTool):
 
     name: str = "cancel_scheduled_message"
     search_keywords: ClassVar[list[str]] = ["取消", "撤销"]
-    description: str = "取消一条待发送的定时消息(需提供message_id)."
+    description: str = (
+        "取消一条待发送的定时消息, 只有尚未发送(pending)的消息可取消.\n"
+        "message_id 来自 list_scheduled_messages 的返回.\n"
+        '示例: 用户说"取消提醒吃药那条定时消息" → 先 list_scheduled_messages 找到该消息的 '
+        'message_id, 再 {"message_id": "..."}'
+    )
     args_schema: type[CancelScheduledMessageRequest] = CancelScheduledMessageRequest
 
     def _get_helper(self) -> ScheduledMessageHelper:

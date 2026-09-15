@@ -54,8 +54,7 @@ class RegenerateDownloadLinkTool(BaseTool):
         "为历史文件准备下载链接, 当用户需要下载或重新发送之前生成的文件时使用.\n"
         "对话历史中的文件以 [file: file_id] 标记存储, 调用时从标记提取 file_id. "
         "调用此工具后系统会自动将下载链接发送给用户, 不需要在回复中包含任何URL.\n\n"
-        '示例: 用户说"重新发送 [file: a1b2c3d4]" -> 调用 {"file_id": "a1b2c3d4"}\n'
-        '示例: {"file_id": "a1b2c3d4"}'
+        '示例: 用户说"重新发送 [file: a1b2c3d4]" -> 调用 {"file_id": "a1b2c3d4"}'
     )
     args_schema: type[RegenerateDownloadLinkInput] = RegenerateDownloadLinkInput
 

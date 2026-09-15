@@ -92,6 +92,29 @@ def mock_handler():
 
 class TestAwrapToolCall:
     @pytest.mark.asyncio
+    async def test_second_search_in_turn_sets_bypass_flag(
+        self, middleware, mock_handler
+    ):
+        """同轮已有一次 search 结果时, 第二次 search 调用应标记跳过降噪."""
+        search_tool = _make_dormant_tool("search_available_tools")
+        prior = _make_tool_message('{"matched_tools": []}')
+        request = _make_tool_call_request("search_available_tools", tool=search_tool)
+        request = request.override(
+            state={"messages": [prior]},
+        )
+        await middleware.awrap_tool_call(request, mock_handler)
+        assert getattr(search_tool, "_bypass_llm_filter", False) is True
+
+    @pytest.mark.asyncio
+    async def test_first_search_in_turn_no_bypass_flag(self, middleware, mock_handler):
+        """本轮首次 search 不标记, 正常走降噪."""
+        search_tool = _make_dormant_tool("search_available_tools")
+        request = _make_tool_call_request("search_available_tools", tool=search_tool)
+        request = request.override(state={"messages": []})
+        await middleware.awrap_tool_call(request, mock_handler)
+        assert getattr(search_tool, "_bypass_llm_filter", False) is False
+
+    @pytest.mark.asyncio
     async def test_should_route_dormant_tool_to_correct_instance(
         self, middleware, mock_handler
     ):
@@ -190,6 +213,78 @@ class TestAwrapModelCall:
         called_request = mock_handler.call_args[0][0]
         names = {t.name for t in called_request.tools}
         assert "geo_navigator" in names
+
+
+# ---------------------------------------------------------------------------
+# TestCompanionActivation
+# ---------------------------------------------------------------------------
+
+
+class TestCompanionActivation:
+    """宿主工具激活时伴随激活 companion 工具."""
+
+    @pytest.mark.asyncio
+    async def test_host_activation_pulls_companion(self, mock_handler):
+        host = _make_dormant_tool("tea_knowledge")
+        companion = _make_dormant_tool("kb_read_image")
+        mw = ToolDiscoveryMiddleware(
+            [host, companion],
+            companion_map={"tea_knowledge": ["kb_read_image"]},
+        )
+        content = json.dumps({
+            "success": True,
+            "matched_tools": [{"name": "tea_knowledge"}],
+        })
+        request = _make_model_request(messages=[_make_tool_message(content)])
+
+        await mw.awrap_model_call(request, mock_handler)
+
+        called_request = mock_handler.call_args[0][0]
+        names = {t.name for t in called_request.tools}
+        assert {"tea_knowledge", "kb_read_image"} <= names
+
+    @pytest.mark.asyncio
+    async def test_companion_activation_idempotent_across_hosts(self, mock_handler):
+        """多宿主共享同一 companion, 均激活时 companion 只注入一次."""
+        host_a = _make_dormant_tool("tea_knowledge")
+        host_b = _make_dormant_tool("kb_other")
+        companion = _make_dormant_tool("kb_read_image")
+        mw = ToolDiscoveryMiddleware(
+            [host_a, host_b, companion],
+            companion_map={
+                "tea_knowledge": ["kb_read_image"],
+                "kb_other": ["kb_read_image"],
+            },
+        )
+        content = json.dumps({
+            "success": True,
+            "matched_tools": [{"name": "tea_knowledge"}, {"name": "kb_other"}],
+        })
+        request = _make_model_request(messages=[_make_tool_message(content)])
+
+        await mw.awrap_model_call(request, mock_handler)
+
+        called_request = mock_handler.call_args[0][0]
+        names = [t.name for t in called_request.tools]
+        assert names.count("kb_read_image") == 1
+
+    @pytest.mark.asyncio
+    async def test_companion_not_in_pool_is_ignored(self, mock_handler):
+        """companion 实例不在 dormant 池(如不可用被过滤)时安全跳过."""
+        host = _make_dormant_tool("tea_knowledge")
+        mw = ToolDiscoveryMiddleware(
+            [host],
+            companion_map={"tea_knowledge": ["kb_read_image"]},
+        )
+        content = json.dumps({
+            "success": True,
+            "matched_tools": [{"name": "tea_knowledge"}],
+        })
+        request = _make_model_request(messages=[_make_tool_message(content)])
+
+        await mw.awrap_model_call(request, mock_handler)
+
+        assert mw._activated_tools == {"tea_knowledge"}
 
 
 # ---------------------------------------------------------------------------

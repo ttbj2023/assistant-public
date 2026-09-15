@@ -2,14 +2,13 @@
 
 NotificationService 屏蔽渠道细节, 业务方提供 DeliverySpec + 内容即可发送.
 渠道后端:
-- wechat → OpenClawClient (src/core/openclaw_client.py)
+- wechat → ChannelPushClient (src/core/channel_push_client.py, 经渠道网关推送)
 - email  → EmailClient (src/core/email_client.py)
 
 resolve_delivery() 收敛渠道配置解析 (原散落在 scheduled_message_service /
-openclaw_message_splitter / 价格监控工具三处重复), 并从
-openclaw.notification_defaults 统一读取系统级渠道名 (消除来源不一致).
+价格监控工具两处重复).
 
-设计原则 (对齐 openclaw_client.py):
+设计原则 (对齐 channel_push_client.py):
 - 模块级单例 + 工厂函数
 - 失败不抛异常, 返回 bool, 调用方决定降级策略
 
@@ -22,9 +21,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from src.core.channel_push_client import SendOutcome, get_channel_push_client
 from src.core.email_client import get_email_client
 from src.core.lifecycle import register_resource
-from src.core.openclaw_client import get_openclaw_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +32,12 @@ logger = logging.getLogger(__name__)
 class DeliverySpec:
     """统一投递描述, 屏蔽渠道细节.
 
-    wechat 渠道: openclaw_channel / account_id / target 必填.
+    wechat 渠道: account_id / target 必填.
     email 渠道: email_address 必填.
     """
 
     method: str  # "wechat" | "email"
-    # wechat (OpenClaw)
-    openclaw_channel: str = ""
+    # wechat (渠道网关)
     account_id: str = ""
     target: str = ""
     # email
@@ -56,7 +54,7 @@ class NotificationService:
         *,
         subject: str = "",
         html: str | None = None,
-    ) -> bool:
+    ) -> SendOutcome:
         """按投递描述发送通知.
 
         Args:
@@ -66,24 +64,28 @@ class NotificationService:
             html: 可选 HTML 正文 (仅 email 渠道, 提供 text+html 双部分)
 
         Returns:
-            True 成功, False 失败 (失败日志已记录)
+            SendOutcome: ok=True 成功; ok=False 时 error 为失败原因
         """
         if delivery.method == "wechat":
-            return await get_openclaw_client().send_message(
-                channel=delivery.openclaw_channel,
+            return await get_channel_push_client().send_message(
                 account_id=delivery.account_id,
-                target=delivery.target,
+                to=delivery.target,
                 text=text,
+                method="wechat",
             )
         if delivery.method == "email":
-            return await get_email_client().send_email(
+            ok = await get_email_client().send_email(
                 to=delivery.email_address,
                 subject=subject or "通知",
                 body=text,
                 html=html,
             )
+            if ok:
+                return SendOutcome(ok=True)
+            # email 后端失败详情暂留应用日志, 此处给出可落库的概要
+            return SendOutcome(ok=False, error="email 发送失败 (详见应用日志)")
         logger.error("不支持的投递方式: %s", delivery.method)
-        return False
+        return SendOutcome(ok=False, error=f"不支持的投递方式: {delivery.method}")
 
     async def close(self) -> None:
         """无持久资源, 占位以满足 LifecycleRegistry close 契约."""
@@ -122,8 +124,7 @@ async def resolve_delivery(
 ) -> DeliverySpec | None:
     """从 user 渠道配置解析投递描述.
 
-    收敛渠道配置解析重复 (原散落在 scheduled_message / openclaw_message_splitter /
-    价格监控工具三处), 并统一从 openclaw.notification_defaults 读取系统级渠道名.
+    收敛渠道配置解析重复 (原散落在 scheduled_message / 价格监控工具).
 
     Args:
         user_id / thread_id / agent_id: 属主 (渠道配置按此物理隔离)
@@ -150,20 +151,16 @@ async def resolve_delivery(
 
     if channel == "wechat":
         target = cfg.get("target", "")
-        account_id = cfg.get("openclaw_account", "")
-        channel_key = cfg.get("openclaw_channel_key", "weixin")
-        openclaw_channel = _resolve_openclaw_channel(channel_key)
-        if not target or not account_id or not openclaw_channel:
+        account_id = cfg.get("account_id", "")
+        if not target or not account_id:
             logger.warning(
-                "wechat 渠道配置不完整: target_ok=%s, account_ok=%s, channel_ok=%s",
+                "wechat 渠道配置不完整: target_ok=%s, account_ok=%s",
                 bool(target),
                 bool(account_id),
-                bool(openclaw_channel),
             )
             return None
         return DeliverySpec(
             method="wechat",
-            openclaw_channel=openclaw_channel,
             account_id=account_id,
             target=target,
         )
@@ -178,22 +175,10 @@ async def resolve_delivery(
     return None
 
 
-def _resolve_openclaw_channel(channel_key: str) -> str:
-    """从 openclaw.notification_defaults 读取系统级渠道名."""
-    try:
-        from src.config.openclaw_config import get_config
-
-        defaults = get_config().notification_defaults
-    except Exception as e:
-        logger.warning("读取 openclaw.notification_defaults 失败: %s", e)
-        return ""
-    entry = defaults.get(channel_key)
-    return entry.channel if entry else ""
-
-
 __all__ = [
     "DeliverySpec",
     "NotificationService",
+    "SendOutcome",
     "close_notification_service",
     "get_notification_service",
     "resolve_delivery",

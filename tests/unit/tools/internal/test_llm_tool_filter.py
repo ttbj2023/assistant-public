@@ -224,15 +224,96 @@ class TestFilterToolsByLlm:
             assert len(result) == 3
 
     @pytest.mark.asyncio
-    async def test_filter_empty_relevant_fallback(self, patch_inference_config):
-        """LLM 返回空列表 → 降级返回全部候选."""
+    async def test_filter_empty_relevant_respected(self, patch_inference_config):
+        """LLM 判定无相关工具(合法空) → 尊重返回空列表, 不降级."""
         with patch(
             "src.tools.internal._llm_tool_filter._call_llm_filter",
             new_callable=AsyncMock,
             return_value=[],
         ):
             result = await filter_tools_by_llm("test", SAMPLE_CANDIDATES)
+            assert result == []
+
+    @pytest.mark.asyncio
+    async def test_filter_plain_explicit_none_respected(self, patch_inference_config):
+        """plain 形态字面 none → 尊重返回空列表, 不降级."""
+        with patch(
+            "src.tools.internal._llm_tool_filter._call_llm_filter",
+            new_callable=AsyncMock,
+            return_value=set(),
+        ):
+            result = await filter_tools_by_llm("test", SAMPLE_CANDIDATES)
+            assert result == []
+
+    @pytest.mark.asyncio
+    async def test_filter_out_of_range_only_fallback(self, patch_inference_config):
+        """编号全部越界 = 模型编号混乱不可信 → 降级返回全部候选."""
+        with patch(
+            "src.tools.internal._llm_tool_filter._call_llm_filter",
+            new_callable=AsyncMock,
+            return_value=[99, 100],
+        ):
+            result = await filter_tools_by_llm("test", SAMPLE_CANDIDATES)
             assert len(result) == 3  # 降级返回全部
+
+    @pytest.mark.asyncio
+    async def test_name_hit_candidate_exempt_from_llm(self, patch_inference_config):
+        """名称命中的高置信候选不送审, LLM 只收到其余候选."""
+        candidates = [
+            {"name": "weather_query", "description": "天气", "_name_hit": True},
+            {"name": "tool_b", "description": "b"},
+            {"name": "tool_c", "description": "c"},
+        ]
+
+        async def fake_llm(query, cands):
+            assert all(not c.get("_name_hit") for c in cands)
+            assert [c["name"] for c in cands] == ["tool_b", "tool_c"]
+            return [2]
+
+        with patch(
+            "src.tools.internal._llm_tool_filter._call_llm_filter",
+            side_effect=fake_llm,
+        ):
+            result = await filter_tools_by_llm("test", candidates)
+
+        assert [t["name"] for t in result] == ["weather_query", "tool_c"]
+
+    @pytest.mark.asyncio
+    async def test_high_score_candidate_exempt_from_llm(self, patch_inference_config):
+        """总分达到豁免阈值的候选不送审."""
+        candidates = [
+            {"name": "tool_a", "description": "a", "_filter_score": 9.0},
+            {"name": "tool_b", "description": "b"},
+            {"name": "tool_c", "description": "c"},
+        ]
+
+        with patch(
+            "src.tools.internal._llm_tool_filter._call_llm_filter",
+            new_callable=AsyncMock,
+            return_value=[1, 2],
+        ) as mock_llm:
+            result = await filter_tools_by_llm("test", candidates)
+
+        sent = mock_llm.call_args.args[1]
+        assert [c["name"] for c in sent] == ["tool_b", "tool_c"]
+        assert [t["name"] for t in result] == ["tool_a", "tool_b", "tool_c"]
+
+    @pytest.mark.asyncio
+    async def test_all_exempt_skips_llm_entirely(self, patch_inference_config):
+        """全部候选高置信豁免 → 不调用 LLM 直接返回全部."""
+        candidates = [
+            {"name": "tool_a", "description": "a", "_filter_score": 10.0},
+            {"name": "tool_b", "description": "b", "_name_hit": True},
+        ]
+
+        with patch(
+            "src.tools.internal._llm_tool_filter._call_llm_filter",
+            new_callable=AsyncMock,
+        ) as mock_llm:
+            result = await filter_tools_by_llm("test", candidates)
+
+        mock_llm.assert_not_awaited()
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_filter_parse_failure_fallback(self, patch_inference_config):

@@ -2,7 +2,7 @@
 
 管理用户的消息渠道配置, 包括查询默认渠道,按类型查询等.
 渠道类型:
-- wechat: 通过OpenClaw发送, config包含openclaw_channel/openclaw_account/target
+- wechat: 经渠道网关推送, config包含account_id/target
 - email: 通过SMTP发送, config包含email_address
 """
 

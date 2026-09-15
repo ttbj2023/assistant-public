@@ -47,7 +47,7 @@ class WeatherQueryTool(BaseTool):
     description: str = (
         "天气查询工具, 查询指定城市的实时天气和未来多日天气预报.\n"
         "包含温度/湿度/风力/空气质量/降水概率等详细信息.\n"
-        "响应快速, 适合简单的天气查询需求.\n"
+        "支持城市名/地区名或经纬度作为 location.\n"
         '示例: {"location": "北京"} 或 {"location": "上海浦东"}'
     )
     args_schema: type[BaseModel] = WeatherQueryInput

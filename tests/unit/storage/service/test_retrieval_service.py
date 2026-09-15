@@ -1116,7 +1116,8 @@ class TestDualStageRetrievalServiceInternalMethods:
 
         # Act - 带round_range过滤器的搜索
         await service.search_conversations(
-            "test query", max_results=10,
+            "test query",
+            max_results=10,
             filters={"round_range": (1, 5)},
         )
 
@@ -1150,7 +1151,9 @@ class TestDualStageRetrievalServiceInternalMethods:
     ):
         """_async_get_final_documents: 候选轮次无对应对话应返回空列表."""
         # Arrange
-        mock_conversation_service.get_conversations_by_rounds = AsyncMock(return_value=[])
+        mock_conversation_service.get_conversations_by_rounds = AsyncMock(
+            return_value=[]
+        )
         service = DualStageRetrievalService(
             conversation_service=mock_conversation_service,
             vector_service=mock_vector_service,
@@ -1211,8 +1214,12 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
     @pytest.mark.asyncio
     async def test_search_conversations_exception_should_fallback_to_sql(
-        self, mock_conversation_service, mock_conversation_dao,
-        mock_vector_service, test_user, test_thread_id,
+        self,
+        mock_conversation_service,
+        mock_conversation_dao,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
     ):
         """search_conversations内部异常时应降级到SQL搜索(覆盖243-246)."""
         # Arrange - SQL有结果,但smart_deduplication_with_scores抛出异常
@@ -1247,8 +1254,11 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
     @pytest.mark.asyncio
     async def test_async_sql_search_with_exception_should_return_empty(
-        self, mock_conversation_service, mock_vector_service,
-        test_user, test_thread_id,
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
     ):
         """_async_sql_search_rounds: 异常时应返回空列表(覆盖276-278)."""
         # Arrange
@@ -1270,8 +1280,12 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
     @pytest.mark.asyncio
     async def test_search_conversations_dedup_empty_should_fallback(
-        self, mock_conversation_service, mock_conversation_dao,
-        mock_vector_service, test_user, test_thread_id,
+        self,
+        mock_conversation_service,
+        mock_conversation_dao,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
     ):
         """双路搜索：去重后无候选轮次应触发fallback."""
         # Arrange - SQL和向量各返回一些结果，但无交集
@@ -1308,8 +1322,12 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
     @pytest.mark.asyncio
     async def test_search_conversations_no_documents_should_fallback(
-        self, mock_conversation_service, mock_conversation_dao,
-        mock_vector_service, test_user, test_thread_id,
+        self,
+        mock_conversation_service,
+        mock_conversation_dao,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
     ):
         """双路搜索：候选轮次无对应文档应触发fallback."""
         # Arrange
@@ -1354,8 +1372,11 @@ class TestDualStageRetrievalServiceRemainingPaths:
 
     @pytest.mark.asyncio
     async def test_async_vector_search_with_no_vector_store_should_return_empty(
-        self, mock_conversation_service, mock_vector_service,
-        test_user, test_thread_id,
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
+        test_thread_id,
     ):
         """_async_vector_search_rounds: 无向量存储应返回空列表."""
         # Arrange - vector_service has no _vector_store
@@ -1385,7 +1406,10 @@ class TestHookFormat:
 
     @pytest.mark.asyncio
     async def test_normal_path_should_return_hook_format(
-        self, mock_conversation_service, mock_vector_service, test_user,
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
         test_thread_id,
     ):
         """正常路径 page_content 应为钩子, 不含完整原文."""
@@ -1415,11 +1439,16 @@ class TestHookFormat:
 
     @pytest.mark.asyncio
     async def test_none_summary_should_fallback_to_user_message_preview(
-        self, mock_conversation_service, mock_vector_service, test_user,
+        self,
+        mock_conversation_service,
+        mock_vector_service,
+        test_user,
         test_thread_id,
     ):
         """summary 为 None 时 fallback 到 user_message 前50字符 (沿用 core.py 模式)."""
-        conv = _make_conv_index(7, "这是一段较长的用户消息内容用于测试fallback截断逻辑", "回复")
+        conv = _make_conv_index(
+            7, "这是一段较长的用户消息内容用于测试fallback截断逻辑", "回复"
+        )
         conv.topic = None
         conv.summary = None
         mock_conversation_service.get_conversations_by_rounds = AsyncMock(
@@ -1448,6 +1477,7 @@ class TestDualStageRetrievalServiceHealthCheckExtra:
         self, mock_conversation_service, test_user, test_thread_id
     ):
         """健康检查抛出异常时应返回包含错误信息的字典."""
+
         # Arrange - 创建一个会在_ensure_initialized抛出的service
         class FailingVectorService:
             _vector_store = None

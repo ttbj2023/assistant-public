@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
+from src.tools.middleware._image_inject import KbImageInjectMiddleware
 from src.tools.middleware._skill_load import SkillLoadMiddleware
 from src.tools.middleware._tool_discovery import ToolDiscoveryMiddleware
 
-__all__ = ["SkillLoadMiddleware", "ToolDiscoveryMiddleware"]
+__all__ = ["KbImageInjectMiddleware", "SkillLoadMiddleware", "ToolDiscoveryMiddleware"]

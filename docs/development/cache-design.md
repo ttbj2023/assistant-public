@@ -42,7 +42,7 @@
 - HttpPool (httpx 连接池)
 - McpBridge (MCP stdio 子进程)
 - BrowserRenderer (HTTP 客户端, 调用 tool-runtime 容器)
-- OpenClawClient (httpx 连接)
+- ChannelPushClient (httpx 连接)
 - ScheduledMessageService (asyncio TimerHandle)
 
 ### 2. 自注册优于集中维护
@@ -89,7 +89,7 @@ VectorService 的 `LangChainVectorStore` 持有 ChromaDB PersistentClient (文�
 
 ### 注册模式
 
-- **全局单例** (HttpPool / OpenClaw / Browser / ToolsManager 等): 在各自的 `get/create` 函数中自注册.
+- **全局单例** (HttpPool / ChannelPush / Browser / ToolsManager 等): 在各自的 `get/create` 函数中自注册.
 - **按维度资源** (ScheduledMessageService / SplittableMemoryCache 等): 在 lifespan shutdown 中集中注册, 因为 close 方式是全局函数.
 
 ### 关闭行为

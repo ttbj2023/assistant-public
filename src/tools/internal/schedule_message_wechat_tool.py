@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.tools.internal.calendar_helpers import CalendarServiceAccessor
 from src.tools.internal.scheduled_message_helper import ScheduledMessageHelper
 from src.tools.shared.tool_runtime import format_tool_error, sync_runnable
 
@@ -37,6 +38,13 @@ class ScheduleMessageWechatRequest(BaseModel):
         None,
         description="备注说明, 如 '提醒用户吃药'",
     )
+    related_event_id: int | None = Field(
+        None,
+        description=(
+            "关联日程事件ID, 该消息作为此日程的到点提醒. "
+            "先创建日程拿到 event_id 后传入; 日程不存在时会报错"
+        ),
+    )
 
 
 @sync_runnable
@@ -57,10 +65,12 @@ class ScheduleMessageWechatTool(BaseTool):
         "参数:\n"
         "- message: 消息内容(必填)\n"
         "- send_time: 发送时间(必填), ISO 8601格式, 应携带时区偏移(如 +08:00 / Z), 不带时区按用户本地时区解释\n"
-        "- description: 备注(可选)\n\n"
+        "- description: 备注(可选)\n"
+        "- related_event_id: 关联日程ID(可选), 作为该日程的到点提醒影子, 先建日程再传\n\n"
         "注意:\n"
-        "- 最多可预约7天内的消息\n"
+        "- 最多可预约一年内的消息\n"
         "- 同时待发送消息不超过50条\n"
+        "- 不支持周期性重复; 周期性提醒应创建重复日程, 由手机日历到点提醒\n"
         "- send_time 填过去/当前时间会自动顺延为最近可发送时间\n\n"
         "示例:\n"
         '- 用户: "明天早上8点提醒我吃药" → {"message": "该吃药啦", "send_time": "2026-07-23T08:00:00+08:00", "description": "提醒吃药"}'
@@ -92,6 +102,19 @@ class ScheduleMessageWechatTool(BaseTool):
                     f" (如 2026-05-30T08:00:00+08:00): {e}"
                 )
 
+            if request.related_event_id is not None:
+                acc = CalendarServiceAccessor(
+                    self.user_id, self.thread_id, self.agent_id
+                )
+                cal_service = await acc.get_service()
+                event = await cal_service.get_event_by_id(request.related_event_id)
+                if event is None:
+                    return (
+                        f"错误: related_event_id={request.related_event_id} 对应的"
+                        "日程不存在, 请先 list_calendar_events 定位正确的 event_id"
+                        " (创建日程会返回 event_id)"
+                    )
+
             service = await helper.get_service()
             msg = await service.schedule_message(
                 message=request.message,
@@ -99,6 +122,7 @@ class ScheduleMessageWechatTool(BaseTool):
                 description=request.description,
                 channel="wechat",
                 timezone=helper.get_timezone(),
+                related_event_id=request.related_event_id,
             )
 
             local_send_time = (
@@ -107,6 +131,11 @@ class ScheduleMessageWechatTool(BaseTool):
                 .astimezone(ZoneInfo(helper.get_timezone()))
                 .strftime("%Y-%m-%d %H:%M")
             )
+            related_line = (
+                f"\n- 关联日程: #{request.related_event_id}"
+                if request.related_event_id
+                else ""
+            )
             return (
                 f"✅ 定时消息已创建\n"
                 f"- 消息ID: {msg.message_id}\n"
@@ -114,6 +143,7 @@ class ScheduleMessageWechatTool(BaseTool):
                 f"- 渠道: wechat\n"
                 f"- 消息内容: {request.message[:100]}"
                 + (f"...\n- 备注: {request.description}" if request.description else "")
+                + related_line
             )
 
         except Exception as e:

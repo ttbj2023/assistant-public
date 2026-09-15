@@ -82,6 +82,62 @@ class TestAgentPipelineE2E:
         assert len(todos) >= 1, "create_todo 应通过 Agent 循环写入 DB"
         assert any("买牛奶" in t.get("title", "") for t in todos)
 
+    async def test_implicit_intent_searches_dormant_todo_and_persists(
+        self,
+        e2e_client,
+        e2e_test_thread_id,
+        e2e_api_key,
+        e2e_db_reader,
+    ):
+        """全折叠架构下隐式记录意图: 先 search 唤醒休眠 todo 组再落库.
+
+        独特价值: todo/calendar 已移入休眠池, 本用例验证 完整折叠链路 —
+                  LLM 起手只有机制工具, 经 search_available_tools 唤醒
+                  todo_manager_group (keyword 召回 + 中间件注入) 后
+                  create_todo 真实落库. query 用单命中词组绕开 0.8B 降噪
+                  (e2e 无本地模型服务).
+        """
+        E2EMockLLM.set_script([
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "search_available_tools",
+                        "args": {"query": "待办 任务"},
+                        "id": "call_s1",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "create_todo",
+                        "args": {"title": "买牛奶"},
+                        "id": "call_t1",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            AIMessage(
+                content="已记录待办：买牛奶。",
+                tool_calls=[],
+            ),
+        ])
+
+        response = await e2e_client.post(
+            "/v1/chat/completions",
+            json=_chat_request("记一下明天买牛奶", e2e_test_thread_id),
+            headers={"Authorization": f"Bearer {e2e_api_key}"},
+        )
+
+        assert response.status_code == 200
+        todos = e2e_db_reader.read_todos(e2e_test_thread_id)
+        assert any("买牛奶" in t.get("title", "") for t in todos), (
+            "隐式记录意图必须经 search 唤醒休眠 todo 组并真实落库, 禁止口头答应"
+        )
+
     async def test_conversation_history_assembled_across_requests(
         self,
         e2e_client,

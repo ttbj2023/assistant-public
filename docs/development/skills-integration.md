@@ -384,6 +384,9 @@ skills/export_document/      # prompt_only
   SKILL.md                   # Markdown → PDF/DOCX 导出规范 + 风格选型
   references/
     gfm_syntax.md            # L3: GFM 语法与图表嵌入
+
+skills/wechat_official_account/  # prompt_only, 关联 internal tool (首个案例)
+  SKILL.md                   # 公众号文风约束 + 写作发布流程; associated_tools: [wechat_publish]
 ```
 
 ## 9. 案例: xlsx
@@ -392,19 +395,19 @@ skills/export_document/      # prompt_only
 
 - **领域知识最丰富**: ~200 行 Excel 专业规范(金融模型颜色 / 数字格式 / 公式规则 / 验证清单), 最能验证 skills 段注入价值
 - **系统目前没有的能力**: export_document 只导出 PDF/DOCX, 无 Excel 生成
-- **生成型, 适配网关**: 用户文本描述 → 生成 .xlsx → file_id 下载(网关无文档上传, 纯生成场景)
+- **生成型, 适配渠道**: 用户文本描述 → 生成 .xlsx → file_id 下载(渠道不收 xlsx 二进制, 纯生成场景)
 - **典型"领域知识 + python 脚本"**: 知识(openpyxl 用法) + 脚本(recalc.py 重算验证)
 
 ### 9.2 适配方案(审核重写)
 
 - **保留**: 输出规范(字体 / 零公式错误)、公式构造规则(用公式不要硬编码值)、openpyxl 代码示例、创建新文件工作流
-- **砍掉**: 读取/编辑已有文件(网关不支持文档上传)、pandas 读取已有文件
+- **砍掉**: 读取/编辑已有文件(skill 执行器无 file_id 传递通道)、pandas 读取已有文件
 - **脚本**: 用原版 `scripts/recalc.py` + `scripts/office/soffice.py`(装了 LibreOffice, 完整零错误验证), 不重写
 
 ### 9.3 完整数据流
 
 ```
-用户(微信/OpenClaw): "帮我做个Q3销售数据表, 含同比公式"
+用户(微信): "帮我做个Q3销售数据表, 含同比公式"
   ↓
 personal-assistant (agent.yaml 配了 skills: [xlsx])
   ↓ [构建期: skills 段注入 xlsx 的 L1 清单(名称+描述); load_skill 工具常驻]
@@ -487,7 +490,7 @@ tool-runtime 跑 LLM 临场代码(skill_executor 的 openpyxl 生成等, 以及 
 
 ### 12.1 已知限制
 
-- **文档摄入类 skill 受限**: OpenClaw 网关只支持图文输入, 无文档上传通道. 因此"读取/编辑用户上传的 PDF/Excel"类 skill 无法工作. skill 的输入只能是命令参数(文本/数据), **纯生成型**.
+- **文档摄入类 skill 受限**: 渠道已支持文档上传 (md/txt/docx/pdf/pptx, 解析为 markdown 入库), 但 skill 执行器无 file_id → 容器内文件传递通道, "读取/编辑用户上传的 PDF/Excel"类 skill 仍无法工作 (二进制 xlsx 不在解析范围). skill 的输入只能是命令参数(文本/数据), **纯生成型**.
 - **图片输入待定**: 用户能传图(file_id 体系内), 但当前 xlsx/chart_maker 案例不涉及. 图片处理类 skill 的 file_id → 执行器传递留作后续.
 - **tmpfs 512m 须实测**: LibreOffice headless + Chromium 同时启动可能吃紧, 不够再扩.
 

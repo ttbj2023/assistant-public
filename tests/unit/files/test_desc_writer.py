@@ -11,10 +11,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.files.desc_writer import (
+    compose_desc,
     delete_desc,
     desc_abs_path,
     desc_relative_path,
     read_desc,
+    split_desc,
     write_desc,
 )
 
@@ -26,6 +28,32 @@ def mock_user_base(tmp_path: Path):
     resolver.get_user_base_path.return_value = tmp_path
     with patch("src.files.desc_writer.get_user_path_resolver", return_value=resolver):
         yield tmp_path
+
+
+class TestComposeDesc:
+    """测试统一描述结构组装: 摘要 + 分隔符 + 原文."""
+
+    def test_composes_summary_and_original(self):
+        result = compose_desc("一句话摘要", "line1\nline2")
+        assert result == "一句话摘要\n\n---\n\nline1\nline2"
+
+    def test_empty_summary_returns_original_only(self):
+        assert compose_desc("", "原文内容") == "原文内容"
+
+
+class TestSplitDesc:
+    """测试统一描述结构解析 (与 compose_desc 互逆)."""
+
+    def test_roundtrip(self):
+        content = compose_desc("摘要", "line1\nline2")
+        assert split_desc(content) == ("摘要", "line1\nline2")
+
+    def test_legacy_content_without_separator(self):
+        """旧格式 (统一前写入) 无分隔符: summary 空, 全文为原文."""
+        assert split_desc("旧格式描述全文") == ("", "旧格式描述全文")
+
+    def test_none_content(self):
+        assert split_desc(None) == ("", "")
 
 
 class TestDescRelativePath:

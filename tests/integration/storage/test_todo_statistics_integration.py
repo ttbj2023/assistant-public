@@ -14,6 +14,7 @@ TODO (不同 status / priority / due_date), 验证统计结果反映真实聚合
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -23,6 +24,18 @@ from src.storage.models.todo import TodoPriority, TodoStatus
 from src.storage.service.service_factory import create_todo_service
 
 _AGENT_ID = "test-agent"
+
+
+@pytest.fixture(autouse=True)
+def test_user(unique_test_user: str) -> str:
+    """本文件内每测试使用唯一 user (todo 为用户级库, 共享 user 会互相污染统计)."""
+    return unique_test_user
+
+
+@pytest.fixture
+def unique_test_user() -> str:
+    """生成进程内唯一的测试用户 ID."""
+    return f"todo_stat_user_{uuid.uuid4().hex[:8]}"
 
 
 async def _set_updated_at(session_factory: object, todo_id: int, ts: datetime) -> None:

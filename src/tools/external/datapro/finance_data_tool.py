@@ -45,7 +45,7 @@ class FinanceDataInput(BaseModel):
     query: str = Field(
         description=(
             "查询语句: 标的(公司全称/股票代码) + 具体金融维度表述. "
-            "维度表述决定返回哪个数据子表, 须明确具体维度"
+            "维度表述决定返回哪类数据, 须明确具体维度"
             "(如ROE盈利水平/K线形态分析/季度业绩/市值与估值水平)."
         )
     )
@@ -58,7 +58,7 @@ def _split_query_if_needed(query: str) -> list[str]:
         return [query]
 
     description = _STOCK_CODE_RE.sub("", query).strip()
-    description = re.sub(r"^[、,，;；\s]+|[、,，;；\s]+$", "", description)  # noqa: RUF001
+    description = re.sub(r"^[、,，;；\s]+|[、,，;；\s]+$", "", description)  # ruff: ignore[ambiguous-unicode-character-string]
 
     groups = [
         codes[i : i + _MAX_STOCKS_PER_CALL]
@@ -74,7 +74,7 @@ class FinanceDataTool(BaseTool):
 
     name: str = "finance_data"
     summary: str = (
-        "金融数据查询, 查A股/港股基本面(财务/估值/行情/研报/技术形态等结构化指标)"
+        "金融数据查询, 查A股/港股基本面(财务/估值/历史行情/研报/技术形态等结构化指标)"
     )
     search_keywords: ClassVar[list[str]] = [
         "金融",
@@ -109,19 +109,18 @@ class FinanceDataTool(BaseTool):
         "对比",
     ]
     description: str = (
-        "金融数据查询工具, 查询A股/港股权威结构化金融数据"
-        "(火山引擎DataPro金融数据库, 覆盖全球股票/期货/期权/债券/基金).\n"
-        "标的可用公司全称或股票代码; query维度表述决定返回哪个数据子表, "
-        "须写明具体金融维度, 系统自动精炼为高密度摘要.\n\n"
-        "数据维度(按query自然语言路由):\n"
+        "金融数据查询工具, 查询A股/港股权威结构化金融数据.\n"
+        "标的可用公司全称或股票代码; query须写明具体金融维度, "
+        "维度表述决定返回哪类数据, 结果为精炼摘要.\n\n"
+        "数据维度:\n"
         "- 盈利能力: ROE/ROA/净利率/毛利率\n"
         "- 技术形态: K线/连涨天数/MACD/KDJ/均线\n"
         "- 估值: PE/PB/市值\n"
-        "- 行情: 开高低收/成交量\n"
+        "- 历史行情: 开高低收/成交量\n"
         "- 财务报表: 季报/年报/营收/净利润/现金流\n\n"
         "用法: query = 标的(公司全称/股票代码) + 具体维度表述. "
-        "维度表述决定返回子表: 写'ROE盈利水平'返回盈利指标, 写'K线形态分析'返回行情技术指标, "
-        "写'金融数据'这类模糊词会命中无关表. "
+        "写'ROE盈利水平'返回盈利指标, 写'K线形态分析'返回行情技术指标, "
+        "写'金融数据'这类模糊词会命中无关内容. "
         "用户问多个维度时分别调用多次(每次一个维度), 不要合并成模糊query.\n"
         "单次最多3只标的, 超出自动分批.\n\n"
         "示例(已验证):\n"

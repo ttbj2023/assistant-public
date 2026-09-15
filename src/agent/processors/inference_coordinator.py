@@ -24,6 +24,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool
 
 from src.agent.processors.system_prompt_assembler import (
     SYSTEM_PROMPT_SECTION_ORDER,
@@ -52,11 +53,18 @@ from src.inference.llm.retry_predicates import (
 )
 from src.tools import get_tools_manager
 from src.tools.experts.agent_utils import enable_tool_error_handling
-from src.tools.middleware import SkillLoadMiddleware, ToolDiscoveryMiddleware
+from src.tools.middleware import (
+    KbImageInjectMiddleware,
+    SkillLoadMiddleware,
+    ToolDiscoveryMiddleware,
+)
 from src.tools.skills.skill_bridge import get_skill_bridge
 from src.utils.debug_config import is_debug_enabled
 
 logger = logging.getLogger(__name__)
+
+# 纯文本文档当轮内联上限 (控制当轮 prompt 预算; 超出走 [file: id] 标记 + read_file)
+INLINE_DOCUMENT_MAX_CHARS = 4000
 
 # data URI 解析: data:<mime>;base64,<payload>
 _DATA_URI_RE = re.compile(r"^data:[^;]+;base64,(.+)$", re.DOTALL)
@@ -231,6 +239,9 @@ class InferenceCoordinator:
             core_names = self._expand_group_names(core_names, group_members_map)
             dormant_names = self._expand_group_names(dormant_names, group_members_map)
 
+            # companion 展开: 休眠宿主的伴随工具追加进池(标记伴随身份, 不进catalog)
+            dormant_names, companion_names = self._expand_companions(dormant_names)
+
             # 能力门控: 过滤与主对话模型能力冲突的工具
             if llm_model:
                 from src.inference.llm.definitions.model_registry import get_model
@@ -253,6 +264,7 @@ class InferenceCoordinator:
             )
 
             discovery_middleware = None
+            dormant_tools: list[BaseTool] = []
             if dormant_names:
                 dormant_tools = await tool_manager.create_dormant_tools(
                     dormant_names,
@@ -261,12 +273,19 @@ class InferenceCoordinator:
                     agent_id=agent_config.agent_id,
                 )
                 if dormant_tools:
+                    companion_map = self._build_companion_map({
+                        t.name for t in dormant_tools
+                    })
                     discovery_middleware = ToolDiscoveryMiddleware(
                         dormant_tools,
                         group_members_map=group_members_map,
+                        companion_map=companion_map,
                     )
                     self._enrich_search_tools_description(
-                        tools, dormant_tools, tool_groups=tool_groups
+                        tools,
+                        dormant_tools,
+                        tool_groups=tool_groups,
+                        companion_names=companion_names,
                     )
 
             # Skills渐进式披露装配(load_skill实例注入skill池 + L1清单 + per-skill关联工具映射)
@@ -292,12 +311,17 @@ class InferenceCoordinator:
                     )
 
             # 收存活工具的 prompt_hint (组级 + 个体级)
+            # 可用性门控后全员阵亡的组(渠道未配置等)不注入 hint
+            alive_tool_names = {t.name for t in tools} | {
+                t.name for t in dormant_tools or []
+            }
             prompt_hints = self._collect_prompt_hints(
                 original_core,
                 original_dormant,
                 core_names,
                 dormant_names,
                 tool_groups,
+                alive_tool_names=alive_tool_names,
             )
 
             tool_stats = {
@@ -374,6 +398,7 @@ class InferenceCoordinator:
         core_tools: list[Any],
         dormant_tools: list[Any],
         tool_groups: dict[str, Any] | None = None,
+        companion_names: set[str] | None = None,
     ) -> None:
         """将休眠工具清单注入search_available_tools的描述和实例目录中.
 
@@ -381,10 +406,14 @@ class InferenceCoordinator:
         组条目用组summary作为description, 组keywords参与检索.
         组对主对话模型透明: LLM只感知被注入的子工具.
 
+        companion处理: 伴随工具跳过catalog条目与描述清单(不可独立发现),
+        仅随宿主激活注入.
+
         Args:
             core_tools: 核心工具列表
             dormant_tools: 休眠工具列表
             tool_groups: 工具组配置(组名 -> ToolGroupConfig), 可选
+            companion_names: 伴随工具名集合(排除出catalog), 可选
 
         """
         search_tool = next(
@@ -393,6 +422,7 @@ class InferenceCoordinator:
         )
         if not search_tool or not dormant_tools:
             return
+        companions = companion_names or set()
 
         # 构建 member -> group_name 反向映射 + 组元数据(仅本agent启用的组)
         member_to_group: dict[str, str] = {}
@@ -419,6 +449,8 @@ class InferenceCoordinator:
             group_name = member_to_group.get(tool.name)
             if group_name:
                 grouped_members.setdefault(group_name, []).append(tool)
+                continue
+            if tool.name in companions:
                 continue
             tagline = (
                 getattr(tool, "summary", "")
@@ -574,6 +606,50 @@ class InferenceCoordinator:
         return expanded
 
     @staticmethod
+    def _expand_companions(
+        dormant_names: list[str],
+    ) -> tuple[list[str], set[str]]:
+        """展开休眠宿主工具的 companions.
+
+        显式列出的工具优先保持常规休眠身份(catalog 可见),
+        仅追加未显式列出的 companion 并标记伴随身份.
+
+        Returns:
+            (展开后的工具名列表, 伴随工具名集合)
+
+        """
+        tools_cfg = get_tools_config()
+        listed = set(dormant_names)
+        expanded = list(dormant_names)
+        companion_names: set[str] = set()
+        for host in dormant_names:
+            cfg = tools_cfg.get_internal_tool_config(host)
+            if cfg is None:
+                cfg = tools_cfg.get_external_tool_config(host)
+            for companion in getattr(cfg, "companions", None) or []:
+                if companion in listed or companion in companion_names:
+                    continue
+                expanded.append(companion)
+                companion_names.add(companion)
+        return expanded, companion_names
+
+    @staticmethod
+    def _build_companion_map(pool_names: set[str]) -> dict[str, list[str]]:
+        """从工具配置构建宿主 -> companion 映射, 仅保留池内实际存在的工具."""
+        tools_cfg = get_tools_config()
+        companion_map: dict[str, list[str]] = {}
+        for host in pool_names:
+            cfg = tools_cfg.get_internal_tool_config(host)
+            if cfg is None:
+                cfg = tools_cfg.get_external_tool_config(host)
+            companions = [
+                c for c in getattr(cfg, "companions", None) or [] if c in pool_names
+            ]
+            if companions:
+                companion_map[host] = companions
+        return companion_map
+
+    @staticmethod
     def _filter_by_capability(
         names: list[str],
         model_caps: set[str],
@@ -616,6 +692,7 @@ class InferenceCoordinator:
         filtered_core: list[str],
         filtered_dormant: list[str],
         tool_groups: dict[str, Any],
+        alive_tool_names: set[str] | None = None,
     ) -> str:
         """收集存活工具的 prompt_hint (组级 + 个体级).
 
@@ -625,6 +702,9 @@ class InferenceCoordinator:
             filtered_core: 展开+能力过滤后的核心工具名
             filtered_dormant: 展开+能力过滤后的休眠工具名
             tool_groups: 工具组配置字典
+            alive_tool_names: 可用性门控后实际存活的成员工具名集合;
+                组全员阵亡(如渠道未配置)时跳过该组 hint,
+                None 表示不做可用性过滤
 
         Returns:
             拼接后的 prompt_hint 文本, 空字符串表示无提示
@@ -639,6 +719,10 @@ class InferenceCoordinator:
             group_cfg = tool_groups.get(name)
             if group_cfg is None or name in seen:
                 continue
+            if alive_tool_names is not None:
+                members = getattr(group_cfg, "members", []) or []
+                if members and not (set(members) & alive_tool_names):
+                    continue
             hint = getattr(group_cfg, "prompt_hint", "") or ""
             if hint:
                 label = getattr(group_cfg, "display_label", name.removesuffix("_group"))
@@ -651,6 +735,8 @@ class InferenceCoordinator:
         # 第二轮: 个体工具 prompt_hint (从过滤后的展开名中查找)
         for name in filtered_core + filtered_dormant:
             if name in seen:
+                continue
+            if alive_tool_names is not None and name not in alive_tool_names:
                 continue
             cfg = tools_cfg.get_internal_tool_config(name)
             if cfg is None:
@@ -755,10 +841,12 @@ class InferenceCoordinator:
                 retry_cfg.max_retries,
                 retry_cfg.total_timeout,
             )
-        middleware.append(ToolCallLimitMiddleware(run_limit=20, exit_behavior="end"))
+        middleware.append(ToolCallLimitMiddleware(run_limit=40, exit_behavior="end"))
 
         if discovery_middleware:
             middleware.append(discovery_middleware)
+            # 知识库图片直注: 多模态主模型下 kb_read_image 原图直注主对话
+            middleware.append(KbImageInjectMiddleware(llm_model))
 
         if skill_load_middleware:
             middleware.append(skill_load_middleware)
@@ -1037,29 +1125,76 @@ class InferenceCoordinator:
             user_content: 用户文本内容(含记忆上下文)
             llm_model: 模型ID
             image_datas: 图片数据列表
-            attachment_infos: 附件描述列表(用于非视觉模型降级)
+            attachment_infos: 附件描述列表(图片供降级引用, 文档按需内联)
 
         Returns:
             HumanMessage实例
 
         """
-        if not image_datas:
+        has_documents = self._has_document_attachments(attachment_infos)
+        if not image_datas and not has_documents:
             return HumanMessage(content=user_content)
 
         from src.inference.llm.definitions.model_registry import get_model
 
         model_meta = get_model(llm_model)
         if model_meta is not None and model_meta.supports_multimodal():
-            return HumanMessage(
-                content=self._build_multimodal_content(
-                    user_content, image_datas, attachment_infos, llm_model
-                )
+            content = self._build_multimodal_content(
+                user_content, image_datas or [], attachment_infos, llm_model
             )
-        return HumanMessage(
-            content=self._build_text_fallback_content(
-                user_content, attachment_infos, llm_model
-            )
+            for doc_block in self._build_document_blocks(attachment_infos):
+                content.append({"type": "text", "text": doc_block})
+            return HumanMessage(content=content)
+
+        fallback = self._build_text_fallback_content(
+            user_content, attachment_infos, llm_model
         )
+        doc_blocks = self._build_document_blocks(attachment_infos)
+        if doc_blocks:
+            fallback = f"{fallback}\n{'\n'.join(doc_blocks)}"
+        return HumanMessage(content=fallback)
+
+    @staticmethod
+    def _has_document_attachments(attachment_infos: list[Any] | None) -> bool:
+        """判断附件中是否含纯文本文档."""
+        return any(
+            getattr(att, "file_type", "") == "document"
+            for att in (attachment_infos or [])
+        )
+
+    def _build_document_blocks(self, attachment_infos: list[Any] | None) -> list[str]:
+        """构建文档文本块: 小文档内联全文, 大文档仅标记 + read_file 提示.
+
+        内联上限 4000 字符 (当轮 prompt 预算); 内联 desc 全文
+        (统一结构: 摘要+原文, store_document 写入).
+        """
+        from src.core.context import get_user_context_or_none
+        from src.files.desc_writer import read_desc
+
+        ctx = get_user_context_or_none()
+        user_id = ctx.user_id if ctx else ""
+
+        blocks: list[str] = []
+        for att in attachment_infos or []:
+            if getattr(att, "file_type", "") != "document":
+                continue
+            file_id = getattr(att, "file_id", None)
+            filename = getattr(att, "filename", "文档")
+            brief = getattr(att, "brief", "")
+
+            content = read_desc(user_id, file_id) if file_id and user_id else None
+            if content and len(content) <= INLINE_DOCUMENT_MAX_CHARS:
+                blocks.append(
+                    f"[file: {file_id}] {filename}\n<document>\n{content}\n</document>"
+                )
+            elif content:
+                blocks.append(
+                    f"[file: {file_id}] {filename} ({len(content)}字符) {brief} "
+                    f"(内容过长未内联, 可用 read_file 工具读取全文)"
+                )
+            else:
+                blocks.append(f"[file: {file_id}] {filename} {brief}")
+        return blocks
 
     def _build_multimodal_content(
         self,
@@ -1188,8 +1323,8 @@ class InferenceCoordinator:
     async def _create_attachment_service_safely(
         self,
         user_id: str,
-        thread_id: str,  # noqa: ARG002
-        agent_id: str | None,  # noqa: ARG002
+        thread_id: str,  # ruff: ignore[unused-method-argument]
+        agent_id: str | None,  # ruff: ignore[unused-method-argument]
     ) -> Any:
         """创建 file_registry_service, 失败返回 None(降级退化为纯占位)."""
         try:
@@ -1700,10 +1835,11 @@ class InferenceCoordinator:
                         if not isinstance(chunk, tuple) or len(chunk) != 2:
                             continue
                         message, metadata = chunk
+                        # 生成器消费方持引用至流结束, timeout 清理由外层 lifespan 保证
                         for item in self._process_stream_chunk(
                             message, metadata, state, tool_display
                         ):
-                            yield item
+                            yield item  # ruff: ignore[yield-in-context-manager-in-async-generator]
 
                     # 记录完成时间
                     processing_time = (now_utc() - start_time).total_seconds()
@@ -1912,32 +2048,32 @@ class InferenceCoordinator:
     def _get_tool_tracker() -> Any:
         """获取工具调用追踪器, 仅DEBUG模式下启用.
 
-        延迟导入scripts.debug模块, 生产环境不需要该模块.
+        延迟导入src.debug模块, 生产环境不需要该模块.
         """
         if not is_debug_enabled():
             return None
         try:
-            from scripts.debug.tool_call_tracker import create_tool_call_tracker
+            from src.debug.tool_call_tracker import create_tool_call_tracker
 
             return create_tool_call_tracker()
         except ImportError:
-            logger.warning("ToolCallTracker需要scripts.debug模块, 但无法导入")
+            logger.warning("ToolCallTracker需要src.debug模块, 但无法导入")
             return None
 
     @staticmethod
     def _capture_prompt(**kwargs: Any) -> None:
         """捕获prompt内容, 仅DEBUG模式下启用.
 
-        延迟导入scripts.debug模块, 生产环境不需要该模块.
+        延迟导入src.debug模块, 生产环境不需要该模块.
         """
         if not is_debug_enabled():
             return
         try:
-            from scripts.debug.prompt_capture import capture_prompt
+            from src.debug.prompt_capture import capture_prompt
 
             capture_prompt(**kwargs)
         except ImportError:
-            logger.warning("PromptCapture需要scripts.debug模块, 但无法导入")
+            logger.warning("PromptCapture需要src.debug模块, 但无法导入")
 
     def _create_llm(
         self,

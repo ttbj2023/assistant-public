@@ -764,7 +764,8 @@ class TestWorkoutStats:
         mock_session_factory.session.execute.side_effect = [total_r, type_r]
 
         result = await health_dao.get_workout_stats(
-            days=90, workout_type="Cycling",
+            days=90,
+            workout_type="Cycling",
         )
 
         assert result["total_count"] == 1
@@ -813,7 +814,8 @@ class TestGetDailySummaries:
         mock_session_factory.session.execute.return_value = mock_result
 
         result = await health_dao.get_daily_summaries(
-            date(2026, 6, 1), date(2026, 6, 7),
+            date(2026, 6, 1),
+            date(2026, 6, 7),
         )
 
         assert len(result) == 2
@@ -832,7 +834,8 @@ class TestGetDailySummaries:
         mock_session_factory.session.execute.return_value = mock_result
 
         result = await health_dao.get_daily_summaries(
-            date(2026, 1, 1), date(2026, 1, 7),
+            date(2026, 1, 1),
+            date(2026, 1, 7),
         )
 
         assert result == []
@@ -859,9 +862,7 @@ class TestGetWeeklySummaries:
         assert len(result) == 2
 
     @pytest.mark.asyncio
-    async def test_should_filter_by_date_range(
-        self, health_dao, mock_session_factory
-    ):
+    async def test_should_filter_by_date_range(self, health_dao, mock_session_factory):
         """指定 start_week 时查询条件应包含下限."""
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
@@ -877,9 +878,7 @@ class TestGetWeeklySummaries:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_should_apply_limit(
-        self, health_dao, mock_session_factory
-    ):
+    async def test_should_apply_limit(self, health_dao, mock_session_factory):
         """应应用 limit 参数控制返回条数."""
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
@@ -896,9 +895,7 @@ class TestGetShoppingList:
     """get_shopping_list 日期范围查询."""
 
     @pytest.mark.asyncio
-    async def test_should_query_by_date_range(
-        self, health_dao, mock_session_factory
-    ):
+    async def test_should_query_by_date_range(self, health_dao, mock_session_factory):
         """应返回指定日期范围内的购物清单."""
         item = ShoppingItem(id=1, name="牛奶", purchase_date=date(2026, 6, 1), items=[])
         mock_scalars = MagicMock()
@@ -908,7 +905,8 @@ class TestGetShoppingList:
         mock_session_factory.session.execute.return_value = mock_result
 
         result = await health_dao.get_shopping_list(
-            date(2026, 6, 1), date(2026, 6, 30),
+            date(2026, 6, 1),
+            date(2026, 6, 30),
         )
 
         assert len(result) == 1
@@ -926,7 +924,8 @@ class TestGetShoppingList:
         mock_session_factory.session.execute.return_value = mock_result
 
         result = await health_dao.get_shopping_list(
-            date(2026, 1, 1), date(2026, 1, 7),
+            date(2026, 1, 1),
+            date(2026, 1, 7),
         )
 
         assert result == []
@@ -941,8 +940,10 @@ class TestGetWorkoutHistory:
     ):
         """应返回指定天数内的运动记录."""
         w = WorkoutRecord(
-            id=1, workout_type="Running",
-            start_time=datetime(2026, 6, 1, 8, 0), duration=30.0,
+            id=1,
+            workout_type="Running",
+            start_time=datetime(2026, 6, 1, 8, 0),
+            duration=30.0,
         )
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [w]
@@ -993,8 +994,10 @@ class TestWorkoutHistoryFiltered:
     ):
         """指定 workout_type 时应过滤对应类型."""
         w = WorkoutRecord(
-            id=1, workout_type="Cycling",
-            start_time=datetime(2026, 6, 1, 7, 0), duration=45.0,
+            id=1,
+            workout_type="Cycling",
+            start_time=datetime(2026, 6, 1, 7, 0),
+            duration=45.0,
         )
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [w]
@@ -1003,7 +1006,9 @@ class TestWorkoutHistoryFiltered:
         mock_session_factory.session.execute.return_value = mock_result
 
         result = await health_dao.get_workout_history_filtered(
-            days=30, workout_type="Cycling", limit=20,
+            days=30,
+            workout_type="Cycling",
+            limit=20,
         )
 
         assert len(result) == 1

@@ -47,7 +47,7 @@ class ModelMetadata:
     """完整的模型元数据定义."""
 
     # 基础信息
-    id: str  # 唯一标识符,如 "deepseek:deepseek-v4-flash"
+    id: str  # 唯一标识符,如 "deepseek:deepseek-flash"
     name: str  # 用户友好的显示名称
     provider: str  # 模型提供者:local, openai, deepseek, gemini
     model_type: ModelType  # 模型类型

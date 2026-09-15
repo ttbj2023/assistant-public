@@ -83,7 +83,7 @@ async def run_chart_maker(
         if not png_path.exists():
             raise RuntimeError("渲染失败, 输出文件未生成")
 
-        # 渲染输入 spec (作为 .desc.md 源码内容, 供 read_file 回顾)
+        # 渲染输入 spec (作为 desc 源码区, 经 source 参数写入统一结构)
         spec = {
             "version": "1.0",
             "engine": engine,
@@ -95,7 +95,7 @@ async def run_chart_maker(
             "created_at": now_utc().isoformat(),
         }
 
-        # 注册输出 (签名URL + 附件注册 + exported_files + 配额)
+        # 注册输出 (签名URL + 附件注册 + exported_files + 配额; desc=摘要+spec)
         result = await register_tool_output(
             output_path=png_path,
             display_filename=display_filename,
@@ -107,12 +107,7 @@ async def run_chart_maker(
             user_id=user_id,
             thread_id=thread_id,
             brief=title,
-        )
-        # 源码即描述: spec 写入 .desc.md
-        from src.files.desc_writer import write_desc
-
-        write_desc(
-            user_id, result["file_id"], json.dumps(spec, ensure_ascii=False, indent=2)
+            source=json.dumps(spec, ensure_ascii=False, indent=2),
         )
         result["engine"] = engine
         return result

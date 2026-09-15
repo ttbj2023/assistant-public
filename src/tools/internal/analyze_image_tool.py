@@ -84,15 +84,14 @@ class AnalyzeImageTool(BaseTool):
     ]
     description: str = (
         "按具体需求重新分析用户上传过的图片原图, 支持 OCR,表格提取,细节识别,数值读取等.\n"
-        "使用视觉模型对原图进行针对性分析, 返回明确请求的具体信息.\n"
+        "可指定历史图片或最近上传的图片, 返回明确请求的具体信息.\n"
         "当用户的问题需要基于原图做特定分析(如识别文字,读取表格,判断内容)时使用.\n"
         "\n"
-        "定位为非视觉模型的读图补充 (视觉模型主对话时本工具自动跳过). "
         "调用时必须提供 prompt, 明确说明想从图片中获取什么信息. "
         "优先使用 attachment_id 指定历史图片; 用户说'刚才那张图'且未提供 ID 时, "
         "可不传 attachment_id 并使用 recent_index=0.\n\n"
         '示例: {"attachment_id": "a1b2c3d4", "prompt": "逐字识别这张图里的收据金额和商户名"}\n'
-        '示例: {"attachment_id": "a1b2c3d4", "prompt": "描述图片细节"}'
+        '示例: {"attachment_id": "a1b2c3d4", "prompt": "读取表格中每一行的数值"}'
     )
     args_schema: type[AnalyzeImageInput] = AnalyzeImageInput
 

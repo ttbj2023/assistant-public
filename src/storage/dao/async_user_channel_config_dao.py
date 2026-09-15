@@ -58,7 +58,7 @@ class AsyncUserChannelConfigDAO:
             async with self.session_factory() as session:
                 stmt = select(UserChannelConfig).where(
                     UserChannelConfig.user_id == user_id,
-                    UserChannelConfig.is_default == True,  # noqa: E712
+                    UserChannelConfig.is_default == True,  # ruff: ignore[true-false-comparison]
                 )
                 result = await session.execute(stmt)
                 return result.scalar_one_or_none()
@@ -154,7 +154,7 @@ class AsyncUserChannelConfigDAO:
                     update(UserChannelConfig)
                     .where(
                         UserChannelConfig.user_id == user_id,
-                        UserChannelConfig.is_default == True,  # noqa: E712
+                        UserChannelConfig.is_default == True,  # ruff: ignore[true-false-comparison]
                     )
                     .values(is_default=False)
                 )

@@ -21,8 +21,8 @@ from src.tools.shared.cache import ExpertCache, get_expert_cache
 
 logger = logging.getLogger(__name__)
 
-_URL_RE = re.compile(r"https?://[^\s<>\]})\"'，。；！？、]+", re.IGNORECASE)  # noqa: RUF001
-_TRAILING_URL_CHARS = ".,;:!?)]}'\"，。；：！？、"  # noqa: RUF001
+_URL_RE = re.compile(r"https?://[^\s<>\]})\"'，。；！？、]+", re.IGNORECASE)  # ruff: ignore[ambiguous-unicode-character-string]
+_TRAILING_URL_CHARS = ".,;:!?)]}'\"，。；：！？、"  # ruff: ignore[ambiguous-unicode-character-string]
 _TUNNEL_DOMAINS = frozenset({
     "ngrok.io",
     "ngrok-free.app",

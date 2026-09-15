@@ -40,20 +40,18 @@ python scripts/static_analysis.py          # 核心模式(默认)含 config_doct
 python scripts/run_test_suite.py --quick   # config_doctor 为 CI 硬门禁
 ```
 
-注: `--codex` 模式跳过 config_doctor, 保持 sandbox 轻量.
-
-> ⚠️ **生产部署前必检 `.env`**: `config.yaml` 已纳入版本控制, `git pull` 自动同步, CI 通过 `config_doctor --strict` 真正覆盖生产配置校验。但 `.env` (密钥/Provider 端点/部署拓扑/SMTP 凭据) 仍 `.gitignore` 忽略, 各环境独立维护, 是高频故障源——例如 `SMTP_HOST` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM_ADDRESS` 漏配(config.yaml.smtp 段全部留空走 .env 回退)会导致定时消息邮件渠道**静默失败**; `OPENCLAW_GATEWAY_TOKEN` / `notification_defaults` 漏配会导致微信补发/定时消息**静默失败**。**每次生产部署前, 在宿主机跑 `python scripts/config_doctor.py --strict` 自检, 并人工核对 `.env` 与 `.env.example` 的字段差异。**
+> ⚠️ **生产部署前必检 `.env`**: `config.yaml` 已纳入版本控制, `git pull` 自动同步, CI 通过 `config_doctor --strict` 真正覆盖生产配置校验。但 `.env` (密钥/Provider 端点/部署拓扑/SMTP 凭据) 仍 `.gitignore` 忽略, 各环境独立维护, 是高频故障源——例如 `SMTP_HOST` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM_ADDRESS` 漏配(config.yaml.smtp 段全部留空走 .env 回退)会导致定时消息邮件渠道**静默失败**; `CHANNEL_GATEWAY_TOKEN` 漏配会导致微信定时消息/价格提醒/通知**静默失败**。**每次生产部署前, 在宿主机跑 `python scripts/config_doctor.py --strict` 自检, 并人工核对 `.env` 与 `.env.example` 的字段差异。**
 
 ## 环境变量分类
 
 运行时/部署:
-`ENVIRONMENT`, `DEBUG`, `BASE_DATA_PATH`, `PYTEST_XDIST_WORKER_ID`, `TEST_PROCESS_PREFIX`, `API_PORT`, `ENABLE_STATIC_USER_MANAGEMENT`, `ENABLE_TOOL_CALL_DISPLAY`, `FILE_SERVER_BASE_URL`, `FILE_URL_TTL_DAYS`, `TOOL_RUNTIME_BASE_URL`, `QUOTE_SERVICE_BASE_URL`, `OPENCLAW_GATEWAY_URL`.
+`ENVIRONMENT`, `DEBUG`, `BASE_DATA_PATH`, `PYTEST_XDIST_WORKER_ID`, `TEST_PROCESS_PREFIX`, `API_PORT`, `ENABLE_STATIC_USER_MANAGEMENT`, `ENABLE_TOOL_CALL_DISPLAY`, `FILE_SERVER_BASE_URL`, `FILE_URL_TTL_DAYS`, `TOOL_RUNTIME_BASE_URL`, `QUOTE_SERVICE_BASE_URL`, `CHANNEL_GATEWAY_URL`, `DOC2MD_BASE_URL`.
 
 密钥:
-`FILE_SIGNING_SECRET`, `OPENCLAW_GATEWAY_TOKEN`, `BAIDU_API_KEY`, `ZHIPU_API_KEY`, `ARK_AGENT_PLAN_API_KEY`, provider API keys, 地图 API keys, SMTP credentials.
+`FILE_SIGNING_SECRET`, `CHANNEL_GATEWAY_TOKEN`, `DOC2MD_TOKEN`, `BAIDU_API_KEY`, `ZHIPU_API_KEY`, `ARK_AGENT_PLAN_API_KEY`, provider API keys, 地图 API keys, SMTP credentials.
 
 Provider 端点:
-各 `*_BASE_URL` 由 `provider_registry.py` 管理, 只覆盖 provider endpoint, 不覆盖应用配置字段。
+各 `*_BASE_URL` 由 `provider_registry.py` 管理, 只覆盖 provider endpoint, 不覆盖应用配置字段。唯一例外: `RERANKER_BASE_URL` (`local-reranker`) 经 `resolve_rerank_base_url` 覆盖 `inference.reranker.base_url` (Docker 部署需借此指向宿主机服务)。
 
 ## 常用入口
 

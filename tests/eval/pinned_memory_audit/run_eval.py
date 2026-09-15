@@ -238,7 +238,7 @@ def load_fixtures() -> list[dict]:
 async def main() -> None:
     parser = argparse.ArgumentParser(description="置顶记忆审计评估")
     parser.add_argument("--real", action="store_true", help="接入真实审计(阶段2)")
-    parser.add_argument("--model", default="deepseek:deepseek-v4-flash")
+    parser.add_argument("--model", default="deepseek:deepseek-flash")
     parser.add_argument("--window", type=int, default=20)
     parser.add_argument(
         "--no-history", action="store_true", help="不提供对话历史(纯置顶判断对照)"

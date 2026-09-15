@@ -45,7 +45,7 @@ _index_run_bg_tasks: set[asyncio.Task[None]] = set()
 
 # 角色标签清洗: 只删 "用户"/"助手" 标签词, 保留其后内容(L1b 方案)
 _ROLE_LABEL_RE = re.compile(r"^(用户|助手)\s*")
-_TRAIL_LABEL_RE = re.compile(r"([，,])\s*助手\s*")  # noqa: RUF001
+_TRAIL_LABEL_RE = re.compile(r"([，,])\s*助手\s*")  # ruff: ignore[ambiguous-unicode-character-string]
 
 
 def clean_summary_for_embedding(summary: str) -> str:

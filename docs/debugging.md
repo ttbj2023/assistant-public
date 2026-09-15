@@ -71,8 +71,8 @@ ls logs/prompts/prompt_*_alice_*.json
 ## 编程接口
 
 ```python
-from scripts.debug.tool_call_tracker import create_tool_call_tracker
-from scripts.debug.prompt_capture import PromptCapture
+from src.debug.tool_call_tracker import create_tool_call_tracker
+from src.debug.prompt_capture import PromptCapture
 
 # 自动根据DEBUG环境变量创建
 tool_tracker = create_tool_call_tracker()  # 返回ToolCallTracker或[]
@@ -90,10 +90,10 @@ prompt_capture.capture_prompt(
 
 ## 模块位置
 
-调试工具独立于核心代码, 位于 `scripts/debug/`:
+调试工具位于 `src/debug/` (依赖方向约束: src 不得 import scripts):
 
 ```
-scripts/debug/
+src/debug/
 ├── __init__.py
 ├── tool_call_tracker.py   # 工具调用追踪器
 └── prompt_capture.py      # Prompt捕获工具

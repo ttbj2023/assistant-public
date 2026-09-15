@@ -201,7 +201,7 @@ class McpBridge:
         """实际加载逻辑 (调用方已持有 _lock)."""
         try:
             from fastmcp.client import Client
-            from fastmcp.client.transports import (  # noqa: F401
+            from fastmcp.client.transports import (  # ruff: ignore[unused-import]
                 SSETransport,
                 StdioTransport,
                 StreamableHttpTransport,

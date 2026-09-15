@@ -241,13 +241,15 @@ SHARED_MODELS: dict[str, SharedModel] = {
     "deepseek-v4-pro": SharedModel(
         name="DeepSeek V4 Pro",
         model_type=ModelType.CHAT,
-        description="DeepSeek V4 Pro 旗舰云端模型. 1.6T 总参 / 49B 激活 MoE 架构, 1M 上下文, 最大输出 384K(含思考). 支持思考推理、工具调用、JSON 模式与流式输出.",
+        description="DeepSeek V4 Pro 旗舰云端模型. 1.6T 总参 / 49B 激活 MoE 架构, 1M 上下文, 最大输出 384K(含思考). 支持思考推理、工具调用、JSON 模式与流式输出."
+        "注意: 官方节点 2026-09-14 起 deepseek-v4-pro 请求全部路由至 V4.1-Flash 并按 Flash 计费(退役过渡, 直至 V4.1 Pro 发布); 火山/阿里云订阅节点不受影响.",
         model_params=_DEEPSEEK_V4_PARAMS,
         capabilities=_CHAT_CAPS_STANDARD,
         default_endpoint_name="deepseek-v4-pro",
-        # 来源: DeepSeek API 官方定价页(api-docs.deepseek.com/quick_start/pricing).
+        # 来源: DeepSeek API 官方定价页(api-docs.deepseek.com/quick_start/pricing), 分峰谷计费(空闲时段半价).
+        # 此处取高峰档作为模型级参考; 空闲时段减半(输入$0.66, 输出$1.98, 缓存$0.022).
         pricing=ModelPricing(
-            input=0.435, output=0.87, cached_input=0.003625, currency="USD"
+            input=1.32, output=3.96, cached_input=0.044, currency="USD"
         ),
     ),
     "qwen3.7-max": SharedModel(

@@ -65,7 +65,7 @@ class SemanticCache:
         import chromadb
 
         cache_path = Path(self._cache_dir)
-        cache_path.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240 缓存初始化, 一次性
+        cache_path.mkdir(parents=True, exist_ok=True)  # ruff: ignore[blocking-path-method-in-async-function] 缓存初始化, 一次性
 
         self._client = chromadb.PersistentClient(path=str(cache_path))
         self._collection = self._client.get_or_create_collection(

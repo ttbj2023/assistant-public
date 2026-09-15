@@ -38,10 +38,18 @@ class ScheduledMessageBase(SQLModel):
     description: str | None = Field(None, description="备注说明")
     sent_at: datetime | None = Field(None, description="实际发送时间")
     channel: str = Field(default="wechat", description="消息发送渠道: wechat / email")
+    last_error: str | None = Field(
+        None,
+        description="最近一次发送失败原因 (发送成功时清空)",
+    )
     subject: str | None = Field(None, description="邮件主题 (仅email渠道使用)")
     html_body: str | None = Field(
         None,
         description="邮件HTML正文 (仅email渠道, 不提供则使用message作为纯文本)",
+    )
+    related_event_id: int | None = Field(
+        None,
+        description="关联日程事件ID (该消息作为日程的到点提醒影子)",
     )
 
     model_config = {"validate_assignment": True, "str_strip_whitespace": True}
@@ -94,6 +102,7 @@ class ScheduledMessage(ScheduledMessageBase, table=True):
             "description": self.description,
             "sent_at": self.sent_at.isoformat() if self.sent_at else None,
             "channel": self.channel,
+            "last_error": self.last_error,
             "subject": self.subject,
             "html_body": self.html_body,
             "user_id": self.user_id,

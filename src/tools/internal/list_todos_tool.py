@@ -79,10 +79,10 @@ class ListTodosTool(BaseTool):
             limit = min(request.limit or 50, 100)
 
             service = await self._get_accessor().get_service()
+            # 用户级统一视图: 不按 thread_id 过滤 (迁移后跨线程共享)
             if status is not None:
                 todos = await service.list_todos(
                     self.user_id,
-                    self.thread_id,
                     status=status,
                     priority=priority,
                     limit=limit,
@@ -90,7 +90,6 @@ class ListTodosTool(BaseTool):
             else:
                 todos = await service.list_todos(
                     self.user_id,
-                    self.thread_id,
                     statuses=[TodoStatus.PENDING, TodoStatus.IN_PROGRESS],
                     priority=priority,
                     limit=limit,

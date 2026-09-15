@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import binascii
-import contextlib
-import json
 import logging
 import re
 import time
@@ -34,7 +31,6 @@ from src.core.streaming import (
 from src.core.types import MessageContent
 from src.inference.llm.definitions.model_registry import get_model
 from src.session.session_queue import SessionMessageQueue
-from src.utils.async_utils import spawn_background_task
 from src.utils.token_utils import TokenEstimator
 
 logger = logging.getLogger(__name__)
@@ -75,16 +71,18 @@ class ChatCompletionResponse(BaseModel):
 # ========== 辅助函数 ==========
 
 
-def _extract_content_with_images(
+def _extract_message_content(
     content: MessageContent,
-) -> tuple[str, list[dict]]:
-    """从多模态内容中提取文本和图片.
+) -> tuple[str, list[dict], list[dict]]:
+    """从多模态内容中提取文本/图片数据/纯文本文档.
 
     Args:
         content: 消息内容(字符串或内容块列表)
 
     Returns:
-        (文本内容, 图片数据列表)
+        (文本内容, 图片数据列表, 文档数据列表)
+        图片: [{"data": bytes, "mime_type": str}]
+        文档: [{"filename": str, "content": str}]
 
     Raises:
         ValueError: 内容格式无效
@@ -92,12 +90,13 @@ def _extract_content_with_images(
     """
     if isinstance(content, str):
         # 纯文本消息
-        return content, []
+        return content, [], []
 
     if isinstance(content, list):
         # 多模态消息
         text_parts = []
         images = []
+        documents = []
 
         for block in content:
             if block.type == "text" and block.text:
@@ -107,9 +106,37 @@ def _extract_content_with_images(
                 img_data = _parse_base64_image(block.image_url.url)
                 if img_data:
                     images.append(img_data)
+            elif block.type == "file" and block.file:
+                # 文档: 纯文本 (content) 或二进制 (content_b64) 两种形态
+                if not block.file.filename.strip():
+                    raise ValueError(
+                        f"无效的 file 内容块: filename 缺失 (filename={block.file.filename!r})"
+                    )
+                if block.file.content_b64:
+                    if not block.file.content_b64.strip():
+                        raise ValueError(
+                            f"无效的 file 内容块: content_b64 为空 (filename={block.file.filename!r})"
+                        )
+                    documents.append({
+                        "filename": block.file.filename,
+                        "content_b64": block.file.content_b64,
+                    })
+                elif block.file.content:
+                    if not block.file.content.strip():
+                        raise ValueError(
+                            f"无效的 file 内容块: content 为空 (filename={block.file.filename!r})"
+                        )
+                    documents.append({
+                        "filename": block.file.filename,
+                        "content": block.file.content,
+                    })
+                else:
+                    raise ValueError(
+                        f"无效的 file 内容块: content/content_b64 均缺失 (filename={block.file.filename!r})"
+                    )
 
         user_text = "\n".join(text_parts) if text_parts else ""
-        return user_text, images
+        return user_text, images, documents
 
     raise ValueError(f"不支持的内容类型: {type(content)}")
 
@@ -144,24 +171,50 @@ def _parse_base64_image(image_url: str) -> dict | None:
         return None
 
 
-async def _auto_provision_openclaw_channel(
+def _extract_channel_context(request: Request) -> dict | None:
+    """从渠道请求头提取渠道上下文.
+
+    渠道网关 (如 weixin-gateway) 转发用户消息时附带:
+    - X-Channel: 渠道名 (如 weixin)
+    - X-Channel-Account: bot 账号 ID
+    - X-Chat-Id: 会话目标地址 (如 OpenID 完整地址)
+
+    Returns:
+        {"channel", "account_id", "chat_id"} 或 None (非渠道请求)
+    """
+    channel = request.headers.get("X-Channel", "").strip()
+    if not channel:
+        return None
+    return {
+        "channel": channel,
+        "account_id": request.headers.get("X-Channel-Account", "").strip(),
+        "chat_id": request.headers.get("X-Chat-Id", "").strip(),
+    }
+
+
+# 网关渠道名 → assistant 渠道配置类型 (user_channel_config 的 channel_type)
+_GATEWAY_CHANNEL_TO_TYPE = {"weixin": "wechat"}
+
+
+async def _provision_channel_config(
     request: Request,
     user_id: str,
     agent_id: str,
 ) -> None:
-    """Fire-and-forget: 从 OpenClaw 请求自动发现并写入渠道配置.
+    """Fire-and-forget: 从渠道请求头自动发现并写入渠道配置.
 
-    account_id 从请求注入的 Inbound Context 直接提取(请求自带, 非猜测),
-    渠道配置按 (user, thread, agent) 物理隔离存储.
-    已写入数据库后不再重复提取.
+    渠道配置按 (user, thread, agent) 物理隔离存储,
+    供定时消息/价格提醒/通知经渠道网关推送时定位投递目标.
+    已写入完整配置后不再重复写入 (字段变化时自愈更新).
     """
-    ctx = getattr(request.state, "openclaw_context", None)
+    ctx = _extract_channel_context(request)
     if ctx is None:
         return
 
-    target = ctx.chat_id
-    channel_key = ctx.channel
-    if not target or not channel_key:
+    target = ctx["chat_id"]
+    account_id = ctx["account_id"]
+    channel_type = _GATEWAY_CHANNEL_TO_TYPE.get(ctx["channel"])
+    if not target or not account_id or not channel_type:
         return
 
     thread_id = getattr(request.state, "thread_id", None)
@@ -176,40 +229,33 @@ async def _auto_provision_openclaw_channel(
         config_service = await get_user_channel_config_service(
             user_id, thread_id, agent_id
         )
-        existing = await config_service.get_config_for_channel("wechat")
+        existing = await config_service.get_config_for_channel(channel_type)
 
-        if existing and existing.get("openclaw_account"):
-            return
-
-        account_id = ctx.account_id
-
+        desired = {"target": target, "account_id": account_id}
         if existing:
-            existing["openclaw_account"] = account_id or ""
+            if (
+                existing.get("target") == target
+                and existing.get("account_id") == account_id
+            ):
+                return
+            merged = {**existing, **desired}
             await config_service.upsert_channel_config(
-                channel_type="wechat",
-                config=existing,
+                channel_type=channel_type,
+                config=merged,
                 is_default=True,
             )
-            logger.info(
-                "增量补充OpenClaw account: user=%s, account=%s",
-                user_id,
-                account_id,
-            )
+            logger.info("渠道配置已自愈更新: user=%s, target=%s", user_id, target)
             return
 
         await config_service.upsert_channel_config(
-            channel_type="wechat",
-            config={
-                "target": target,
-                "openclaw_channel_key": channel_key,
-                "openclaw_account": account_id or "",
-            },
+            channel_type=channel_type,
+            config=desired,
             is_default=True,
         )
-        logger.info("✅ 自动发现OpenClaw渠道配置: user=%s, target=%s", user_id, target)
+        logger.info("✅ 自动发现渠道配置: user=%s, target=%s", user_id, target)
 
     except Exception as e:
-        logger.warning("自动写入OpenClaw渠道配置失败(非阻塞): %s", e)
+        logger.warning("自动写入渠道配置失败(非阻塞): %s", e)
 
 
 # ========== 路由处理函数 ==========
@@ -245,7 +291,9 @@ async def chat_completions(
     try:
         # 1. 提取用户消息(多模态内容)
         user_message = chat_request.messages[-1]
-        user_input, image_datas = _extract_content_with_images(user_message.content)
+        user_input, image_datas, document_datas = _extract_message_content(
+            user_message.content
+        )
 
         # 1.5 捕获前端透传历史(messages[:-1]), 供 simple 模式处理器透传给 LLM.
         # local 模式不读此字段(从自有 DB 重建历史), 透传对其透明.
@@ -275,8 +323,8 @@ async def chat_completions(
             logger.error("❌ 创建用户目录失败 %s: %s", user_id, e)
             # 不阻止处理,但记录错误
 
-        # 4.5 OpenClaw 渠道配置自动发现
-        await _auto_provision_openclaw_channel(request, user_id, chat_request.model)
+        # 4.5 渠道配置自动发现 (渠道网关请求头)
+        await _provision_channel_config(request, user_id, chat_request.model)
 
         # 5. 验证并获取Agent实例
         logger.info(f"准备获取Agent: {chat_request.model}")
@@ -290,30 +338,12 @@ async def chat_completions(
                 detail=f"Agent '{chat_request.model}' not found or failed to load",
             ) from e
 
-        is_openclaw = getattr(request.state, "is_openclaw", False)
-
         llm_model_id = getattr(getattr(agent, "config", None), "model_id", "")
         model_meta = get_model(llm_model_id)
         is_multimodal = model_meta is not None and model_meta.supports_multimodal()
 
         if chat_request.stream:
             logger.info("启用流式响应模式")
-
-            if is_openclaw:
-                return StreamingResponse(
-                    stream_openclaw_response(
-                        agent=agent,
-                        user_input=user_input,
-                        user_id=user_id,
-                        thread_id=thread_id,
-                        model_id=chat_request.model,
-                        image_datas=image_datas,
-                        timezone=timezone,
-                        is_multimodal=is_multimodal,
-                        chat_messages=chat_messages,
-                    ),
-                    media_type="text/event-stream",
-                )
 
             return StreamingResponse(
                 locked_stream_chat_completion(
@@ -326,6 +356,7 @@ async def chat_completions(
                     timezone=timezone,
                     is_multimodal=is_multimodal,
                     chat_messages=chat_messages,
+                    document_datas=document_datas,
                 ),
                 media_type="text/event-stream",
             )
@@ -338,9 +369,9 @@ async def chat_completions(
             image_datas=image_datas or [],
             timezone=timezone,
             agent=agent,
-            is_openclaw=is_openclaw,
             is_multimodal=is_multimodal,
             chat_messages=chat_messages,
+            document_datas=document_datas,
         )
         response = await response_future
         if response is None:
@@ -441,6 +472,7 @@ async def locked_stream_chat_completion(
     *,
     is_multimodal: bool = False,
     chat_messages: list[dict] | None = None,
+    document_datas: list[dict] | None = None,
 ) -> AsyncIterator[str]:
     """标准流式聊天处理 — 通过消息队列保证顺序, 逐 token 流式输出.
 
@@ -457,6 +489,7 @@ async def locked_stream_chat_completion(
         agent=agent,
         is_multimodal=is_multimodal,
         chat_messages=chat_messages,
+        document_datas=document_datas,
     )
 
     has_content = False
@@ -485,136 +518,3 @@ async def locked_stream_chat_completion(
                 created=created,
                 model=model_id,
             )
-
-
-# ========== OpenClaw 流式保活 ==========
-
-HEARTBEAT_INTERVAL_SECONDS = 90
-
-
-def _heartbeat_sse_chunk(payload_id: str, model_id: str) -> str:
-    """生成单空格心跳 chunk.
-
-    delta.content=' ' 确保触发 OpenClaw 的 text_delta 事件链路:
-    processOpenAICompletionsStream -> onPartialReply -> markProgress,
-    防止 stuck session abort (阈值 360s).
-
-    finish_reason 必须为 null, 否则 OpenClaw 视为对话结束.
-    """
-    chunk = {
-        "id": payload_id,
-        "object": "chat.completion.chunk",
-        "created": int(time.time()),
-        "model": model_id,
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": " "},
-                "finish_reason": None,
-            },
-        ],
-    }
-    return f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-
-
-async def stream_openclaw_response(
-    agent: Any,
-    user_input: str,
-    user_id: str,
-    thread_id: str,
-    model_id: str,
-    image_datas: list[dict] | None = None,
-    timezone: str = "Asia/Shanghai",
-    *,
-    is_multimodal: bool = False,
-    chat_messages: list[dict] | None = None,
-) -> AsyncIterator[str]:
-    """OpenClaw 专用流式响应: 立即心跳 + 消息队列保序.
-
-    架构:
-        - 心跳在入队后立即启动(关键改进:不等处理开始)
-        - 通过 SessionMessageQueue 保证顺序处理 + 消息合并
-        - 业务处理在队列的 _processor_loop 中执行
-
-    Yields:
-        SSE 格式字符串
-    """
-    queue = SessionMessageQueue.get(user_id, thread_id, model_id)
-    completion_id = generate_completion_id()
-    created = int(time.time())
-
-    # 立即启动心跳(关键改进:不依赖任何锁/队列处理状态)
-    async def heartbeat_loop(out: asyncio.Queue[str | None]) -> None:
-        """周期性推送心跳标记到输出队列."""
-        while True:
-            await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
-            await out.put("heartbeat")
-
-    output_queue: asyncio.Queue[str | None] = asyncio.Queue()
-
-    # 心跳先启动
-    hb = asyncio.create_task(heartbeat_loop(output_queue))
-
-    try:
-        # 入队并获取 future
-        response_future = await queue.submit(
-            user_input=user_input,
-            image_datas=image_datas or [],
-            timezone=timezone,
-            agent=agent,
-            is_openclaw=True,
-            is_multimodal=is_multimodal,
-            chat_messages=chat_messages,
-        )
-
-        # 持续 yield 心跳,等待处理完成
-        while not response_future.done():
-            try:
-                msg = await asyncio.wait_for(output_queue.get(), timeout=1.0)
-                if msg == "heartbeat":
-                    yield _heartbeat_sse_chunk(completion_id, model_id)
-            except TimeoutError:
-                continue
-
-        # 处理完成,取结果
-        result = response_future.result()
-
-        if result is None:
-            # 被合并吸收 → 静默关闭
-            return
-
-        # 正常响应
-        if len(result) > 2000:
-            from src.session.openclaw_message_splitter import (
-                send_openclaw_followup,
-                split_message,
-            )
-
-            parts = split_message(result)
-            result = parts[0]
-            # model_id 在 OpenClaw 场景即 agent 标识 (chat_request.model = agent_id,
-            # 见 get_agent(chat_request.model)), 故第三参数语义为 agent_id,
-            # 用于定位 agent 级 channel_config; 切勿按字面理解为模型 ID.
-            if len(parts) > 1:
-                spawn_background_task(
-                    send_openclaw_followup(user_id, thread_id, model_id, parts[1:]),
-                )
-
-        yield create_stream_chunk(
-            completion_id=completion_id,
-            created=created,
-            model=model_id,
-            content=result,
-        )
-        yield create_stream_final_chunk(
-            completion_id=completion_id,
-            created=created,
-            model=model_id,
-        )
-    except Exception as e:
-        logger.error("❌ OpenClaw 流式响应失败: %s", e)
-        yield create_stream_error_chunk(str(e), "openclaw_processing_error")
-    finally:
-        hb.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await hb

@@ -29,7 +29,10 @@ ALLOWED_RUNTIME_ENV_VARS: Final[frozenset[str]] = frozenset({
     "FILE_URL_TTL_DAYS",
     "TOOL_RUNTIME_BASE_URL",
     "QUOTE_SERVICE_BASE_URL",
-    "OPENCLAW_GATEWAY_URL",
+    "CHANNEL_GATEWAY_URL",
+    "DOC2MD_BASE_URL",
+    "MS_GRAPH_CLIENT_ID",
+    "PROMPT_CAPTURE_DIR",
 })
 
 
@@ -194,7 +197,32 @@ def get_quote_service_base_url() -> str | None:
     return get_optional_str("QUOTE_SERVICE_BASE_URL")
 
 
-def get_openclaw_gateway_url() -> str | None:
-    """OpenClaw Gateway 服务地址."""
-    value = get_optional_str("OPENCLAW_GATEWAY_URL")
+def get_ms_graph_client_id() -> str:
+    """Microsoft Graph device code flow 公共客户端 ID.
+
+    主通道为自建 app「JFT Assistant」(个人 Azure 目录, 与 homelab 通道共用
+    注册但各自独立授权), client_id 属部署配置经 env 注入, 不硬编码进源码
+    (与 homelab「config 不进仓库」一致). 该值非机密 (公共客户端); 缺省回退
+    微软第一方公共客户端 (自建 app 不可用时的应急 fallback).
+    """
+    return get_str(
+        "MS_GRAPH_CLIENT_ID",
+        default="14d82eec-204b-4c2f-b7e8-296a70dab67e",
+    )
+
+
+def get_channel_gateway_url() -> str | None:
+    """渠道推送网关服务地址."""
+    value = get_optional_str("CHANNEL_GATEWAY_URL")
     return value.rstrip("/") if value else None
+
+
+def get_doc2md_base_url() -> str | None:
+    """doc2md 文档解析服务地址 (None 表示未部署, 二进制文档解析降级)."""
+    value = get_optional_str("DOC2MD_BASE_URL")
+    return value.rstrip("/") if value else None
+
+
+def get_prompt_capture_dir() -> Path:
+    """DEBUG 模式 prompt 捕获存储目录."""
+    return Path(get_str("PROMPT_CAPTURE_DIR", "logs/prompts"))

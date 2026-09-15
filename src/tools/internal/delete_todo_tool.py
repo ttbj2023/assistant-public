@@ -37,7 +37,7 @@ class DeleteTodoTool(BaseTool):
     description: str = (
         "彻底删除一条TODO任务(不可恢复).\n"
         "当用户要删除/移除任务时使用, 必须提供todo_id.\n"
-        "先根据用户提到的任务标题, 在 list_todos 结果或写工具返回的 current_todos 中匹配对应 ID.\n"
+        "todo_id 可从 list_todos 结果中获取.\n"
         '注意: 删除是物理删除, 记录不可恢复; 若只想标记为已取消(保留记录), 请使用 update_todo(status="cancelled").\n\n'
         "示例:\n"
         '- 用户: "删掉买牛奶的任务" → 匹配到"买牛奶"的 todo_id 后, {"todo_id": 2}\n'

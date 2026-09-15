@@ -34,7 +34,7 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
         thread_id: str,
         agent_id: str,
         max_pending_messages: int = 50,
-        max_schedule_ahead_hours: int = 168,
+        max_schedule_ahead_hours: int = 8760,
         default_channel: str = "wechat",
     ) -> None:
         super().__init__()
@@ -149,6 +149,7 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
         subject: str | None = None,
         html_body: str | None = None,
         timezone: str = "Asia/Shanghai",
+        related_event_id: int | None = None,
     ) -> ScheduledMessage:
         """创建定时消息并注册调度器.
 
@@ -160,6 +161,7 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
             subject: 邮件主题
             html_body: 邮件HTML正文
             timezone: 用户时区, 用于将无时区的send_time转为UTC
+            related_event_id: 关联日程事件ID (提醒影子)
 
         """
         start_time = time.time()
@@ -210,6 +212,7 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
                 channel=effective_channel,
                 subject=subject,
                 html_body=html_body,
+                related_event_id=related_event_id,
             )
 
             self._register_timer(msg)
@@ -242,6 +245,18 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
         except Exception as e:
             self.logger.error("❌ 查询待发送消息失败: %s", e)
             raise RuntimeError(f"查询待发送消息失败: {e}") from e
+
+    async def list_failed_messages(self) -> list[ScheduledMessage]:
+        """列出所有发送失败消息 (含 last_error 失败原因)."""
+        try:
+            return await self.dao.get_failed_messages(
+                self.user_id,
+                self.thread_id,
+                self.agent_id,
+            )
+        except Exception as e:
+            self.logger.error("❌ 查询失败消息失败: %s", e)
+            raise RuntimeError(f"查询失败消息失败: {e}") from e
 
     async def cancel_message(self, message_id: str) -> bool:
         """取消定时消息."""
@@ -288,6 +303,22 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
                 )
                 return
 
+            # 到点复查: DB send_time 可能被外部顺延(日程改期级联),
+            # 未到点则重挂定时器而非发送; 60s内容差按到点发送避免紧密重挂
+            send_time_utc = (
+                msg.send_time.replace(tzinfo=UTC)
+                if msg.send_time.tzinfo is None
+                else msg.send_time
+            )
+            if send_time_utc > datetime.now(UTC) + timedelta(seconds=60):
+                self.logger.info(
+                    "消息%s未到点(已被顺延), 重挂定时器: %s",
+                    message_id,
+                    send_time_utc.isoformat(),
+                )
+                self._register_timer(msg)
+                return
+
             channel = msg.channel or self._default_channel
             self.logger.info("📤 开始发送消息: %s, channel=%s", message_id, channel)
 
@@ -305,10 +336,14 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
                     channel,
                     message_id,
                 )
-                await self.dao.update_status(message_id, MessageStatus.FAILED)
+                await self.dao.update_status(
+                    message_id,
+                    MessageStatus.FAILED,
+                    last_error=f"渠道{channel}配置缺失或无效",
+                )
                 return
 
-            success = await get_notification_service().send(
+            outcome = await get_notification_service().send(
                 delivery,
                 msg.message,
                 subject=msg.subject or "定时消息提醒",
@@ -316,19 +351,32 @@ class ScheduledMessageService(ServiceHealthCheckMixin):
             )
 
             now = datetime.now(UTC)
-            if success:
+            if outcome.ok:
                 await self.dao.update_status(
                     message_id,
                     MessageStatus.SENT,
                     sent_at=now,
+                    last_error=None,
                 )
             else:
-                await self.dao.update_status(message_id, MessageStatus.FAILED)
+                error = outcome.error or "(未知失败原因)"
+                self.logger.error(
+                    "❌ 定时消息发送失败: %s, error=%s", message_id, error
+                )
+                await self.dao.update_status(
+                    message_id,
+                    MessageStatus.FAILED,
+                    last_error=error,
+                )
 
         except Exception as e:
             self.logger.error("❌ 发送消息异常: %s, %s", message_id, e)
             try:
-                await self.dao.update_status(message_id, MessageStatus.FAILED)
+                await self.dao.update_status(
+                    message_id,
+                    MessageStatus.FAILED,
+                    last_error=f"发送异常: {e}",
+                )
             except Exception as inner_e:
                 self.logger.error(
                     "更新消息状态为failed也失败: %s, inner_error=%s",
@@ -418,7 +466,7 @@ def _load_default_service_config() -> dict[str, Any]:
     """从config.yaml读取scheduled_messenger的默认配置.
 
     Returns:
-        包含 openclaw_defaults 等工具专属配置的字典(SMTP 已迁移到系统级 smtp 段).
+        工具专属配置的字典(SMTP 已迁移到系统级 smtp 段).
 
     """
     try:
@@ -462,10 +510,8 @@ async def get_scheduled_message_service(
 
     defaults = _load_default_service_config()
     merged = {**defaults, **config_kwargs}
-    # SMTP 已迁移到系统级配置(src.config.smtp_config); openclaw 渠道默认已统一到
-    # openclaw.notification_defaults. 过滤旧残留避免透传给构造函数.
+    # SMTP 已迁移到系统级配置(src.config.smtp_config). 过滤旧残留避免透传给构造函数.
     merged.pop("smtp_config", None)
-    merged.pop("openclaw_defaults", None)
 
     service = ScheduledMessageService(
         session_factory=db_manager.session_factory,

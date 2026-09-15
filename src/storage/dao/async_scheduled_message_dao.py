@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# update_status 的 last_error 哨兵: 区分"未传(不更新列)"与"显式 None(清空)"
+_UNSET = object()
+
 
 class AsyncScheduledMessageDAO:
     """异步定时消息数据访问对象."""
@@ -35,6 +38,7 @@ class AsyncScheduledMessageDAO:
         channel: str = "wechat",
         subject: str | None = None,
         html_body: str | None = None,
+        related_event_id: int | None = None,
     ) -> ScheduledMessage:
         return await self.db_ops.create_with_validation(
             required_fields=[
@@ -50,6 +54,7 @@ class AsyncScheduledMessageDAO:
                 "channel": channel,
                 "subject": subject,
                 "html_body": html_body,
+                "related_event_id": related_event_id,
             },
             message=message,
             send_time=send_time,
@@ -60,6 +65,7 @@ class AsyncScheduledMessageDAO:
             channel=channel,
             subject=subject,
             html_body=html_body,
+            related_event_id=related_event_id,
         )
 
     async def get_by_message_id(self, message_id: str) -> ScheduledMessage | None:
@@ -122,6 +128,31 @@ class AsyncScheduledMessageDAO:
             logger.error("查询missed消息失败: %s", e)
             raise
 
+    async def get_failed_messages(
+        self,
+        user_id: str,
+        thread_id: str,
+        agent_id: str,
+    ) -> list[ScheduledMessage]:
+        """查询发送失败的消息 (含 last_error, 供用户/运维排查)."""
+        try:
+            async with self.session_factory() as session:
+                stmt = (
+                    select(ScheduledMessage)
+                    .where(
+                        ScheduledMessage.user_id == user_id,
+                        ScheduledMessage.thread_id == thread_id,
+                        ScheduledMessage.agent_id == agent_id,
+                        ScheduledMessage.status == MessageStatus.FAILED,
+                    )
+                    .order_by(ScheduledMessage.send_time)
+                )
+                result = await session.execute(stmt)
+                return list(result.scalars().all())
+        except Exception as e:
+            logger.error("查询failed消息失败: %s", e)
+            raise
+
     async def get_all_pending_across_users(self) -> list[ScheduledMessage]:
         try:
             async with self.session_factory() as session:
@@ -141,12 +172,16 @@ class AsyncScheduledMessageDAO:
         message_id: str,
         status: MessageStatus,
         sent_at: datetime | None = None,
+        last_error: object = _UNSET,
     ) -> bool:
         try:
             async with self.session_factory() as session:
                 values: dict[str, Any] = {"status": status}
                 if sent_at is not None:
                     values["sent_at"] = sent_at
+                # last_error: 未传(_UNSET)不更新; 显式 None 清空; 字符串写入
+                if last_error is not _UNSET:
+                    values["last_error"] = last_error
                 stmt = (
                     update(ScheduledMessage)
                     .where(ScheduledMessage.message_id == message_id)
@@ -196,6 +231,58 @@ class AsyncScheduledMessageDAO:
                 return result.scalar() or 0
         except Exception as e:
             logger.error("统计pending消息数量失败: %s", e)
+            raise
+
+    async def get_pending_by_related_event(
+        self,
+        user_id: str,
+        related_event_id: int,
+    ) -> list[ScheduledMessage]:
+        """按关联日程ID查询pending影子消息 (跨线程级联入口, 库本身线程级).
+
+        Args:
+            user_id: 用户ID (防御性过滤, 同库行本就同用户)
+            related_event_id: 关联日程事件ID
+
+        Returns:
+            pending状态的影子消息列表
+
+        """
+        try:
+            async with self.session_factory() as session:
+                stmt = (
+                    select(ScheduledMessage)
+                    .where(
+                        ScheduledMessage.user_id == user_id,
+                        ScheduledMessage.related_event_id == related_event_id,
+                        ScheduledMessage.status == MessageStatus.PENDING,
+                    )
+                    .order_by(ScheduledMessage.send_time)
+                )
+                result = await session.execute(stmt)
+                return list(result.scalars().all())
+        except Exception as e:
+            logger.error("按关联日程查询影子消息失败: %s", e)
+            raise
+
+    async def update_send_time(
+        self,
+        message_id: str,
+        send_time: datetime,
+    ) -> bool:
+        """顺延影子消息发送时间 (日程改期级联, 保持naive UTC约定)."""
+        try:
+            async with self.session_factory() as session:
+                stmt = (
+                    update(ScheduledMessage)
+                    .where(ScheduledMessage.message_id == message_id)
+                    .values(send_time=send_time)
+                )
+                result = await session.execute(stmt)
+                await session.commit()
+                return result.rowcount > 0
+        except Exception as e:
+            logger.error("更新消息发送时间失败: %s", e)
             raise
 
     async def health_check(self) -> bool:

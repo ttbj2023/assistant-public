@@ -6,7 +6,8 @@
 
 规则:
   - 基于 git ls-files (自动遵循 .gitignore, 排除 data/.venv 等未跟踪内容)
-  - 黑名单: AGENTS.md / CLAUDE.md / .agents/ / .claude/ / .opencode/ / .github/ (私人配置)
+  - 黑名单: AGENTS.md / CLAUDE.md / opencode.json / .agents/ / .claude/ / .dsh/ / .opencode/
+    / .github/ / scripts/benchmarks/ (私人配置/内部工具/含内网端点的对照脚本, 公开仓只保留代码与核心文档)
   - 脱敏: README / docs/README.md 去私人引用 (CLAUDE.md/AGENTS.md) / 精简 .gitignore
   - 新增: LICENSE (MIT)
 
@@ -28,13 +29,16 @@ from pathlib import Path
 EXCLUDE_PATHS: frozenset[str] = frozenset({
     "AGENTS.md",
     "CLAUDE.md",
+    "opencode.json",
 })
 
 EXCLUDE_PREFIXES: tuple[str, ...] = (
     ".agents/",
     ".claude/",
+    ".dsh/",
     ".opencode/",
     ".github/",
+    "scripts/benchmarks/",
 )
 
 # .gitignore 中明确私人的行 (整行匹配, 含注释则保留以维持可读性)

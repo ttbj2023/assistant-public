@@ -191,7 +191,7 @@ class AsyncHealthDAO:
                 )
                 .where(
                     DailyHealthSummary.record_date >= cutoff_date,
-                    getattr(DailyHealthSummary, metric) != None,  # noqa: E711
+                    getattr(DailyHealthSummary, metric) != None,  # ruff: ignore[none-comparison]
                 )
                 .order_by(DailyHealthSummary.record_date.desc())
             )
@@ -653,7 +653,7 @@ class AsyncHealthDAO:
                 count_stmt = (
                     select(func.count())
                     .select_from(DailyHealthSummary)
-                    .where(col != None)  # noqa: E711
+                    .where(col != None)  # ruff: ignore[none-comparison]
                 )
                 r = await session.execute(count_stmt)
                 metric_counts[metric] = r.scalar_one() or 0
@@ -713,7 +713,7 @@ class AsyncHealthDAO:
             ).where(
                 DailyHealthSummary.record_date >= period1_start,
                 DailyHealthSummary.record_date <= period1_end,
-                col != None,  # noqa: E711
+                col != None,  # ruff: ignore[none-comparison]
             )
             r1 = await session.execute(stmt1)
             row1 = r1.one()
@@ -728,7 +728,7 @@ class AsyncHealthDAO:
             ).where(
                 DailyHealthSummary.record_date >= period2_start,
                 DailyHealthSummary.record_date <= period2_end,
-                col != None,  # noqa: E711
+                col != None,  # ruff: ignore[none-comparison]
             )
             r2 = await session.execute(stmt2)
             row2 = r2.one()

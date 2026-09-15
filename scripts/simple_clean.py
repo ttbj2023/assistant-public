@@ -79,6 +79,7 @@ class SimpleCleaner:
                     ".env.example",
                     ".env",
                     ".env.test",
+                    "opencode.json",
                 ],
             },
             "ignore_root_files": {

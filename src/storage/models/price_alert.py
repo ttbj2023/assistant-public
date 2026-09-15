@@ -1,8 +1,8 @@
 """价格监控规则数据模型定义.
 
 一次性语义: 触发即结束 (status active→disabled), 无 last_side/count/date 等
-长期监控字段. 规则自包含投递参数 (delivery_method + account_id/target/
-openclaw_channel 或 email_address), 触发时由 NotificationService 派发,
+长期监控字段. 规则自包含投递参数 (delivery_method + account_id/target
+或 email_address), 触发时由 NotificationService 派发,
 无需回查渠道配置.
 """
 
@@ -50,7 +50,6 @@ class PriceAlertRuleBase(SQLModel):
     # wechat 投递参数 (delivery_method=wechat 时必填)
     account_id: str = Field(default="", description="OpenClaw bot 账号 ID")
     target: str = Field(default="", description="OpenClaw 收消息人")
-    openclaw_channel: str = Field(default="", description="OpenClaw 系统渠道名")
     # email 投递参数 (delivery_method=email 时必填)
     email_address: str = Field(default="", description="收件邮箱")
     status: AlertStatus = Field(default=AlertStatus.ACTIVE, description="规则状态")
@@ -115,7 +114,6 @@ class PriceAlertRule(PriceAlertRuleBase, table=True):
             "delivery_method": self.delivery_method,
             "account_id": self.account_id,
             "target": self.target,
-            "openclaw_channel": self.openclaw_channel,
             "email_address": self.email_address,
             "status": self.status,
             "triggered_at": self.triggered_at.isoformat()

@@ -31,7 +31,6 @@ class UserContext:
     request_id: str | None = None
     round_number: int | None = None
     usage_source: str = "main_chat"
-    is_openclaw: bool = False
     timezone: str = "Asia/Shanghai"
     exported_files: list[dict] = field(default_factory=list)
 
@@ -42,10 +41,7 @@ _user_context: ContextVar[UserContext | None] = ContextVar("user_context", defau
 def set_user_context(ctx: UserContext) -> Token[UserContext | None]:
     """设置当前异步上下文的用户信息."""
     token = _user_context.set(ctx)
-    logger.debug(
-        f"UserContext set: {ctx.user_id}/{ctx.thread_id}/{ctx.agent_id} "
-        f"openclaw={ctx.is_openclaw}",
-    )
+    logger.debug(f"UserContext set: {ctx.user_id}/{ctx.thread_id}/{ctx.agent_id} ")
     return token
 
 

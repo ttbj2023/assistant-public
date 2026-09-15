@@ -324,7 +324,7 @@ class OrchestratorAgent(BaseAgent):
 
     async def _post_process_hook(
         self,
-        result: str,  # noqa: ARG002
+        result: str,  # ruff: ignore[unused-method-argument]
         conversation_data: Any,
         user_id: str,
         thread_id: str,
@@ -350,9 +350,9 @@ class OrchestratorAgent(BaseAgent):
 
     def _pre_stream_hook(
         self,
-        image_datas: list[dict[str, Any]] | None,  # noqa: ARG002
+        image_datas: list[dict[str, Any]] | None,  # ruff: ignore[unused-method-argument]
         attachment_infos: list[Any] | None,
-        kwargs: ProcessMessageKwargs,  # noqa: ARG002
+        kwargs: ProcessMessageKwargs,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """process_message_stream前置钩子: 缓存 attachment_infos 供 finalize 使用."""
         if self._domain_data_dispatcher:
@@ -360,7 +360,7 @@ class OrchestratorAgent(BaseAgent):
 
     async def _post_finalize_hook(
         self,
-        response: str,  # noqa: ARG002
+        response: str,  # ruff: ignore[unused-method-argument]
         conversation_data: Any,
         user_id: str,
         thread_id: str,

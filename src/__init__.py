@@ -9,7 +9,7 @@
 # 从版本管理模块导入版本号
 from __future__ import annotations
 
-try:  # noqa: RUF067
+try:  # ruff: ignore[non-empty-init-module]
     from ._version import __version__
 except ImportError:
     __version__ = "1.0.0-dev"

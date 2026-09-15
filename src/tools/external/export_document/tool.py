@@ -139,7 +139,7 @@ class ExportDocumentTool(BaseTool):
         # 第 4 行起: 参数细节, 仅主对话 agent 实际调用时可见
         "\n"
         "content(必填)为完整 GFM Markdown(表格/脚注/Callout(:::tip)/代码高亮等); "
-        "内部预处理器还会把 mermaid/vega-lite/markmap 代码块渲染为图,支持 $...$ LaTeX 数学公式.\n"
+        "mermaid/vega-lite/markmap 代码块会渲染为图片,支持 $...$ LaTeX 数学公式.\n"
         "其余参数可选 — style(风格), format(pdf/docx), filename(留空则从内容标题自动生成).\n\n"
         '示例: {"content": "# 月度报告\\n## 概要\\n...", "style": "business", "format": "pdf"}'
     )

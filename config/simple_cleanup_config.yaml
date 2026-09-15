@@ -21,6 +21,7 @@ protected_files:
     - ".env.example"
     - ".env"
     - ".env.test"
+    - "opencode.json"
 
 # 忽略的根目录文件(不归档, 不删除)
 ignore_root_files:

@@ -29,6 +29,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# 确保项目根目录在Python路径中
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# venv 守卫: 解释器错误时自动切换 (须在第三方依赖导入前执行)
+from scripts.venv_guard import ensure_venv
+
+ensure_venv()
+
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -38,11 +48,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# 确保项目根目录在Python路径中
-project_root = Path(__file__).parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 console = Console()
 
@@ -129,11 +134,12 @@ class CIParallelRunner:
     """CI并行执行器 - 统一架构"""
 
     def __init__(
-        self, quick_mode: bool = False, verbose: bool = False, codex_mode: bool = False
+        self,
+        quick_mode: bool = False,
+        verbose: bool = False,
     ):
-        self.quick_mode = quick_mode or codex_mode
+        self.quick_mode = quick_mode
         self.verbose = verbose
-        self.codex_mode = codex_mode
         self.console = Console()
         self.start_time = time.time()
         self.reports_dir = project_root / "reports"
@@ -143,9 +149,7 @@ class CIParallelRunner:
         self.reports_dir.mkdir(exist_ok=True)
 
         if self.verbose:
-            mode_label = (
-                "Codex" if codex_mode else ("快速" if self.quick_mode else "完整")
-            )
+            mode_label = "快速" if self.quick_mode else "完整"
             self.console.print(f"[blue]🚀 CI并行执行器启动 (模式: {mode_label})[/blue]")
 
     # ==================== 静态分析工具调用 ====================
@@ -196,7 +200,6 @@ class CIParallelRunner:
             runner = StaticAnalysisRunner(
                 core_mode=self.quick_mode,
                 verbose=self.verbose,
-                codex_mode=self.codex_mode,
             )
             result = await runner.run_ruff_analysis()
 
@@ -239,7 +242,6 @@ class CIParallelRunner:
             runner = StaticAnalysisRunner(
                 core_mode=self.quick_mode,
                 verbose=self.verbose,
-                codex_mode=self.codex_mode,
             )
             result = await runner.run_mypy_analysis()
 
@@ -282,7 +284,6 @@ class CIParallelRunner:
             runner = StaticAnalysisRunner(
                 core_mode=self.quick_mode,
                 verbose=self.verbose,
-                codex_mode=self.codex_mode,
             )
             result = await runner.run_bandit_analysis()
 
@@ -325,7 +326,6 @@ class CIParallelRunner:
             runner = StaticAnalysisRunner(
                 core_mode=self.quick_mode,
                 verbose=self.verbose,
-                codex_mode=self.codex_mode,
             )
             result = await runner.run_safety_analysis()
 
@@ -373,7 +373,6 @@ class CIParallelRunner:
             runner = StaticAnalysisRunner(
                 core_mode=self.quick_mode,
                 verbose=self.verbose,
-                codex_mode=self.codex_mode,
             )
             result = await runner.run_config_governance_analysis()
 
@@ -408,12 +407,14 @@ class CIParallelRunner:
                 self.console.print("[cyan]🧪 运行综合测试：单元测试 + 集成测试[/cyan]")
 
             # 构建pytest命令：单元+集成测试一起运行，生成综合覆盖率
+            # CI 只管 src/: scripts/ 相关测试不进 CI, 手动执行 pytest tests/unit/scripts/ 验证
             cmd = [
                 sys.executable,
                 "-m",
                 "pytest",
                 "tests/unit/",
                 "tests/integration/",
+                "--ignore=tests/unit/scripts/",
                 "--cov=src",
                 "--cov-report=xml:reports/coverage.xml",
                 "--cov-report=html:reports/coverage_html",
@@ -501,18 +502,14 @@ class CIParallelRunner:
     async def run_unit_tests_simple(self) -> TaskResult:
         """快速模式专用的简化单元测试"""
         start_time = time.time()
-        task_name = "单元测试(Codex)" if self.codex_mode else "单元测试(快速)"
+        task_name = "单元测试(快速)"
 
         try:
             if self.verbose:
                 self.console.print(f"🧪 运行{task_name}...")
 
-            worker_count = "0" if self.codex_mode else "6"
-            test_target = (
-                "tests/unit/core/test_path_resolver.py"
-                if self.codex_mode
-                else "tests/unit/"
-            )
+            worker_count = "6"
+            test_target = "tests/unit/"
 
             # 直接调用pytest
             cmd = [
@@ -522,6 +519,7 @@ class CIParallelRunner:
                 test_target,
                 "--ignore=tests/integration/",
                 "--ignore=tests/e2e/",
+                "--ignore=tests/unit/scripts/",
                 "-m unit or (not integration and not e2e)",
                 "-n",
                 worker_count,
@@ -532,6 +530,13 @@ class CIParallelRunner:
             if self.verbose:
                 self.console.print(f"[dim]执行命令: {' '.join(cmd)}[/dim]")
 
+            # TMPDIR 缺省时指向 /tmp: 受限沙盒 (Landlock/bwrap 只授予 /tmp + workspace
+            # 写权限) 中 SQLite 内部临时文件默认搜索 /var/tmp 会被拒 (EACCES ->
+            # code 14, 影响 chromadb rust sqlite); SQLite 优先尊重 TMPDIR, 显式
+            # 指向后避免依赖沙盒对 access() 探测的诚实性. 常规环境 /tmp 无害.
+            run_env = {**os.environ, "TEST_PROCESS_PREFIX": "unit"}
+            run_env.setdefault("TMPDIR", "/tmp")
+
             def run_pytest() -> subprocess.CompletedProcess[str]:
                 return subprocess.run(
                     cmd,
@@ -540,15 +545,12 @@ class CIParallelRunner:
                     text=True,
                     check=False,
                     timeout=600,  # 10分钟超时，避免无限等待
-                    env={**os.environ, "TEST_PROCESS_PREFIX": "unit"},
+                    env=run_env,
                 )
 
-            if self.codex_mode:
-                result = run_pytest()
-            else:
-                # 在线程池中执行同步命令，添加超时避免卡死
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, run_pytest)
+            # 在线程池中执行同步命令，避免阻塞 event loop (任务级并行时其他任务依赖它)
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, run_pytest)
 
             # 解析pytest输出
             passed, failed, skipped = self._parse_pytest_summary(result.stdout)
@@ -556,7 +558,7 @@ class CIParallelRunner:
             # 保存简化报告
             report_data = {
                 "report_type": "unit_tests",
-                "mode": "codex" if self.codex_mode else "quick",
+                "mode": "quick",
                 "timestamp": time.time(),
                 "tests_run": passed + failed + skipped,
                 "tests_passed": passed,
@@ -565,7 +567,6 @@ class CIParallelRunner:
                 "execution_time": time.time() - start_time,
                 "exit_code": result.returncode,
                 "success": result.returncode == 0,
-                "codex_smoke": self.codex_mode,
             }
 
             # 确保reports/current目录存在
@@ -640,7 +641,7 @@ class CIParallelRunner:
                 "-m",
                 "integration and not skip",
                 "-n",
-                "8",  # 集成测试8线程 (实测到-n16零失败, 隔离设计稳健; -n8比-n2快~32%)
+                "8",  # 常规/沙盒均 8 线程 (沙盒内实测并行全绿; -n8比-n2快~32%)
                 "--timeout=5",  # 5秒超时
                 "--timeout-method=thread",
                 "-v" if self.verbose else "-q",
@@ -652,6 +653,10 @@ class CIParallelRunner:
             # 在线程池中执行同步命令
             loop = asyncio.get_event_loop()
 
+            # 与单元测试同机制: TMPDIR 缺省指向 /tmp, 规避受限沙盒中 /var/tmp 只读
+            run_env = {**os.environ, "TEST_PROCESS_PREFIX": "integration"}
+            run_env.setdefault("TMPDIR", "/tmp")
+
             def _run_pytest() -> subprocess.CompletedProcess[str]:
                 return subprocess.run(
                     cmd,
@@ -660,7 +665,7 @@ class CIParallelRunner:
                     text=True,
                     check=False,
                     timeout=600,  # 10分钟超时
-                    env={**os.environ, "TEST_PROCESS_PREFIX": "integration"},
+                    env=run_env,
                 )
 
             # xdist worker 崩溃 (exit code 3) 属基础设施故障而非测试失败,
@@ -804,11 +809,7 @@ class CIParallelRunner:
                 "test_type": "e2e_graybox",
                 "service_managed": True,  # 通过conftest.py fixture管理
                 "service_type": "pytest_fixture",
-                "ci_mode": (
-                    "quick_with_e2e"
-                    if self.quick_mode
-                    else "full_with_e2e"
-                ),
+                "ci_mode": ("quick_with_e2e" if self.quick_mode else "full_with_e2e"),
             }
 
             # 如果有测试详情，添加到执行详情中
@@ -927,9 +928,7 @@ class CIParallelRunner:
 
         except Exception as e:
             error_msg = f"E2E测试执行失败: {e!s}"
-            return E2ETestResult(
-                False, error_msg, 0, error_msg, {"exception": str(e)}
-            )
+            return E2ETestResult(False, error_msg, 0, error_msg, {"exception": str(e)})
 
     def _save_e2e_full_log(self, result: subprocess.CompletedProcess[str]) -> None:
         """保存E2E完整 pytest 输出, 仿 unit_tests_quick_full.log."""
@@ -947,63 +946,10 @@ class CIParallelRunner:
 
     # ==================== 并行执行协调 ====================
 
-    async def run_codex_tasks(self) -> dict[str, Any]:
-        """顺序执行Codex sandbox安全任务."""
-        task_specs = [
-            ("ruff", self.run_ruff_analysis),
-            ("mypy", self.run_mypy_analysis),
-            ("bandit", self.run_bandit_analysis),
-            ("unit", self.run_unit_tests_simple),
-        ]
-
-        self.console.print(f"[cyan]📋 顺序启动 {len(task_specs)} 个Codex任务:[/cyan]")
-        for task_name, _ in task_specs:
-            icon = "🧪" if task_name == "unit" else "🔍"
-            self.console.print(f"  {icon} {task_name.title()}")
-
-        start_time = time.time()
-        self.results = []
-        for task_name, task_func in task_specs:
-            try:
-                task_result = await task_func()
-            except Exception as e:
-                self.console.print(f"[red]❌ {task_name.title()} 执行异常: {e}[/red]")
-                # 用映射归类 task_type, 确保崩溃任务仍被门禁逻辑检测到
-                display_name, task_type = TASK_METADATA.get(
-                    task_name, (task_name.title(), "unknown")
-                )
-                self.results.append(
-                    TaskResult(
-                        task_name=display_name,
-                        task_type=task_type,
-                        success=False,
-                        duration=0,
-                        output="执行异常",
-                        error_message=str(e),
-                    )
-                )
-                continue
-
-            self.results.append(task_result)
-            status = "✅" if task_result.success else "❌"
-            self.console.print(
-                f"{status} {task_result.task_name}: {task_result.output}"
-            )
-
-        total_time = time.time() - start_time
-        summary = self._generate_execution_summary(total_time)
-        await self._save_ci_summary_report(summary)
-        return summary
-
     async def run_parallel_tasks(self) -> dict[str, Any]:
         """并行执行所有任务"""
-        mode_label = (
-            "Codex" if self.codex_mode else ("快速" if self.quick_mode else "完整")
-        )
+        mode_label = "快速" if self.quick_mode else "完整"
         self.console.print(f"[bold blue]🚀 开始执行 ({mode_label}模式)[/bold blue]")
-
-        if self.codex_mode:
-            return await self.run_codex_tasks()
 
         # CI预构建清理：归档reports目录和根目录文件 - 使用SimpleCleaner
         try:
@@ -1455,9 +1401,7 @@ class CIParallelRunner:
 
         # 生成简化的摘要 - 不包含详细的完整信息
         summary = {
-            "execution_mode": "codex"
-            if self.codex_mode
-            else ("quick" if self.quick_mode else "full"),
+            "execution_mode": "quick" if self.quick_mode else "full",
             "timestamp": time.time(),
             "total_execution_time": total_time,
             "ci_passed": ci_passed,
@@ -1613,9 +1557,6 @@ class CIParallelRunner:
                         f"  • {test_suite['name']}: {test_suite['report_path']}"
                     )
 
-        if self.codex_mode:
-            return
-
         # CI后构建清理：使用SimpleCleaner（清理htmlcov和过期文件）
         try:
             self.console.print("[cyan]🧹 执行后构建清理...[/cyan]")
@@ -1681,9 +1622,7 @@ class CIParallelRunner:
                 size = test_logs_result.get("cleaned_size", 0)
                 files_cleaned += count
                 size_freed += size
-                self.console.print(
-                    f"[green]✅ 清理了 {count} 个过期测试日志[/green]"
-                )
+                self.console.print(f"[green]✅ 清理了 {count} 个过期测试日志[/green]")
             else:
                 self.console.print("[dim]✓ 没有过期测试日志需要清理[/dim]")
 
@@ -1746,11 +1685,6 @@ def main() -> None:
     parser.add_argument(
         "--quick", action="store_true", help="快速模式（单元测试+静态分析）"
     )
-    parser.add_argument(
-        "--codex",
-        action="store_true",
-        help="启用Codex sandbox兼容模式(顺序核心检查,禁用xdist)",
-    )
     parser.add_argument("--verbose", action="store_true", help="详细输出")
 
     args = parser.parse_args()
@@ -1760,7 +1694,6 @@ def main() -> None:
         runner = CIParallelRunner(
             quick_mode=args.quick,
             verbose=args.verbose,
-            codex_mode=args.codex,
         )
 
         # 并行执行所有任务

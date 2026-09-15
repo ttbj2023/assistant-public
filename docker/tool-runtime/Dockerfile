@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 
 ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright
 ARG HTTP_PROXY=
 ARG HTTPS_PROXY=
 ARG http_proxy=
@@ -10,6 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST} \
     XDG_CACHE_HOME=/tmp/.cache \
     HOME=/tmp \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright

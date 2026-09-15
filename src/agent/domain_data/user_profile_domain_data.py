@@ -51,8 +51,8 @@ class UserProfileDomainData(BaseDomainData):
     async def on_conversation_round(
         self,
         conversation_data: ConversationData | None,
-        attachment_infos: list[Any] | None = None,  # noqa: ARG002
-        round_number: int | None = None,  # noqa: ARG002
+        attachment_infos: list[Any] | None = None,  # ruff: ignore[unused-method-argument]
+        round_number: int | None = None,  # ruff: ignore[unused-method-argument]
     ) -> None:
         """对话后主模型覆写用户画像.
 

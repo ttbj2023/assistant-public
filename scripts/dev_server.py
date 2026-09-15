@@ -19,22 +19,13 @@ import sys
 import time
 from pathlib import Path
 
+# 确保项目根目录在Python路径中 (stdlib 操作, 任何解释器下均可执行)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-def ensure_venv() -> None:
-    """检测并自动切换到项目虚拟环境, 避免因未激活venv导致第三方库导入失败."""
-    venv_python = Path(__file__).parent.parent / ".venv" / "bin" / "python"
-    if not venv_python.exists():
-        return
-
-    expected_prefix = str(Path(__file__).parent.parent / ".venv")
-    if sys.prefix == expected_prefix:
-        return
-
-    print("🔄 当前未在项目虚拟环境中, 自动切换...")
-    print(f"   当前: {sys.executable}")
-    print(f"   目标: {venv_python}")
-    os.execv(str(venv_python), [str(venv_python), *sys.argv])
-
+# venv 守卫: 解释器错误时自动切换 (须在第三方依赖导入前执行)
+from scripts.venv_guard import ensure_venv
 
 ensure_venv()
 

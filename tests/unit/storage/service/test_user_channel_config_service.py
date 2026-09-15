@@ -36,7 +36,9 @@ class TestUpsertChannelConfig:
             "wechat", {"target": "new_target"}, is_default=True
         )
         service.dao.update_config.assert_awaited_once_with(
-            1, config={"target": "new_target"}, is_default=True,
+            1,
+            config={"target": "new_target"},
+            is_default=True,
         )
         assert result == existing
 

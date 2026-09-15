@@ -5,19 +5,20 @@ name: "Personal Agent Assistant"
 description: "个人助手Agent，支持记忆管理、TODO任务等"
 
 # 模型配置
-model_id: "deepseek:deepseek-v4-pro"
+model_id: "deepseek:deepseek-flash"
 
 # 备选方案（需要对应的API密钥或服务）:
 # - Qwen3.8-Max: model_id: "aliyun-token-plan:qwen3.8-max" (阿里云 Token Plan 订阅独享旗舰模型, 强制思考模式)
 # - Kimi K2.6: model_id: "ark-agent-plan:kimi-k2.6" (火山引擎 Ark Agent Plan 订阅)
 # - Qwen3.7-Plus: model_id: "aliyun-token-plan:qwen3.7-plus" (阿里云 Token Plan 订阅, 多模态, 1M上下文)
-# - DeepSeek V4 Pro: model_id: "deepseek:deepseek-v4-pro" (旗舰推理, 1M上下文)
+# - DeepSeek V4 Pro: model_id: "deepseek:deepseek-v4-pro" (旗舰推理, 1M上下文; 官方节点已路由至 Flash 计费)
 # - OpenAI: model_id: "openai:gpt-5.5" (旗舰模型, 1.05M上下文, 128K输出, 多模态)
 
 # 系统提示词
 system_prompt: |
   你是一个个人助手Agent，可以帮助用户维护TODO、管理日常事务。
   你的回答应该友好、准确。
+  记录/待办/日程类请求必须实际调用对应工具完成，禁止仅口头答应而不落库。
 
 # 首轮对话开场专属提示词 (为空则不启用; 非空时首轮跳过记忆拼接并注入该提示词)
 first_turn_prompt: |
@@ -26,14 +27,15 @@ first_turn_prompt: |
   2. 询问用户希望被怎样称呼(用户的称呼偏好会被长期记住)
   如果用户的首条消息已包含明确的任务需求, 应优先响应需求, 在合适时机穿插上述引导, 不要让引导打断用户当前意图.
 
-# 工具配置
+# 工具配置 (core 仅保留机制类工具: 记忆检索 + 工具发现; 领域工具全部休眠, 经 search 按需唤醒)
 tools:
   - "memory_recall_group"
   - "search_available_tools"
-  - "todo_manager_group"
 
 # 可选工具: 休眠状态, Agent通过search_available_tools按需发现后由中间件动态注入
 optional_tools:
+  - "todo_manager_group"
+  - "calendar_manager_group"
   - "web_research"
   - "finance_data"
   - "business_registry"
@@ -43,6 +45,7 @@ optional_tools:
   - "analyze_image"
   - "scheduled_messenger_group"
   - "stock_watch_group"
+  - "msgraph_sync_group"
   - "regenerate_download_link"
   - "geo_navigator"
   - "weather_query"

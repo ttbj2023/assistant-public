@@ -315,7 +315,10 @@ def e2e_db_reader(e2e_test_user: str):
         )
 
     def read_todos(thread_id: str, agent_id: str = "personal-assistant") -> list[dict]:
-        db_path = _get_db_path(thread_id, agent_id, "todo")
+        """读取用户级 todo.db (thread_id/agent_id 仅溯源, 不参与路径)."""
+        from src.core.path_resolver import get_user_database_path
+
+        db_path = Path(get_user_database_path(e2e_test_user, "todo"))
         if not db_path.exists():
             return []
         conn = sqlite3.connect(str(db_path))

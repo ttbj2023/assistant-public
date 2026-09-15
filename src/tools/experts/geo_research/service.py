@@ -23,7 +23,10 @@ from src.inference.llm.retry_predicates import (
     format_llm_failure_message,
     is_retryable_llm_exception,
 )
-from src.tools.experts.agent_utils import enable_tool_error_handling
+from src.tools.experts.agent_utils import (
+    EXPERT_AGENT_RECURSION_LIMIT,
+    enable_tool_error_handling,
+)
 from src.tools.experts.geo_research.unified_geo_tools import create_geo_sub_tools
 from src.tools.experts.model_factory import ExpertModelFactory
 
@@ -259,7 +262,10 @@ async def _run_deep(
         result = await asyncio.wait_for(
             agent.ainvoke(
                 {"messages": [HumanMessage(content=prompt)]},
-                config=RunnableConfig(max_concurrency=1, recursion_limit=50),
+                config=RunnableConfig(
+                    max_concurrency=1,
+                    recursion_limit=EXPERT_AGENT_RECURSION_LIMIT,
+                ),
             ),
             timeout=timeout,
         )

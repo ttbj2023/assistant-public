@@ -5,12 +5,16 @@ Mock httpx 请求, 验证请求构造/响应解析/降级行为.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 
-from src.inference.rerank.client import RerankClient, RerankResult
+from src.inference.rerank.client import (
+    RerankClient,
+    RerankResult,
+    resolve_rerank_base_url,
+)
 
 
 def _make_rerank_response(
@@ -195,3 +199,29 @@ class TestRerankHealthCheck:
         mock_http_client.get.side_effect = httpx.ConnectError("refused")
 
         assert await client.health_check() is False
+
+
+class TestResolveRerankBaseUrl:
+    def test_env_override_takes_priority(self, monkeypatch):
+        """RERANKER_BASE_URL 环境变量优先于 fallback (容器内指向宿主机)."""
+        monkeypatch.setenv("RERANKER_BASE_URL", "http://host.docker.internal:8768")
+        assert (
+            resolve_rerank_base_url("http://localhost:8768")
+            == "http://host.docker.internal:8768"
+        )
+
+    def test_fallback_when_env_unset(self, monkeypatch):
+        """环境变量未设置时返回调用方 fallback (config.yaml 值)."""
+        monkeypatch.delenv("RERANKER_BASE_URL", raising=False)
+        assert (
+            resolve_rerank_base_url("http://localhost:8768")
+            == "http://localhost:8768"
+        )
+
+    def test_fallback_when_env_empty(self, monkeypatch):
+        """环境变量为空字符串时同样回退 (get_effective_base_url 空值语义)."""
+        monkeypatch.setenv("RERANKER_BASE_URL", "")
+        assert (
+            resolve_rerank_base_url("http://localhost:8768")
+            == "http://localhost:8768"
+        )

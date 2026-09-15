@@ -5,6 +5,10 @@ book.yaml 提供书目元数据(缺省宽容默认); doc_ref = 相对语料根�
 
 增量幂等: 以 文档内容 sha256 判重, 未变更跳过; 变更/重建时先按 doc_ref 删旧块再重写.
 索引状态(各文档 content hash)以 JSON 落向量库目录的 index_state.json.
+
+图片索引: 注入 image_describer 时, 文中整行图片引用解析为语料相对路径,
+经视觉模型生成题注后作为独立图片块(chunk_type=image)入库;
+正文块 metadata 的 images 字段同步改写为解析后的路径.
 """
 
 from __future__ import annotations
@@ -12,8 +16,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import posixpath
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from langchain_core.documents import Document
 
 from src.knowledge_base.book import BookMetadata, load_book_metadata
 from src.knowledge_base.chunker import MarkdownChunker
@@ -22,6 +29,8 @@ from src.knowledge_base.store import KnowledgeBaseStore
 logger = logging.getLogger(__name__)
 
 _STATE_FILENAME = "index_state.json"
+_CHAIN_JOIN = " / "
+_KB_META_FILENAME = "kb_meta.json"
 
 
 @dataclass
@@ -33,6 +42,7 @@ class IndexStats:
     skipped: int = 0
     updated: int = 0
     failed: int = 0
+    images: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -43,9 +53,11 @@ class KnowledgeBaseIndexer:
         self,
         store: KnowledgeBaseStore,
         chunker: MarkdownChunker | None = None,
+        image_describer: object | None = None,
     ) -> None:
         self.store = store
         self.chunker = chunker or MarkdownChunker()
+        self._image_describer = image_describer
 
     async def build(
         self,
@@ -95,20 +107,117 @@ class KnowledgeBaseIndexer:
                 "source": book.source,
                 "kb_name": self.store.kb_name,
             }
-            for chunk in chunks:
+            self._resolve_chunk_images(chunks, doc_ref)
+            image_chunks = await self._build_image_chunks(content, root, doc_ref)
+            stats.images += len(image_chunks)
+            all_chunks = chunks + image_chunks
+            for chunk in all_chunks:
                 chunk.metadata.update(doc_meta)
-            ids = [f"{doc_ref}::{i}" for i in range(len(chunks))]
-            await self.store.add_documents(chunks, ids)
+            ids = [f"{doc_ref}::{i}" for i in range(len(all_chunks))]
+            await self.store.add_documents(all_chunks, ids)
 
             state[doc_ref] = content_hash
             if is_update:
                 stats.updated += 1
             else:
                 stats.indexed += 1
-            logger.info("已索引 %s: %d 块", doc_ref, len(chunks))
+            logger.info(
+                "已索引 %s: %d 块 (含 %d 图片块)",
+                doc_ref,
+                len(all_chunks),
+                len(image_chunks),
+            )
 
         self._save_state(state)
+        self._save_kb_meta(root)
         return stats
+
+    def _save_kb_meta(self, corpus_root: Path) -> None:
+        """语料根落 kb_meta.json, 供运行时读图工具解析 image_ref 寻址."""
+        meta_path = Path(self.store.persist_directory) / _KB_META_FILENAME
+        try:
+            meta_path.parent.mkdir(parents=True, exist_ok=True)
+            meta_path.write_text(
+                json.dumps({"corpus_root": str(corpus_root.resolve())}),
+                encoding="utf-8",
+            )
+        except OSError as e:
+            logger.warning("kb_meta.json 写入失败: %s, %s", meta_path, e)
+
+    @staticmethod
+    def _resolve_image_ref(doc_ref: str, raw_ref: str) -> str | None:
+        """图片原始引用(md 相对路径) → 语料根相对路径; 逃逸语料根或空引用返回 None."""
+        if not raw_ref:
+            return None
+        resolved = posixpath.normpath(
+            posixpath.join(posixpath.dirname(posixpath.normpath(doc_ref)), raw_ref)
+        )
+        if not resolved or resolved.startswith("../") or posixpath.isabs(resolved):
+            logger.warning("图片引用逃逸语料根, 忽略: doc=%s ref=%s", doc_ref, raw_ref)
+            return None
+        return resolved
+
+    def _resolve_chunk_images(
+        self,
+        chunks: list[Document],
+        doc_ref: str,
+    ) -> None:
+        """把正文块 metadata.images 的原始引用改写为语料根相对路径."""
+        for chunk in chunks:
+            raw = chunk.metadata.get("images")
+            if not raw:
+                continue
+            resolved = [
+                r
+                for r in (self._resolve_image_ref(doc_ref, x) for x in raw.split(","))
+                if r
+            ]
+            if resolved:
+                chunk.metadata["images"] = ",".join(resolved)
+            else:
+                chunk.metadata.pop("images")
+
+    async def _build_image_chunks(
+        self,
+        content: str,
+        corpus_root: Path,
+        doc_ref: str,
+    ) -> list[Document]:
+        """为文档中的图片锚点生成独立图片块(chunk_type=image).
+
+        未注入 image_describer 或描述失败时跳过; 按解析后路径去重.
+        """
+        if self._image_describer is None:
+            return []
+
+        seen: set[str] = set()
+        image_chunks: list[Document] = []
+        for chain, raw_ref in self.chunker.extract_image_anchors(content):
+            resolved = self._resolve_image_ref(doc_ref, raw_ref)
+            if not resolved or resolved in seen:
+                continue
+            seen.add(resolved)
+
+            caption = await self._image_describer.describe(corpus_root, resolved)
+            if not caption:
+                continue
+
+            page_content = "\n".join([
+                "[章节] " + _CHAIN_JOIN.join(chain),
+                f"[图片] {caption}",
+            ])
+            image_chunks.append(
+                Document(
+                    page_content=page_content,
+                    metadata={
+                        "chunk_type": "image",
+                        "image_path": resolved,
+                        "heading_chain": _CHAIN_JOIN.join(chain),
+                        "section_title": chain[-1] if chain else "",
+                    },
+                )
+            )
+        return image_chunks
 
     @staticmethod
     def _discover(root: Path) -> list[tuple[str, Path, BookMetadata]]:

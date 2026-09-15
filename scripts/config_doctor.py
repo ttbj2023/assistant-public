@@ -35,10 +35,10 @@ ALLOWED_ENV_READ_FILES = {
 
 DEPRECATED_FIELD_PATHS = {
     "api.file_signing_secret": "FILE_SIGNING_SECRET 只允许放在 .env",
-    "openclaw.gateway.token": "OPENCLAW_GATEWAY_TOKEN 只允许放在 .env",
+    "channel_push.gateway.token": "CHANNEL_GATEWAY_TOKEN 只允许放在 .env",
     "storage.database": "数据库路径由 path_resolver 管理, 当前仅保留 storage.file_store",
     "tools.internal_tools.scheduled_messenger.config.openclaw_defaults": (
-        "openclaw 渠道默认已迁移到 openclaw.notification_defaults"
+        "openclaw 渠道配置体系已移除, 请删除该字段"
     ),
     "tools.internal_tools.scheduled_messenger.config.smtp_config": (
         "SMTP 已迁移到系统级 smtp 段"
@@ -122,41 +122,6 @@ def check_deprecated_fields(config: dict[str, Any]) -> list[Issue]:
                 )
             )
     return issues
-
-
-def check_notification_defaults(config: dict[str, Any]) -> list[Issue]:
-    """检查 openclaw.notification_defaults (微信渠道通知派发的系统级依赖).
-
-    微信渠道(超长回复补发/定时消息/价格监控派发)经 resolve_delivery 读取此配置
-    解析系统级渠道名; 缺失或为空时这些功能会静默失败(日志告警但消息不发出).
-    因 config.yaml 被 gitignore, 生产环境易漏配, 故作为 WARNING 提示.
-    """
-    openclaw = config.get("openclaw")
-    if not isinstance(openclaw, dict):
-        return [
-            Issue(
-                severity="WARNING",
-                code="MISSING_NOTIFICATION_DEFAULTS",
-                path="openclaw",
-                message=(
-                    "缺 openclaw 段; 微信渠道(超长回复补发/定时消息/价格监控派发)"
-                    "将静默失败, 见 docs/config-yaml-template.yaml 的 openclaw.notification_defaults"
-                ),
-            ),
-        ]
-    defaults = openclaw.get("notification_defaults")
-    if not isinstance(defaults, dict) or not defaults:
-        return [
-            Issue(
-                severity="WARNING",
-                code="MISSING_NOTIFICATION_DEFAULTS",
-                path="openclaw.notification_defaults",
-                message=(
-                    "为空或缺失; 微信渠道(超长回复补发/定时消息/价格监控派发)将静默失败"
-                ),
-            ),
-        ]
-    return []
 
 
 def check_dict_categories_not_none(config: dict[str, Any]) -> list[Issue]:
@@ -380,11 +345,17 @@ def migrate_config(config: dict[str, Any]) -> tuple[dict[str, Any], list[Issue]]
     issues: list[Issue] = []
 
     _drop_path(migrated, "api.file_signing_secret")
-    _drop_path(migrated, "openclaw.gateway.token")
-    _drop_path(migrated, "storage.database")
+    _drop_path(migrated, "channel_push.gateway.token")
+    # 旧 openclaw 段迁移到 channel_push (gateway.url 保留, notification_defaults 废弃)
+    openclaw_legacy = migrated.pop("openclaw", None)
+    if isinstance(openclaw_legacy, dict) and "channel_push" not in migrated:
+        legacy_url = openclaw_legacy.get("gateway", {}).get("url")
+        if legacy_url:
+            migrated["channel_push"] = {"gateway": {"url": legacy_url}}
     _drop_path(
         migrated, "tools.internal_tools.scheduled_messenger.config.openclaw_defaults"
     )
+    _drop_path(migrated, "storage.database")
     _drop_path(migrated, "tools.internal_tools.scheduled_messenger.config.smtp_config")
     for path in list(DEPRECATED_FIELD_PATHS):
         if path.startswith("core.cache."):
@@ -454,7 +425,6 @@ def run(args: argparse.Namespace) -> int:
 
     if args.validate or args.strict or args.check_env:
         issues.extend(check_deprecated_fields(config))
-        issues.extend(check_notification_defaults(config))
         issues.extend(check_dict_categories_not_none(config))
         issues.extend(validate_app_config(config))
         issues.extend(check_agent_references(config))

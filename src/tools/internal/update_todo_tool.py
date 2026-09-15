@@ -49,7 +49,7 @@ class UpdateTodoTool(BaseTool):
     description: str = (
         "更新一条TODO任务.\n"
         "当用户要修改/完成/改状态/取消时使用, 必须提供todo_id.\n"
-        "先根据用户提到的任务标题, 在 list_todos 结果或写工具返回的 current_todos 中匹配对应 ID, 只更新用户明确要求的字段.\n"
+        "todo_id 可从 list_todos 结果中获取; 只更新用户明确要求的字段.\n"
         "注意: 将 status 设为 cancelled 表示软取消(保留记录); 若要彻底删除记录, 请使用 delete_todo.\n\n"
         "示例:\n"
         '- 用户: "把买牛奶的任务标记为已完成" → 匹配到"买牛奶"的 todo_id 后, {"todo_id": 3, "status": "completed"}\n'

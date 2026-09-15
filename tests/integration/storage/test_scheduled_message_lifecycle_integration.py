@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -104,11 +105,12 @@ class TestScheduledMessageLifecycleIntegration:
     ):
         """PENDING 消息 → Mock OpenClaw 发送成功 → status=SENT 且 sent_at 非空.
 
-        Mock 边界: get_openclaw_client 返回 send_message=True; 预填渠道配置缓存
+        Mock 边界: get_channel_push_client 返回 send_message=True; 预填渠道配置缓存
         验证重点: _send_message 后 status 变为 SENT; sent_at 被写入
         """
         service = await _create_service(test_user, test_thread_id)
-        future_time = datetime.now(UTC) + timedelta(hours=1)
+        # 模拟到点触发: send_time 落在 60s 发送容差内, 不触发顺延重挂
+        future_time = datetime.now(UTC) + timedelta(seconds=5)
 
         msg = await service.schedule_message(
             "微信消息内容",
@@ -116,16 +118,16 @@ class TestScheduledMessageLifecycleIntegration:
             channel="wechat",
         )
 
+        from src.core.channel_push_client import SendOutcome
         from src.core.notification import DeliverySpec
 
         delivery = DeliverySpec(
             method="wechat",
-            openclaw_channel="openclaw-weixin",
             account_id="bot-1",
             target="user-target",
         )
         mock_notifier = MagicMock()
-        mock_notifier.send = AsyncMock(return_value=True)
+        mock_notifier.send = AsyncMock(return_value=SendOutcome(ok=True))
 
         with (
             patch(
@@ -143,6 +145,7 @@ class TestScheduledMessageLifecycleIntegration:
         assert refreshed is not None
         assert refreshed.status == MessageStatus.SENT
         assert refreshed.sent_at is not None
+        assert refreshed.last_error is None
         mock_notifier.send.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -153,11 +156,12 @@ class TestScheduledMessageLifecycleIntegration:
     ):
         """PENDING 消息 → Mock OpenClaw 发送失败 → status=FAILED.
 
-        Mock 边界: get_openclaw_client 返回 send_message=False; 预填渠道配置缓存
+        Mock 边界: get_channel_push_client 返回 send_message=False; 预填渠道配置缓存
         验证重点: _send_message 后 status 变为 FAILED
         """
         service = await _create_service(test_user, test_thread_id)
-        future_time = datetime.now(UTC) + timedelta(hours=1)
+        # 模拟到点触发: send_time 落在 60s 发送容差内, 不触发顺延重挂
+        future_time = datetime.now(UTC) + timedelta(seconds=5)
 
         msg = await service.schedule_message(
             "发送失败的消息",
@@ -165,16 +169,18 @@ class TestScheduledMessageLifecycleIntegration:
             channel="wechat",
         )
 
+        from src.core.channel_push_client import SendOutcome
         from src.core.notification import DeliverySpec
 
         delivery = DeliverySpec(
             method="wechat",
-            openclaw_channel="openclaw-weixin",
             account_id="bot-1",
             target="user-target",
         )
         mock_notifier = MagicMock()
-        mock_notifier.send = AsyncMock(return_value=False)
+        mock_notifier.send = AsyncMock(
+            return_value=SendOutcome(ok=False, error="网关投递失败: prepare failed")
+        )
 
         with (
             patch(
@@ -191,6 +197,7 @@ class TestScheduledMessageLifecycleIntegration:
         refreshed = await service.dao.get_by_message_id(msg.message_id)
         assert refreshed is not None
         assert refreshed.status == MessageStatus.FAILED
+        assert "prepare failed" in (refreshed.last_error or "")
 
     @pytest.mark.asyncio
     async def test_cancel_message_removes_timer_and_updates_status(
@@ -248,3 +255,73 @@ class TestScheduledMessageLifecycleIntegration:
         await service._send_message("nonexistent-id")
 
         # 无需额外断言, 不抛异常即为通过
+
+    @pytest.mark.asyncio
+    async def test_legacy_db_without_last_error_migrated(
+        self,
+        test_user,
+        test_thread_id,
+    ):
+        """旧库 (无 last_error 列) 建管理器时应自动迁移, 失败原因可写入读取."""
+        import aiosqlite
+
+        from src.core.path_resolver import get_database_path
+        from src.storage.dao.async_database_manager import (
+            create_async_scheduled_message_db_manager,
+        )
+
+        db_path = get_database_path(
+            test_user, test_thread_id, "scheduled_message", agent_id=_AGENT_ID
+        )
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
+        # 手工建旧 schema (模拟 v1.9.0 之前的库, 无 last_error 列)
+        old_schema = """
+            CREATE TABLE scheduled_messages (
+                id INTEGER PRIMARY KEY,
+                message_id VARCHAR NOT NULL,
+                message VARCHAR NOT NULL,
+                send_time DATETIME NOT NULL,
+                status VARCHAR NOT NULL,
+                description VARCHAR,
+                sent_at DATETIME,
+                channel VARCHAR NOT NULL DEFAULT 'wechat',
+                subject VARCHAR,
+                html_body VARCHAR,
+                user_id VARCHAR NOT NULL,
+                thread_id VARCHAR NOT NULL,
+                agent_id VARCHAR NOT NULL,
+                created_at DATETIME,
+                updated_at DATETIME
+            )
+        """
+        async with aiosqlite.connect(db_path) as conn:
+            await conn.execute(old_schema)
+            await conn.execute(
+                "INSERT INTO scheduled_messages (message_id, message, send_time,"
+                " status, channel, user_id, thread_id, agent_id)"
+                " VALUES ('msg_legacy_1', '旧消息', '2026-09-01 00:00:00',"
+                " 'pending', 'wechat', ?, ?, ?)",
+                (test_user, test_thread_id, _AGENT_ID),
+            )
+            await conn.commit()
+
+        # 建管理器触发迁移 + 写入 last_error
+        db_manager = await create_async_scheduled_message_db_manager(
+            test_user, test_thread_id, agent_id=_AGENT_ID
+        )
+        from src.storage.dao.async_scheduled_message_dao import (
+            AsyncScheduledMessageDAO,
+        )
+        from src.storage.models.scheduled_message import MessageStatus as MS
+
+        dao = AsyncScheduledMessageDAO(db_manager.session_factory)
+        ok = await dao.update_status(
+            "msg_legacy_1", MS.FAILED, last_error="渠道wechat配置缺失或无效"
+        )
+        assert ok is True
+
+        refreshed = await dao.get_by_message_id("msg_legacy_1")
+        assert refreshed is not None
+        assert refreshed.status == MS.FAILED
+        assert refreshed.last_error == "渠道wechat配置缺失或无效"

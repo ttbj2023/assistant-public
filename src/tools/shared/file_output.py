@@ -55,6 +55,7 @@ async def register_tool_output(
     *,
     document_meta: str | None = None,
     brief: str | None = None,
+    source: str | None = None,
 ) -> dict[str, Any]:
     """注册工具输出文件: 去重 → 附件注册 → HMAC签名URL → exported_files → 配额.
 
@@ -70,6 +71,7 @@ async def register_tool_output(
         thread_id: 会话ID
         document_meta: 文档结构化元数据JSON (摘要+目录信息)
         brief: 对话历史一句话标签; 优先于 summary 推导, 缺省走 summary 或自动拼合
+        source: 源码/生成参数 (生成文件的"源码"区); desc = compose_desc(brief, source)
 
     Returns:
         包含 file_id, file_url, filename, format, size_bytes 的结果字典.
@@ -152,11 +154,11 @@ async def register_tool_output(
         ),
     )
 
-    # 描述外置: 文档摘要写 .desc.md (summary 即文档的"描述")
-    if summary:
-        from src.files.desc_writer import write_desc
+    # desc = 摘要 + 分隔符 + 源码 (统一结构); source 缺失时回退 summary 纯摘要
+    if source or summary:
+        from src.files.desc_writer import compose_desc, write_desc
 
-        write_desc(user_id, file_id, summary)
+        write_desc(user_id, file_id, compose_desc(brief or summary or "", source or ""))
     token = get_signed_url_provider().compose_token(
         ctx.user_id,
         ctx.thread_id,

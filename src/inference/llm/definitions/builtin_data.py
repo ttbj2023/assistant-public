@@ -21,10 +21,12 @@ def create_builtin_models() -> list[ModelMetadata]:
     # Local Chat Models
     # ═══════════════════════════════════════════════════════════════════
 
-    # Qwen3-4B-Instruct (工具筛选首选, 非思考+JSON mode)
-    # 基准测试: 工具反向选择97.5%(39/40), avg=154ms, p95=194ms
+    # Qwen3-4B-Instruct (工具筛选备选, 非思考+JSON mode)
+    # 基准测试(2026-09修订版标签): 工具反向选择92.3%(36/39), avg=195ms, p95=241ms
     # 原生256K上下文, 本地64K配置(RTX 4070 Ti SUPER 16GB实测196K稳定)
     # SDK: langchain_ollama.ChatOllama
+    # 注: 工具筛选首选已切换为 sft08b_v4 (plain 形态, 零误杀), 本条保留为
+    # numbers/JSON 形态的通用备选 (ToolFilterConfig 默认值)
     models.append(
         ModelMetadata(
             id="local:qwen3:4b-instruct",
@@ -33,8 +35,8 @@ def create_builtin_models() -> list[ModelMetadata]:
             model_type=ModelType.CHAT,
             description="本地部署的 Qwen3-4B-Instruct模型(Ollama: qwen3:4b-instruct), 4B参数, Q4_K_M量化."
             "原生256K上下文, 本地64K配置(RTX 4070 Ti SUPER 16GB实测196K稳定)."
-            "工具筛选基准测试97.5%准确率(39/40), 平均延迟154ms, JSON mode可用."
-            "非思考模式, 适合低延迟结构化输出场景(工具筛选/意图分类).",
+            "工具筛选基准测试92.3%准确率(36/39, 2026-09修订版标签), 平均延迟195ms, JSON mode可用."
+            "非思考模式, 适合低延迟结构化输出场景(numbers/JSON 形态的工具筛选备选/意图分类).",
             model_params={
                 "temperature": {"default": 0.0},
                 "top_p": {"default": 0.9},
@@ -47,6 +49,36 @@ def create_builtin_models() -> list[ModelMetadata]:
                 ModelCapability.TEXT_INPUT,
                 ModelCapability.STREAMING,
                 ModelCapability.JSON_MODE,
+            ],
+        ),
+    )
+
+    # Qwen3.5-0.8B-SFT-v4 (工具筛选, plain 名称直出形态)
+    # 微调: 1000 条宽松金标 slim 数据 / 8 epoch / LoRA r16 (finetune 仓库)
+    # 基准(2026-09 新口径 36 目录): agent_retrieval 金标保持率 100%
+    # (91/91 零误杀), 噪音 0.4, 延迟 ~75ms; Q8_0 量化 833MB.
+    # 部署形态: response_format=plain (名称直出, 免 JSON), 见 _llm_tool_filter
+    models.append(
+        ModelMetadata(
+            id="local:sft08b_v4:q8_0",
+            name="Qwen3.5-0.8B-SFT-v4",
+            provider="local",
+            model_type=ModelType.CHAT,
+            description="本地部署的 Qwen3.5-0.8B 微调模型(工具筛选专用, Ollama: sft08b_v4:q8_0), "
+            "0.8B参数, Q8_0量化, 833MB."
+            "agent_retrieval 基准金标保持率 100% (零误杀), 噪音 0.4, 延迟 ~75ms."
+            "仅支持 plain 名称直出形态 (response_format=plain), 不支持 JSON mode.",
+            model_params={
+                "temperature": {"default": 0.0},
+                "top_p": {"default": 0.9},
+                "num_predict": {"default": 256},
+                "num_ctx": {"default": 4096},
+                "repeat_penalty": {"default": 1.0},
+                "format": {"default": None},
+            },
+            capabilities=[
+                ModelCapability.TEXT_INPUT,
+                ModelCapability.STREAMING,
             ],
         ),
     )
@@ -150,42 +182,63 @@ def create_builtin_models() -> list[ModelMetadata]:
     )
 
     # ═══════════════════════════════════════════════════════════════════
-    # DeepSeek V4 Models (2026-04-24发布, 全系标配1M上下文, MoE架构)
+    # DeepSeek Models (V4.1 Flash 2026-09-10发布, 1M上下文, 非对称MoE新架构)
     # SDK: langchain_deepseek.ChatDeepSeek
     # ═══════════════════════════════════════════════════════════════════
 
+    # DeepSeek V4.1 Flash (2026-09-10发布, 新架构家族最小型号, 原生多模态)
+    # 552B MoE, 非对称 Causal Encoder-Decoder 架构: 输入激活8B/输出激活16B
+    # KV cache 仅前代 1/4 HBM / 1/8 SSD; 官方基准全面超越 V4 Pro; 并发上限2500
+    # 取代已退役的 deepseek-v4-flash / deepseek-v4-flash-vision-exp (旧名暂时路由至此)
+    # SDK: langchain_deepseek.ChatDeepSeek
     models.append(
         ModelMetadata(
-            id="deepseek:deepseek-v4-flash",
-            name="DeepSeek V4 Flash",
+            id="deepseek:deepseek-flash",
+            name="DeepSeek V4.1 Flash",
             provider="deepseek",
             model_type=ModelType.CHAT,
-            description="DeepSeek V4 Flash云端模型(2026-04-24发布).284B总参/13B激活MoE架构,全系标配1M上下文,384K最大输出."
-            "默认思考模式(reasoning_effort=high),通过extra_body.thinking.type=disabled可切换非思考模式."
-            "注意: temperature/top_p在思考模式下被忽略; frequency_penalty/presence_penalty已在V4中废弃."
-            "注意: max_tokens包含reasoning_content+content总预算, high模式建议≥16K, max模式建议≥32K."
-            "官方定价: 输入$0.14/百万tokens(缓存未命中), 输出$0.28/百万tokens, 缓存命中$0.0028/百万tokens.快捷经济之选.",
+            description="DeepSeek V4.1 Flash云端模型(2026-09-10发布, API模型名 deepseek-flash)."
+            "552B总参MoE, 非对称 Causal Encoder-Decoder 架构(输入激活8B/输出激活16B), 原生视觉理解."
+            "官方基准全面超越V4 Pro; KV cache仅前代1/4 HBM/1/8 SSD, 并发上限2500."
+            "1M上下文, 384K最大输出; 默认思考模式(effort=high), reasoning_effort支持low/high/max,"
+            "经extra_body.thinking.type=enabled/disabled切换思考开关."
+            "注意: 思考模式下temperature/presence_penalty/frequency_penalty被忽略,"
+            "top_p生效但下限0.95(非思考模式固定1.0); max_tokens包含reasoning_content+content总预算;"
+            "携带tools时reasoning_content须回传否则400."
+            "图片输入: JPEG/PNG/GIF/WebP, 仅user消息, base64(请求体上限48MiB)/外部URL/Files API,"
+            "自动缩放至约1300x1300, 单图上限1024 tokens, 单请求最多600张."
+            "deepseek-v4-flash与deepseek-v4-flash-vision-exp已退役, 旧名暂时路由至本模型并按本模型计费."
+            "官方定价分峰谷时段(空闲减半), 此处按高峰档: 输入$0.30/百万tokens(缓存未命中), "
+            "输出$1.20/百万tokens, 缓存命中$0.006/百万tokens.",
             model_params={
                 "temperature": {"default": 1.0},
                 "top_p": {"default": 1.0},
                 "max_tokens": {"default": 32768},
-                "reasoning_effort": {"default": None, "options": ["high", "max"]},
+                "reasoning_effort": {
+                    "default": None,
+                    "options": ["low", "high", "max"],
+                },
                 "stop": {"default": None},
             },
             capabilities=[
                 ModelCapability.TEXT_INPUT,
+                ModelCapability.IMAGE_INPUT,
                 ModelCapability.REASONING,
                 ModelCapability.STREAMING,
                 ModelCapability.JSON_MODE,
                 ModelCapability.TOOL_CALLING,
             ],
+            # 来源: DeepSeek API Pricing(api-docs.deepseek.com), 分峰谷计费(空闲时段半价).
+            # 此处取高峰档作为模型级参考; 空闲时段减半(输入$0.15, 输出$0.60, 缓存$0.003).
             pricing=ModelPricing(
-                input=0.14, output=0.28, cached_input=0.0028, currency="USD"
+                input=0.3, output=1.2, cached_input=0.006, currency="USD"
             ),
         ),
     )
 
     # DeepSeek V4 Pro 在 deepseek 官方节点与阿里云 Token Plan 均有提供, 引用共享定义.
+    # 注意: 官方节点 2026-09-14 起 deepseek-v4-pro 请求全部路由至 V4.1-Flash 并按 Flash 计费
+    # (退役过渡, 直至 V4.1 Pro 发布); 火山/阿里云订阅节点不受影响.
     models.append(
         bind_shared("deepseek", "deepseek-v4-pro"),
     )

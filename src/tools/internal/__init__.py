@@ -27,6 +27,8 @@ from .list_scheduled_messages_tool import ListScheduledMessagesTool
 from .list_shopping_items_tool import ListShoppingItemsTool
 from .list_todos_tool import ListTodosTool
 from .list_workout_records_tool import ListWorkoutRecordsTool
+from .msgraph_connect_tool import MsGraphConnectTool
+from .msgraph_sync_status_tool import MsGraphSyncStatusTool
 from .query_daily_health_tool import QueryDailyHealthTool
 from .query_metric_trend_tool import QueryMetricTrendTool
 from .read_file_tool import ReadFileTool
@@ -51,6 +53,8 @@ __all__ = [
     "ListShoppingItemsTool",
     "ListTodosTool",
     "ListWorkoutRecordsTool",
+    "MsGraphConnectTool",
+    "MsGraphSyncStatusTool",
     "QueryDailyHealthTool",
     "QueryMetricTrendTool",
     "ReadFileTool",

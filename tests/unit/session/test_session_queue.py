@@ -9,7 +9,7 @@
 Mock 边界:
 - agent 的 process_message / process_message_stream / finalize_conversation
 - chat_helpers.allocate_round_number / prepare_image_attachments
-- message_formatting.build_file_links / build_media_lines
+- message_formatting.build_file_links
 - context.set_user_context / get_user_context_or_none / reset_user_context
 """
 
@@ -117,7 +117,6 @@ class TestSessionMessageQueueSubmit:
                 AsyncMock(return_value=[]),
             ),
             patch("src.session.session_queue.build_file_links", return_value=""),
-            patch("src.session.session_queue.build_media_lines", return_value=""),
             patch(
                 "src.core.context.set_user_context",
                 return_value="ctx_token",
@@ -154,7 +153,6 @@ class TestSessionMessageQueueSubmit:
         queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
         mock_ctx = Mock()
         mock_ctx.exported_files = [{"url": "http://example.com/file.txt"}]
-        mock_ctx.is_openclaw = False
 
         with (
             patch(
@@ -192,19 +190,21 @@ class TestSessionMessageQueueSubmit:
             assert "file" in response
             assert "http://example.com/file.txt" in response
 
+
+class TestSessionMessageQueueDocumentDatas:
+    """测试 document_datas (纯文本文档) 的传递与合并."""
+
     @pytest.mark.asyncio
-    async def test_submit_with_openclaw_exported_files_should_append_media_lines(
+    async def test_submit_with_documents_should_store_and_pass_attachments(
         self,
         mock_agent: AsyncMock,
         test_user: str,
         test_thread_id: str,
     ):
-        """测试 submit: OpenClaw 模式下应拼接 MEDIA 行."""
-        # Arrange
+        """submit 携带 document_datas: 保存文档, attachment_infos 传给 agent."""
         queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
-        mock_ctx = Mock()
-        mock_ctx.exported_files = [{"url": "http://example.com/file.txt"}]
-        mock_ctx.is_openclaw = True
+        doc_dto = Mock()
+        doc_dto.file_type = "document"
 
         with (
             patch(
@@ -216,68 +216,122 @@ class TestSessionMessageQueueSubmit:
                 AsyncMock(return_value=[]),
             ),
             patch(
-                "src.session.session_queue.build_media_lines",
-                return_value="MEDIA:http://example.com/file.txt",
-            ),
-            patch(
-                "src.core.context.set_user_context",
-                return_value="ctx_token",
-            ),
-            patch(
-                "src.core.context.get_user_context_or_none",
-                return_value=mock_ctx,
-            ),
-            patch("src.core.context.reset_user_context"),
-        ):
-            # Act
-            future = await queue.submit(
-                user_input="你好",
-                image_datas=[],
-                timezone="Asia/Shanghai",
-                agent=mock_agent,
-                is_openclaw=True,
-            )
-            response = await asyncio.wait_for(future, timeout=1.0)
-
-            # Assert
-            assert "MEDIA" in response
-
-    @pytest.mark.asyncio
-    async def test_submit_processing_exception_should_set_future_exception(
-        self,
-        mock_agent: AsyncMock,
-        test_user: str,
-        test_thread_id: str,
-    ):
-        """测试 submit: agent 处理异常时应将异常设置到 future."""
-        # Arrange
-        queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
-        mock_agent.process_message = AsyncMock(side_effect=RuntimeError("处理失败"))
-
-        with (
-            patch(
-                "src.session.session_queue.allocate_round_number",
-                AsyncMock(return_value=1),
-            ),
-            patch(
-                "src.session.session_queue.prepare_image_attachments",
-                AsyncMock(return_value=[]),
-            ),
-            patch("src.core.context.set_user_context", return_value="ctx"),
+                "src.session.session_queue.prepare_document_attachments",
+                AsyncMock(return_value=[doc_dto]),
+            ) as mock_prepare_doc,
+            patch("src.session.session_queue.build_file_links", return_value=""),
+            patch("src.core.context.set_user_context", return_value="ctx_token"),
             patch("src.core.context.get_user_context_or_none", return_value=None),
             patch("src.core.context.reset_user_context"),
         ):
-            # Act
             future = await queue.submit(
-                user_input="你好",
+                user_input="总结文件",
                 image_datas=[],
                 timezone="Asia/Shanghai",
                 agent=mock_agent,
+                document_datas=[{"filename": "a.md", "content": "A"}],
             )
+            response = await asyncio.wait_for(future, timeout=1.0)
 
-            # Assert
-            with pytest.raises(RuntimeError, match="处理失败"):
-                await asyncio.wait_for(future, timeout=1.0)
+        assert response == "模拟响应"
+        mock_prepare_doc.assert_awaited_once()
+        call_kwargs = mock_prepare_doc.await_args.kwargs
+        assert call_kwargs["document_datas"] == [{"filename": "a.md", "content": "A"}]
+        # agent 收到合并后的 attachment_infos
+        agent_kwargs = mock_agent.process_message.await_args.kwargs
+        assert agent_kwargs["attachment_infos"] == [doc_dto]
+
+    @pytest.mark.asyncio
+    async def test_merged_documents_should_extend_across_batch(
+        self,
+        mock_agent: AsyncMock,
+        test_user: str,
+        test_thread_id: str,
+    ):
+        """合并处理: 多条消息的 document_datas 累加传给存储层."""
+        queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
+
+        with (
+            patch(
+                "src.session.session_queue.allocate_round_number",
+                AsyncMock(return_value=1),
+            ),
+            patch(
+                "src.session.session_queue.prepare_image_attachments",
+                AsyncMock(return_value=[]),
+            ),
+            patch(
+                "src.session.session_queue.prepare_document_attachments",
+                AsyncMock(return_value=[]),
+            ) as mock_prepare_doc,
+            patch("src.session.session_queue.build_file_links", return_value=""),
+            patch("src.core.context.set_user_context", return_value="ctx_token"),
+            patch("src.core.context.get_user_context_or_none", return_value=None),
+            patch("src.core.context.reset_user_context"),
+        ):
+            f1 = await queue.submit(
+                user_input="第一条",
+                image_datas=[],
+                timezone="Asia/Shanghai",
+                agent=mock_agent,
+                document_datas=[{"filename": "a.md", "content": "A"}],
+            )
+            f2 = await queue.submit(
+                user_input="第二条",
+                image_datas=[],
+                timezone="Asia/Shanghai",
+                agent=mock_agent,
+                document_datas=[{"filename": "b.md", "content": "B"}],
+            )
+            await asyncio.wait_for(f1, timeout=1.0)
+            await asyncio.wait_for(f2, timeout=1.0)
+
+        merged_docs = mock_prepare_doc.await_args.kwargs["document_datas"]
+        assert [d["filename"] for d in merged_docs] == ["a.md", "b.md"]
+
+    @pytest.mark.asyncio
+    async def test_submit_streaming_with_documents_should_pass_attachments(
+        self,
+        mock_agent: AsyncMock,
+        test_user: str,
+        test_thread_id: str,
+    ):
+        """流式路径同样传递 document_datas 与 attachment_infos."""
+        queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
+        doc_dto = Mock()
+
+        with (
+            patch(
+                "src.session.session_queue.allocate_round_number",
+                AsyncMock(return_value=1),
+            ),
+            patch(
+                "src.session.session_queue.prepare_image_attachments",
+                AsyncMock(return_value=[]),
+            ),
+            patch(
+                "src.session.session_queue.prepare_document_attachments",
+                AsyncMock(return_value=[doc_dto]),
+            ),
+            patch("src.session.session_queue.build_file_links", return_value=""),
+            patch("src.core.context.set_user_context", return_value="ctx_token"),
+            patch("src.core.context.get_user_context_or_none", return_value=None),
+            patch("src.core.context.reset_user_context"),
+        ):
+            tokens = []
+            iterator = await queue.submit_streaming(
+                user_input="总结文件",
+                image_datas=[],
+                timezone="Asia/Shanghai",
+                agent=mock_agent,
+                document_datas=[{"filename": "a.md", "content": "A"}],
+            )
+            async for token in iterator:
+                tokens.append(token)
+
+        assert tokens == ["token1", "token2"]
+        agent_kwargs = mock_agent.process_message_stream.call_args.kwargs
+        assert agent_kwargs["attachment_infos"] == [doc_dto]
 
 
 class TestSessionMessageQueueMergedProcessing:
@@ -436,9 +490,7 @@ class TestSessionMessageQueueStreaming:
         # Arrange
         queue = SessionMessageQueue.get(test_user, test_thread_id, "test_agent")
 
-        mock_agent.process_message_stream = Mock(
-            return_value=_AsyncTokenStream([])
-        )
+        mock_agent.process_message_stream = Mock(return_value=_AsyncTokenStream([]))
         captured_response: str | None = None
 
         def _capture_finalize(**kwargs: Any) -> None:

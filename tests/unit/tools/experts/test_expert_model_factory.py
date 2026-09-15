@@ -27,9 +27,9 @@ class TestExpertModelFactoryCreate:
         mock_llm = MagicMock()
         mock_get.return_value = mock_llm
 
-        result = ExpertModelFactory.create("deepseek:deepseek-v4-flash")
+        result = ExpertModelFactory.create("deepseek:deepseek-flash")
 
-        mock_get.assert_called_once_with("deepseek:deepseek-v4-flash")
+        mock_get.assert_called_once_with("deepseek:deepseek-flash")
         assert result is mock_llm
 
     @patch(
@@ -42,10 +42,10 @@ class TestExpertModelFactoryCreate:
         mock_get.return_value = mock_llm
 
         result = ExpertModelFactory.create(
-            "deepseek:deepseek-v4-flash", max_tokens=16384
+            "deepseek:deepseek-flash", max_tokens=16384
         )
 
-        mock_get.assert_called_once_with("deepseek:deepseek-v4-flash")
+        mock_get.assert_called_once_with("deepseek:deepseek-flash")
         mock_llm.bind.assert_called_once_with(max_tokens=16384)
         assert result is mock_bound
 

@@ -30,7 +30,8 @@ class TestCredentialsRegistry:
         """验证全部凭据均已注册."""
         expected = {
             "file_signing_secret",
-            "openclaw_gateway_token",
+            "channel_gateway_token",
+            "doc2md_token",
             "baidu_api_key",
             "zhipu_api_key",
             "ark_agent_plan_api_key",
@@ -56,7 +57,8 @@ class TestCredentialsRegistry:
         [
             ("zhipu_api_key", "ZHIPU_API_KEY"),
             ("file_signing_secret", "FILE_SIGNING_SECRET"),
-            ("openclaw_gateway_token", "OPENCLAW_GATEWAY_TOKEN"),
+            ("channel_gateway_token", "CHANNEL_GATEWAY_TOKEN"),
+            ("doc2md_token", "DOC2MD_TOKEN"),
             ("baidu_api_key", "BAIDU_API_KEY"),
             ("ark_agent_plan_api_key", "ARK_AGENT_PLAN_API_KEY"),
             ("baidu_maps_ak", "BAIDU_MAPS_AK"),

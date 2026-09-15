@@ -143,6 +143,48 @@ class TestArun:
 # ---------------------------------------------------------------------------
 
 
+class TestBypassLlmFilter:
+    def _multi_match_tool(self):
+        t = SearchAvailableTools(
+            user_id="test_user", thread_id="test_thread", agent_id="test-agent"
+        )
+        t.set_catalog(SAMPLE_CATALOG)
+        return t
+
+    @pytest.mark.asyncio
+    async def test_bypass_flag_skips_llm_filter_and_resets(self):
+        """置位 _bypass_llm_filter 时跳过降噪并复位(一次性)."""
+        from unittest.mock import patch
+
+        t = self._multi_match_tool()
+        object.__setattr__(t, "_bypass_llm_filter", True)
+
+        with patch(
+            "src.tools.internal._llm_tool_filter.filter_tools_by_llm"
+        ) as mock_filter:
+            result = await t._arun("搜索 地图")
+
+        mock_filter.assert_not_called()
+        assert getattr(t, "_bypass_llm_filter", False) is False
+        data = json.loads(result)
+        assert data["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_without_bypass_flag_calls_llm_filter(self):
+        """默认(未置位)时多候选照常走降噪."""
+        from unittest.mock import AsyncMock, patch
+
+        t = self._multi_match_tool()
+
+        with patch(
+            "src.tools.internal._llm_tool_filter.filter_tools_by_llm",
+            new=AsyncMock(return_value=[]),
+        ) as mock_filter:
+            await t._arun("搜索 地图")
+
+        mock_filter.assert_awaited_once()
+
+
 class TestSearchCatalog:
     def test_search_by_name_parts(self, tool_with_catalog):
         results = tool_with_catalog._search_catalog("web_research")

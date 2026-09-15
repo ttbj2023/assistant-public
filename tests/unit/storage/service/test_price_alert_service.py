@@ -33,7 +33,6 @@ def _rule(**overrides) -> PriceAlertRule:
         "direction": "above",
         "threshold_price": 100.0,
         "delivery_method": "wechat",
-        "openclaw_channel": "openclaw-weixin",
         "account_id": "bot-1",
         "target": "user-1",
         "user_id": "u",
@@ -87,7 +86,6 @@ class TestRuleToDelivery:
         d = rule_to_delivery(_rule())
         assert d is not None
         assert d.method == "wechat"
-        assert d.openclaw_channel == "openclaw-weixin"
         assert d.account_id == "bot-1"
         assert d.target == "user-1"
 
@@ -95,17 +93,15 @@ class TestRuleToDelivery:
         assert rule_to_delivery(_rule(account_id="")) is None
 
     def test_email_complete(self):
-        d = rule_to_delivery(
-            _rule(delivery_method="email", email_address="x@y.com")
-        )
+        d = rule_to_delivery(_rule(delivery_method="email", email_address="x@y.com"))
         assert d is not None
         assert d.method == "email"
         assert d.email_address == "x@y.com"
 
     def test_email_missing_address_returns_none(self):
-        assert rule_to_delivery(
-            _rule(delivery_method="email", email_address="")
-        ) is None
+        assert (
+            rule_to_delivery(_rule(delivery_method="email", email_address="")) is None
+        )
 
 
 class TestDedupeCodes:
@@ -184,9 +180,7 @@ class TestEngineTick:
         await e.tick()
 
         e._dispatch.assert_awaited_once()
-        mock_dao.disable.assert_awaited_once_with(
-            rule.rule_id, owner, triggered=True
-        )
+        mock_dao.disable.assert_awaited_once_with(rule.rule_id, owner, triggered=True)
         assert e.stats.last_tick_triggered == 1
         assert e.stats.total_triggered == 1
 

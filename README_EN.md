@@ -153,7 +153,13 @@ Each agent owns independent `database/` + `vector/` directories — filesystem-l
 
 ### Channel Access
 
-Uses the [OpenClaw](https://github.com/openclaw/openclaw) gateway to reach WeChat / Telegram / WhatsApp and other broad IM channels. **Key**: this project **fully self-orchestrates** — memory / agent / tools / skills are all self-built; it **actively strips** OpenClaw's injected system prompts / metadata / heartbeat / smart context, **using only its messaging channel** (inbound receives, outbound sends via `/tools/invoke`). Exposes a standard OpenAI-compatible API — can also be used directly without any gateway.
+WeChat access via a self-built weixin-gateway (separate repo): assistant stays a pure agent backend exposing a standard OpenAI-compatible API; the gateway handles message-protocol adaptation (markdown filtering / chunking / file conversion), connected by a lightweight contract.
+
+- **Inbound**: channel requests carry `X-Channel` / `X-Channel-Account` / `X-Chat-Id` headers; assistant auto-discovers and persists the channel config (self-heals on field changes)
+- **Outbound**: proactive pushes (scheduled messages / price alerts / notifications) go through `channel_push_client` calling the gateway's `POST /channel/send`
+- **Files**: the WeChat channel supports images and documents (md/txt/docx/pdf/pptx; binary documents parsed to markdown via the doc2md service)
+
+> Core code: `src/api/routes/chat.py` (channel-config discovery) + `src/core/channel_push_client.py` (outbound push)
 
 ---
 

@@ -130,6 +130,69 @@ class TestScheduleMessageWechat:
         assert "定时消息已创建" in result
 
     @pytest.mark.asyncio
+    async def test_schedule_with_related_event_passes_through(
+        self, wechat_tool, mock_msg_service
+    ):
+        """合法关联日程ID应透传给service并出现在结果中."""
+        mock_msg = MagicMock()
+        mock_msg.message_id = "msg-rel-1"
+        mock_msg.send_time = datetime(2026, 6, 2, 0, 0)
+        mock_msg_service.schedule_message = AsyncMock(return_value=mock_msg)
+
+        mock_event = MagicMock()
+        mock_event.title = "评审会"
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=mock_event)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        mock_helper = _mock_msg_helper(mock_msg_service)
+        with (
+            patch.object(wechat_tool, "_get_helper", return_value=mock_helper),
+            patch(
+                "src.tools.internal.schedule_message_wechat_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await wechat_tool._arun(
+                message="会前提醒",
+                send_time="2026-06-02T08:00:00+08:00",
+                related_event_id=42,
+            )
+
+        assert "msg-rel-1" in result
+        _, kwargs = mock_msg_service.schedule_message.call_args
+        assert kwargs["related_event_id"] == 42
+
+    @pytest.mark.asyncio
+    async def test_schedule_with_invalid_related_event_rejected(
+        self, wechat_tool, mock_msg_service
+    ):
+        """幻觉日程ID应被硬校验拒绝并引导重试, 不创建消息."""
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=None)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        mock_helper = _mock_msg_helper(mock_msg_service)
+        with (
+            patch.object(wechat_tool, "_get_helper", return_value=mock_helper),
+            patch(
+                "src.tools.internal.schedule_message_wechat_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await wechat_tool._arun(
+                message="会前提醒",
+                send_time="2026-06-02T08:00:00+08:00",
+                related_event_id=999,
+            )
+
+        assert "999" in result
+        assert "错误" in result
+        mock_msg_service.schedule_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_is_available_wechat_configured(self, wechat_tool):
         mock_helper = _mock_msg_helper(None, channels=["wechat"])
         with patch.object(wechat_tool, "_get_helper", return_value=mock_helper):
@@ -196,6 +259,71 @@ class TestScheduleMessageEmail:
         assert "send_time格式无效" in result
 
     @pytest.mark.asyncio
+    async def test_schedule_with_related_event_passes_through(
+        self, email_tool, mock_msg_service
+    ):
+        """合法关联日程ID应透传给service (email渠道)."""
+        mock_msg = MagicMock()
+        mock_msg.message_id = "msg-rel-2"
+        mock_msg.send_time = datetime(2026, 6, 2, 0, 0)
+        mock_msg_service.schedule_message = AsyncMock(return_value=mock_msg)
+
+        mock_event = MagicMock()
+        mock_event.title = "评审会"
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=mock_event)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        mock_helper = _mock_msg_helper(mock_msg_service)
+        with (
+            patch.object(email_tool, "_get_helper", return_value=mock_helper),
+            patch(
+                "src.tools.internal.schedule_message_email_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await email_tool._arun(
+                message="会前提醒",
+                send_time="2026-06-02T08:00:00+08:00",
+                subject="提醒",
+                related_event_id=42,
+            )
+
+        assert "msg-rel-2" in result
+        _, kwargs = mock_msg_service.schedule_message.call_args
+        assert kwargs["related_event_id"] == 42
+
+    @pytest.mark.asyncio
+    async def test_schedule_with_invalid_related_event_rejected(
+        self, email_tool, mock_msg_service
+    ):
+        """幻觉日程ID应被硬校验拒绝 (email渠道)."""
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=None)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        mock_helper = _mock_msg_helper(mock_msg_service)
+        with (
+            patch.object(email_tool, "_get_helper", return_value=mock_helper),
+            patch(
+                "src.tools.internal.schedule_message_email_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await email_tool._arun(
+                message="会前提醒",
+                send_time="2026-06-02T08:00:00+08:00",
+                subject="提醒",
+                related_event_id=999,
+            )
+
+        assert "999" in result
+        assert "错误" in result
+        mock_msg_service.schedule_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_is_available_smtp_configured(self, email_tool):
         mock_helper = _mock_msg_helper(None, channels=["wechat", "email"])
         mock_helper.check_smtp_config.return_value = True
@@ -222,7 +350,9 @@ class TestListScheduledMessages:
         assert "没有待发送" in result
 
     @pytest.mark.asyncio
-    async def test_list_with_messages_shows_local_time(self, list_tool, mock_msg_service):
+    async def test_list_with_messages_shows_local_time(
+        self, list_tool, mock_msg_service
+    ):
         mock_msg = MagicMock()
         mock_msg.message_id = "msg-002"
         mock_msg.send_time = datetime(2026, 6, 2, 1, 0)
@@ -239,6 +369,76 @@ class TestListScheduledMessages:
         assert "Asia/Shanghai" in result
 
     @pytest.mark.asyncio
+    async def test_list_with_related_event_shows_event_title(
+        self, list_tool, mock_msg_service
+    ):
+        """带关联日程的消息应显示关联日程ID与标题."""
+        mock_msg = MagicMock()
+        mock_msg.message_id = "msg-003"
+        mock_msg.send_time = datetime(2026, 6, 2, 1, 0)
+        mock_msg.channel = "wechat"
+        mock_msg.message = "会前提醒"
+        mock_msg.description = None
+        mock_msg.related_event_id = 42
+        mock_msg_service.list_pending_messages = AsyncMock(return_value=[mock_msg])
+
+        mock_event = MagicMock()
+        mock_event.title = "周三评审会"
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=mock_event)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        with (
+            patch.object(
+                list_tool, "_get_helper", return_value=_mock_msg_helper(mock_msg_service)
+            ),
+            patch(
+                "src.tools.internal.list_scheduled_messages_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await list_tool._arun()
+
+        assert "msg-003" in result
+        assert "#42" in result
+        assert "周三评审会" in result
+
+    @pytest.mark.asyncio
+    async def test_list_with_related_event_missing_event_degrades(
+        self, list_tool, mock_msg_service
+    ):
+        """关联日程已被删除时仍正常列出消息, 只显示ID不显示标题."""
+        mock_msg = MagicMock()
+        mock_msg.message_id = "msg-004"
+        mock_msg.send_time = datetime(2026, 6, 2, 1, 0)
+        mock_msg.channel = "wechat"
+        mock_msg.message = "会前提醒"
+        mock_msg.description = None
+        mock_msg.related_event_id = 99
+        mock_msg_service.list_pending_messages = AsyncMock(return_value=[mock_msg])
+
+        mock_calendar_service = MagicMock()
+        mock_calendar_service.get_event_by_id = AsyncMock(return_value=None)
+        mock_accessor = MagicMock()
+        mock_accessor.get_service = AsyncMock(return_value=mock_calendar_service)
+
+        with (
+            patch.object(
+                list_tool, "_get_helper", return_value=_mock_msg_helper(mock_msg_service)
+            ),
+            patch(
+                "src.tools.internal.list_scheduled_messages_tool.CalendarServiceAccessor",
+                return_value=mock_accessor,
+            ),
+        ):
+            result = await list_tool._arun()
+
+        assert "msg-004" in result
+        assert "#99" in result
+        assert "周三评审会" not in result
+
+    @pytest.mark.asyncio
     async def test_is_available_any_channel(self, list_tool):
         mock_helper = _mock_msg_helper(None, channels=["wechat"])
         with patch.object(list_tool, "_get_helper", return_value=mock_helper):
@@ -249,6 +449,38 @@ class TestListScheduledMessages:
         mock_helper = _mock_msg_helper(None, channels=[])
         with patch.object(list_tool, "_get_helper", return_value=mock_helper):
             assert await list_tool.is_available() is False
+
+    @pytest.mark.asyncio
+    async def test_include_failed_shows_failed_messages(
+        self, list_tool, mock_msg_service
+    ):
+        """include_failed=True 时应列出失败消息及其失败原因."""
+        failed_msg = MagicMock()
+        failed_msg.message_id = "msg-fail-1"
+        failed_msg.send_time = datetime(2026, 6, 2, 1, 0)
+        failed_msg.channel = "wechat"
+        failed_msg.message = "演出提醒"
+        failed_msg.description = None
+        failed_msg.last_error = "网关投递失败: prepare failed"
+        mock_msg_service.list_pending_messages = AsyncMock(return_value=[])
+        mock_msg_service.list_failed_messages = AsyncMock(return_value=[failed_msg])
+        mock_helper = _mock_msg_helper(mock_msg_service, timezone="Asia/Shanghai")
+        with patch.object(list_tool, "_get_helper", return_value=mock_helper):
+            result = await list_tool._arun(include_failed=True)
+        assert "msg-fail-1" in result
+        assert "prepare failed" in result
+        assert "失败" in result
+
+    @pytest.mark.asyncio
+    async def test_default_excludes_failed(self, list_tool, mock_msg_service):
+        """默认只看待发送, 不查询失败记录."""
+        mock_msg_service.list_pending_messages = AsyncMock(return_value=[])
+        mock_msg_service.list_failed_messages = AsyncMock(return_value=[])
+        mock_helper = _mock_msg_helper(mock_msg_service)
+        with patch.object(list_tool, "_get_helper", return_value=mock_helper):
+            result = await list_tool._arun()
+        assert "没有待发送" in result
+        mock_msg_service.list_failed_messages.assert_not_awaited()
 
 
 # ========== CancelScheduledMessageTool ==========

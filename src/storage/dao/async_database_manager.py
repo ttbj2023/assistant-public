@@ -27,6 +27,8 @@ from src.core.path_resolver import (
     get_user_database_path,
     get_user_path_resolver,
 )
+from src.storage.models.calendar_event import CalendarEvent
+from src.storage.models.calendar_subscription import CalendarSubscription
 from src.storage.models.conversation import ConversationIndex, ConversationIndexGroup
 from src.storage.models.file_registry import FileEntry
 from src.storage.models.health_data import (
@@ -44,6 +46,8 @@ from src.storage.models.health_data import (
 from src.storage.models.pinned_memory_block import PinnedMemoryBlock
 from src.storage.models.price_alert import PriceAlertRule
 from src.storage.models.scheduled_message import ScheduledMessage
+from src.storage.models.sync_map import SyncMap
+from src.storage.models.sync_setting import SyncSetting
 from src.storage.models.todo import TodoItem
 from src.storage.models.usage import UsageRecord
 from src.storage.models.user_channel_config import UserChannelConfig
@@ -337,24 +341,20 @@ class AsyncDatabaseManager:
                     raise
 
 
-async def create_async_todo_db_manager(
-    user_id: str,
-    thread_id: str,
-    *,
-    agent_id: str,
-) -> AsyncDatabaseManager:
-    """创建异步TODO数据库管理器实例 (Agent物理隔离, 全局缓存复用Engine).
+async def create_async_todo_db_manager(user_id: str) -> AsyncDatabaseManager:
+    """创建异步TODO数据库管理器实例 (用户级统一视图, 全局缓存复用Engine).
+
+    TODO 数据迁移为用户级存储 (data/{user_id}/database/todo.db),
+    跨线程统一; thread_id/agent_id 降级为行级溯源字段.
 
     Args:
         user_id: 用户ID
-        thread_id: 线程ID
-        agent_id: Agent ID
 
     Returns:
         异步TODO数据库管理器实例
 
     """
-    db_path = get_database_path(user_id, thread_id, "todo", agent_id=agent_id)
+    db_path = get_user_database_path(user_id, "todo")
     return await _get_or_create_db_manager(
         f"sqlite+aiosqlite:///{db_path}",
         tables=[TodoItem],
@@ -532,7 +532,34 @@ async def create_async_scheduled_message_db_manager(
     return await _get_or_create_db_manager(
         f"sqlite+aiosqlite:///{db_path}",
         tables=[ScheduledMessage],
+        post_create=_run_scheduled_message_migrations,
     )
+
+
+async def _run_scheduled_message_migrations(manager: AsyncDatabaseManager) -> None:
+    """定时消息库建表后的幂等迁移 (仅新建 manager 时执行一次)."""
+    migration_columns = {
+        "scheduled_messages": [
+            ("last_error", "VARCHAR"),
+            ("related_event_id", "INTEGER"),
+        ],
+    }
+
+    async with manager.engine.begin() as conn:
+        for table_name, columns in migration_columns.items():
+            for col_name, col_type in columns:
+                try:
+                    await conn.execute(
+                        text(
+                            f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}",
+                        ),
+                    )
+                    logger.info("✅ 迁移: %s.%s", table_name, col_name)
+                except Exception as e:
+                    if "duplicate column name" in str(e).lower():
+                        logger.debug("列已存在, 跳过: %s.%s", table_name, col_name)
+                    else:
+                        logger.warning("迁移失败 %s.%s: %s", table_name, col_name, e)
 
 
 async def create_async_channel_config_db_manager(
@@ -598,6 +625,50 @@ async def create_async_price_alert_db_manager(
     )
 
 
+async def create_async_calendar_db_manager(
+    user_id: str,
+) -> AsyncDatabaseManager:
+    """创建用户级日历数据库管理器实例 (用户级, 全局缓存复用 Engine).
+
+    日程为个人全局视图, 跨线程统一存储于
+    data/{user_id}/database/calendar.db.
+
+    Args:
+        user_id: 用户ID
+
+    Returns:
+        异步日历数据库管理器实例
+
+    """
+    db_path = get_user_database_path(user_id, "calendar")
+    return await _get_or_create_db_manager(
+        f"sqlite+aiosqlite:///{db_path}",
+        tables=[CalendarEvent, CalendarSubscription],
+    )
+
+
+async def create_async_graph_sync_db_manager(
+    user_id: str,
+) -> AsyncDatabaseManager:
+    """创建用户级 Graph 同步数据库管理器实例 (全局缓存复用 Engine).
+
+    存储同步映射 (graph_sync_map) 与 per-user 同步键值
+    (graph_sync_settings), 位于 data/{user_id}/database/graph_sync.db.
+
+    Args:
+        user_id: 用户ID
+
+    Returns:
+        异步 Graph 同步数据库管理器实例
+
+    """
+    db_path = get_user_database_path(user_id, "graph_sync")
+    return await _get_or_create_db_manager(
+        f"sqlite+aiosqlite:///{db_path}",
+        tables=[SyncMap, SyncSetting],
+    )
+
+
 async def create_async_file_registry_db_manager(
     user_id: str,
 ) -> AsyncDatabaseManager:
@@ -630,6 +701,7 @@ async def create_async_file_registry_db_manager(
 __all__ = [
     "AsyncDatabaseManager",
     "close_all_db_managers",
+    "create_async_calendar_db_manager",
     "create_async_channel_config_db_manager",
     "create_async_conversation_history_db_manager",
     "create_async_file_registry_db_manager",

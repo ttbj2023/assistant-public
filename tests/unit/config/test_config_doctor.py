@@ -9,7 +9,6 @@ from scripts.config_doctor import (
     _merge_tools_overlay,
     check_deprecated_fields,
     check_dict_categories_not_none,
-    check_notification_defaults,
     migrate_config,
 )
 
@@ -23,11 +22,23 @@ def test_env_read_kind_detects_os_getenv() -> None:
 def test_migrate_config_removes_secret_fields() -> None:
     migrated, _issues = migrate_config({
         "api": {"file_signing_secret": "secret"},
-        "openclaw": {"gateway": {"url": "http://x", "token": "token"}},
+        "channel_push": {"gateway": {"url": "http://x", "token": "token"}},
     })
 
     assert "file_signing_secret" not in migrated["api"]
-    assert "token" not in migrated["openclaw"]["gateway"]
+    assert "token" not in migrated["channel_push"]["gateway"]
+
+
+def test_migrate_config_migrates_legacy_openclaw_section() -> None:
+    """旧 openclaw 段迁移到 channel_push (notification_defaults 废弃)."""
+    migrated, _issues = migrate_config({
+        "openclaw": {
+            "gateway": {"url": "http://legacy:18789"},
+            "notification_defaults": {"weixin": {"channel": "openclaw-weixin"}},
+        },
+    })
+    assert "openclaw" not in migrated
+    assert migrated["channel_push"]["gateway"]["url"] == "http://legacy:18789"
 
 
 def test_check_deprecated_flags_scheduled_messenger_dead_config_as_error() -> None:
@@ -70,32 +81,6 @@ def test_migrate_removes_scheduled_messenger_dead_config() -> None:
     assert "openclaw_defaults" not in cfg
     assert "smtp_config" not in cfg
     assert cfg.get("default_channel") == "wechat"
-
-
-def test_check_notification_defaults_warns_when_openclaw_section_missing() -> None:
-    """缺整个 openclaw 段 (notification_defaults 无默认值) 应 WARNING."""
-    issues = check_notification_defaults({})
-    assert len(issues) == 1
-    assert issues[0].severity == "WARNING"
-
-
-def test_check_notification_defaults_warns_when_empty() -> None:
-    """notification_defaults 显式空应 WARNING (微信渠道派发将静默失败)."""
-    issues = check_notification_defaults(
-        {"openclaw": {"notification_defaults": {}}},
-    )
-    assert len(issues) == 1
-    assert issues[0].severity == "WARNING"
-
-
-def test_check_notification_defaults_pass_when_configured() -> None:
-    """notification_defaults 已配置应无 issue."""
-    config = {
-        "openclaw": {
-            "notification_defaults": {"weixin": {"channel": "openclaw-weixin"}},
-        },
-    }
-    assert check_notification_defaults(config) == []
 
 
 class TestMergeToolsOverlayNoneDefense:

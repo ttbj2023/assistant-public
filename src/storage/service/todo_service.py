@@ -18,6 +18,13 @@ from src.storage.models.todo import TodoItem, TodoPriority, TodoStatus
 from .health_check_mixin import ServiceHealthCheckMixin
 
 
+def _notify_graph_sync(user_id: str) -> None:
+    """本地写后投递 Graph 同步即时信号 (惰性 import 防包初始化循环)."""
+    from src.sync.graph_sync_engine import notify_local_write
+
+    notify_local_write(user_id)
+
+
 class TodoService(ServiceHealthCheckMixin):
     """TODO业务服务.
 
@@ -215,6 +222,7 @@ class TodoService(ServiceHealthCheckMixin):
 
             duration = (time.time() - start_time) * 1000
             self.logger.info(f"✅ 创建TODO完成 - duration: {duration:.2f}ms")
+            _notify_graph_sync(user_id)  # 投递 Graph 同步即时信号
             return created_todo
 
         except ValueError:
@@ -316,6 +324,7 @@ class TodoService(ServiceHealthCheckMixin):
 
             duration = (time.time() - start_time) * 1000
             self.logger.info(f"✅ 更新TODO完成 - 成功, duration: {duration:.2f}ms")
+            _notify_graph_sync(user_id)  # 投递 Graph 同步即时信号
             return updated_todo
 
         except (FileNotFoundError, ValueError):
@@ -372,6 +381,8 @@ class TodoService(ServiceHealthCheckMixin):
             self.logger.info(
                 f"✅ 删除TODO完成 - 成功: {deleted}, duration: {duration:.2f}ms",
             )
+            if deleted:
+                _notify_graph_sync(user_id)  # 投递 Graph 同步即时信号
             return deleted
 
         except Exception as e:

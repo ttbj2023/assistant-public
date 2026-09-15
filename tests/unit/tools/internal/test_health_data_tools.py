@@ -18,6 +18,12 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.tools.internal.compare_health_periods_tool import CompareHealthPeriodsTool
+from src.tools.internal.health_data_helpers import (
+    HealthDataServiceAccessor,
+    first_day_of_month_n_ago,
+    has_value,
+    user_today,
+)
 from src.tools.internal.list_meal_records_tool import ListMealRecordsTool
 from src.tools.internal.list_shopping_items_tool import ListShoppingItemsTool
 from src.tools.internal.list_workout_records_tool import ListWorkoutRecordsTool
@@ -25,12 +31,6 @@ from src.tools.internal.query_daily_health_tool import QueryDailyHealthTool
 from src.tools.internal.query_metric_trend_tool import QueryMetricTrendTool
 from src.tools.internal.view_health_snapshot_tool import ViewHealthSnapshotTool
 from src.tools.internal.view_medical_report_tool import ViewMedicalReportTool
-from src.tools.internal.health_data_helpers import (
-    HealthDataServiceAccessor,
-    first_day_of_month_n_ago,
-    has_value,
-    user_today,
-)
 from src.tools.shared.tool_runtime import inject_identity
 
 # 单日汇总模型用到的全部字段

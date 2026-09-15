@@ -7,10 +7,10 @@ from pathlib import Path
 
 import yaml
 
-logger = logging.getLogger(__name__)  # noqa: RUF067
+logger = logging.getLogger(__name__)  # ruff: ignore[non-empty-init-module]
 
 
-def get_available_agents() -> list[str]:  # noqa: RUF067
+def get_available_agents() -> list[str]:  # ruff: ignore[non-empty-init-module]
     """获取可用的Agent列表."""
     implementations_dir = Path(__file__).parent
     agents: list[str] = []
@@ -30,7 +30,7 @@ def get_available_agents() -> list[str]:  # noqa: RUF067
     return sorted(agents)
 
 
-def get_agent_directory(agent_id: str) -> str:  # noqa: RUF067
+def get_agent_directory(agent_id: str) -> str:  # ruff: ignore[non-empty-init-module]
     """获取Agent的目录名."""
     return agent_id.replace("-", "_")
 

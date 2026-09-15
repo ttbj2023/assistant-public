@@ -270,7 +270,7 @@ class TestLlmFactoryProviderRouting:
 
     def test_deepseek_provider_should_use_chat_deepseek(self, mock_cache):
         """deepseek provider 应使用 ChatDeepSeek."""
-        metadata = _make_chat_metadata("deepseek", "deepseek:deepseek-v4-flash")
+        metadata = _make_chat_metadata("deepseek", "deepseek:deepseek-flash")
 
         with (
             patch.dict("os.environ", {"DEEPSEEK_API_KEY": "test-key"}),
@@ -284,7 +284,7 @@ class TestLlmFactoryProviderRouting:
             mock_cls.return_value = Mock()
             factory = LlmFactory()
             factory._cache = mock_cache  # type: ignore[assignment]
-            factory.get_llm("deepseek:deepseek-v4-flash")
+            factory.get_llm("deepseek:deepseek-flash")
             mock_cls.assert_called_once()
 
     def test_minimax_provider_should_use_chat_anthropic(self, mock_cache):

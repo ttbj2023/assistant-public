@@ -32,13 +32,18 @@ class QueryMetricTrendRequest(BaseModel):
 
     metric: str = Field(
         ...,
-        description="指标名, 如 steps, body_mass_kg, resting_hr_bpm, hrv_ms, sleep_duration_hours, weight_7d_avg 等",
+        description=(
+            "指标名. daily: steps, body_mass_kg, resting_hr_bpm, hrv_ms, "
+            "sleep_duration_hours, weight_7d_avg 等; "
+            "weekly(周汇总指标, 与 daily 不通用): steps_total, steps_daily_avg, "
+            "body_mass_avg, resting_hr_avg, hrv_avg, sleep_duration_avg 等"
+        ),
     )
     days: int = Field(
         default=30,
         ge=1,
         le=365,
-        description="查询天数(日趋势默认30, 周趋势默认12); 周趋势时代表周数",
+        description="查询范围, 默认30; 周趋势时代表周数",
     )
     period: str | None = Field(
         default="daily",
@@ -53,7 +58,10 @@ class QueryMetricTrendTool(BaseTool):
     name: str = "query_metric_trend"
     description: str = (
         "查询单指标趋势. 参数: metric(必需), days(默认30), period=daily/weekly. "
-        "返回最新值、均值、变化量、最大/最小值、近期列表和数据断档提示."
+        "返回最新值、均值、变化量、最大/最小值、近期列表和数据断档提示. "
+        "weekly 模式须用周汇总指标名(如 steps_total), 与 daily 指标不通用.\n"
+        '示例: {"metric": "steps", "days": 30}\n'
+        '示例: {"metric": "steps_total", "period": "weekly", "days": 12}'
     )
     args_schema: type[QueryMetricTrendRequest] = QueryMetricTrendRequest
 
@@ -70,6 +78,8 @@ class QueryMetricTrendTool(BaseTool):
             metric = request.metric
             period = request.period or "daily"
             if period == "weekly":
+                # TODO(工具重写): 设计意图为周趋势默认12周, 但 days 字段默认30
+                # 使 "or 12" 永不生效, 当前实际默认恒为30; 重写时恢复差异化默认
                 return await self._run_weekly(metric, request.days or 12)
 
             return await self._run_daily(metric, request.days or 30)

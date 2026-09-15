@@ -64,8 +64,9 @@ async def update_document_meta_summary(
     summary: str,
     *,
     user_id: str,
-    thread_id: str,  # noqa: ARG001
-    agent_id: str,  # noqa: ARG001
+    thread_id: str,  # ruff: ignore[unused-function-argument]
+    agent_id: str,  # ruff: ignore[unused-function-argument]
+    gfm_content: str = "",
 ) -> None:
     """更新已注册附件的 document_meta 中的 summary 字段.
 
@@ -75,6 +76,7 @@ async def update_document_meta_summary(
         user_id: 用户 ID
         thread_id: 会话 ID
         agent_id: Agent ID
+        gfm_content: GFM 原文; 非空时 desc 重组为 摘要+原文 统一结构
     """
     try:
         from src.storage.service.file_registry_service import (
@@ -90,12 +92,14 @@ async def update_document_meta_summary(
         meta = json.loads(db_entry.document_meta)
         meta["summary"] = summary
         db_entry.document_meta = json.dumps(meta, ensure_ascii=False)
+        # DB brief 同步更新 (进对话历史的标记行用 brief, 不能停留在首段提取)
+        db_entry.brief = summary[:200]
         await registry.upsert(db_entry)
 
-        # 描述外置: 后台 LLM 摘要完成后, 写入 .desc.md (覆盖导出时的临时摘要)
-        from src.files.desc_writer import write_desc
+        # 后台 LLM 摘要完成后, desc 重组为 摘要+原文 统一结构
+        from src.files.desc_writer import compose_desc, write_desc
 
-        write_desc(user_id, file_id, summary)
+        write_desc(user_id, file_id, compose_desc(summary, gfm_content))
 
         logger.info("文档摘要已更新: file_id=%s, 摘要长度=%d", file_id, len(summary))
     except Exception as e:
@@ -130,6 +134,7 @@ def schedule_summary_generation(
                 user_id=user_id,
                 thread_id=thread_id,
                 agent_id=agent_id,
+                gfm_content=gfm_content,
             )
 
     try:

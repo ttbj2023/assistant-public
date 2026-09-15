@@ -15,6 +15,9 @@ router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
+# 模块加载即记录服务启动时间, 供 /health 的 uptime_seconds 使用
+_PROCESS_START_TIME = time.time()
+
 
 class HealthResponse(BaseModel):
     """健康检查响应模型."""
@@ -106,7 +109,7 @@ async def health_check() -> HealthResponse:
         response_data = {
             "status": overall_status,
             "version": "1.0.0",
-            "uptime_seconds": int(time.time() - 0),  # 实际应该记录服务启动时间
+            "uptime_seconds": int(time.time() - _PROCESS_START_TIME),
             "timestamp": int(time.time()),
             "duration_ms": round(duration_ms, 2),
             "checks": {

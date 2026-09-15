@@ -264,7 +264,9 @@ class TestStorageHealthAggregator:
         assert "aggregation_info" in result
         aggregation_info = result["aggregation_info"]
         assert aggregation_info["parallel_execution"] is True
-        assert aggregation_info["timeout_per_service"] == HEALTH_CHECK_TIMEOUT_PER_SERVICE
+        assert (
+            aggregation_info["timeout_per_service"] == HEALTH_CHECK_TIMEOUT_PER_SERVICE
+        )
         assert len(aggregation_info["services_checked"]) == 4
         assert "conversation_service" in aggregation_info["services_checked"]
         assert "todo_service" in aggregation_info["services_checked"]

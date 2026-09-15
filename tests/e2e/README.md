@@ -17,19 +17,25 @@ E2E 测试聚焦于 **集成/单元测试无法覆盖的 HTTP 边界 + Agent 管
   FastAPI + Agent + Service + DAO + SQLite + ChromaDB
 - **串行执行**: `-n 0` 避免共享 test_data 目录竞态
 
-## 用例清单 (13 用例)
+## 用例清单 (18 用例)
 
 | 文件 | 用例 | 独特价值 |
 |------|------|----------|
 | `test_agent_pipeline_e2e.py` | `test_agent_tool_loop_executes_and_persists` | HTTP→Agent→LLM(tool_calls)→create_todo→DB. 灰盒读取 todo.db |
+| `test_agent_pipeline_e2e.py` | `test_implicit_intent_searches_dormant_todo_and_persists` | 全折叠: 隐式记录意图经 search 唤醒休眠 todo 组 → 中间件注入 → create_todo 落库 |
 | `test_agent_pipeline_e2e.py` | `test_conversation_history_assembled_across_requests` | 2次HTTP请求, 捕获LLM输入验证历史组装 |
 | `test_streaming_api.py` | `test_streaming_concurrent_clients` | 3并发流式请求 ASGI 并发 |
 | `test_streaming_api.py` | `test_streaming_long_input` | 2000字符流式处理 |
 | `test_api_smoke_e2e.py` | `test_server_health_and_agent_registry` | /health + /v1/models |
 | `test_api_smoke_e2e.py` | `test_invalid_request_returns_error` | 422 错误边界 |
 | `test_memory_retrieval_tool_e2e.py` | `test_e2e_search_memories_runs_in_agent_loop` | LLM 触发 search_memories → 真实 DualStageRetrievalService → 结果反馈进下一轮 LLM |
-| `test_openclaw_pipeline_e2e.py` | `test_e2e_inbound_context_provisions_channel_config` | OpenClaw 请求 → 中间件解析 inbound → 自动写入 channel_config |
-| `test_openclaw_pipeline_e2e.py` | `test_e2e_long_response_splits_and_spawns_followup` | 超长响应拆分 → spawn send_openclaw_followup 补发后续段 |
+| `test_channel_gateway_contract_e2e.py` | `test_channel_headers_provision_wechat_config` | X-Channel 请求头 → 渠道配置自动发现并持久化 |
+| `test_channel_gateway_contract_e2e.py` | `test_channel_config_self_heals_on_change` | 渠道账号字段变化 → 配置自愈更新 |
+| `test_channel_gateway_contract_e2e.py` | `test_request_without_channel_headers_skips_provisioning` | 无渠道头 → 跳过配置发现 |
+| `test_document_input_e2e.py` | `test_file_block_inlined_to_llm_and_marker_persisted` | 小文档内联 `<document>` 块, 持久化仅存 `[file: id]` 标记 |
+| `test_document_input_e2e.py` | `test_large_document_marker_only_in_prompt` | 超长文档仅注入标记, 不污染主历史 |
+| `test_document_input_e2e.py` | `test_mixed_image_and_file_blocks` | 图文+文档混合 ContentBlock 编排 |
+| `test_document_input_e2e.py` | `test_code_file_stored_with_summary_structure` | 代码文件入库 desc=摘要+源码 结构 |
 | `test_tool_runtime_container_e2e.py` | `test_e2e_execute_python` | PythonExecutorTool → 真 /execute: print(2+2) 返回 stdout=4 |
 | `test_tool_runtime_container_e2e.py` | `test_e2e_render_chart_mermaid` | ChartMaker → 真 /render/chart: mermaid 源码 → 合法 PNG |
 | `test_tool_runtime_container_e2e.py` | `test_e2e_export_document_docx` | ExportDocument → 真 /convert/pandoc: Markdown → 合法 DOCX (zip) |

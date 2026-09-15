@@ -176,9 +176,6 @@ inference:
     model: <your-model-id>
     model_params:
       max_tokens: 4096
-    refine_model: <your-model-id>
-    refine_model_params:
-      max_tokens: 32768
 
   # 统一 fallback (主模型瞬时错误白名单失败时切换)
   fallback:
@@ -253,18 +250,14 @@ tools:
       enabled: true
 
 # ===========================================
-# OpenClaw Gateway 配置 (主动发消息渠道)
+# 渠道推送网关配置 (定时消息/价格提醒/通知主动推送)
 # ===========================================
-# gateway.url 默认 http://127.0.0.1:18789, Docker 由 env OPENCLAW_GATEWAY_URL 覆盖
-# gateway.token 走 .env OPENCLAW_GATEWAY_TOKEN, 不进 config.yaml
-openclaw:
+# gateway.url 默认 http://127.0.0.1:18789, 可由 env CHANNEL_GATEWAY_URL 覆盖
+# gateway.token 走 .env CHANNEL_GATEWAY_TOKEN, 不进 config.yaml
+channel_push:
   gateway:
     url: http://127.0.0.1:18789
     # token: <走 .env, 严禁写在此处>
-  # 通知渠道系统级默认 (微信渠道补发/定时消息/价格监控派发依赖此配置, 缺失会静默失败)
-  notification_defaults:
-    weixin:
-      channel: <your-openclaw-channel-id>
 
 # ===========================================
 # SMTP 邮件配置 (系统级共享)
@@ -280,3 +273,14 @@ smtp:
   username: ""      # 留空回退 .env SMTP_USERNAME
   password: ""      # 留空回退 .env SMTP_PASSWORD (密钥不进 config.yaml)
   from_address: ""  # 留空回退 .env SMTP_FROM_ADDRESS, 再回退 username
+
+# ===========================================
+# Graph 同步引擎配置 (MSA: TODO 双向 + 日历单向 push)
+# ===========================================
+# 全局默认; per-user 覆盖经 PUT /v1/sync/msgraph/settings
+calendar_sync:
+  enabled: true
+  interval_seconds: 600
+  todo_list_name: "Assistant"
+  calendar_name: "Assistant"
+  timezone: "Asia/Shanghai"

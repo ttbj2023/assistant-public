@@ -20,9 +20,10 @@ from typing import Any, ClassVar
 
 from src.session.chat_helpers import (
     allocate_round_number,
+    prepare_document_attachments,
     prepare_image_attachments,
 )
-from src.utils.message_formatting import build_file_links, build_media_lines
+from src.utils.message_formatting import build_file_links
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,9 @@ class QueuedMessage:
     user_input: str
     image_datas: list[dict]
     timezone: str
-    is_openclaw: bool = False
     streaming: bool = False
     is_multimodal: bool = False
+    document_datas: list[dict] = field(default_factory=list)
     response_future: asyncio.Future[str | None] | None = None
     token_sink: asyncio.Queue[str | None] | None = None
     arrived_at: float = field(default_factory=time.time)
@@ -80,9 +81,9 @@ class SessionMessageQueue:
         timezone: str,
         agent: Any,
         *,
-        is_openclaw: bool = False,
         is_multimodal: bool = False,
         chat_messages: list[dict] | None = None,
+        document_datas: list[dict] | None = None,
     ) -> asyncio.Future[str | None]:
         """入队一条消息, 返回 future 用于等待响应.
 
@@ -99,8 +100,8 @@ class SessionMessageQueue:
                 user_input=user_input,
                 image_datas=image_datas,
                 timezone=timezone,
-                is_openclaw=is_openclaw,
                 is_multimodal=is_multimodal,
+                document_datas=document_datas or [],
                 response_future=future,
                 arrived_at=time.time(),
                 chat_messages=chat_messages,
@@ -127,6 +128,7 @@ class SessionMessageQueue:
         *,
         is_multimodal: bool = False,
         chat_messages: list[dict] | None = None,
+        document_datas: list[dict] | None = None,
     ) -> AsyncIterator[str]:
         """入队一条消息, 返回 async iterator 逐 token 产出响应.
 
@@ -144,6 +146,7 @@ class SessionMessageQueue:
                 timezone=timezone,
                 streaming=True,
                 is_multimodal=is_multimodal,
+                document_datas=document_datas or [],
                 token_sink=sink,
                 arrived_at=time.time(),
                 chat_messages=chat_messages,
@@ -234,15 +237,16 @@ class SessionMessageQueue:
                     sink=msg.token_sink,
                     is_multimodal=msg.is_multimodal,
                     chat_messages=msg.chat_messages,
+                    document_datas=msg.document_datas,
                 )
             else:
                 response, _ = await self._execute_agent(
                     text=msg.user_input,
                     image_datas=msg.image_datas,
                     timezone=msg.timezone,
-                    is_openclaw=msg.is_openclaw,
                     is_multimodal=msg.is_multimodal,
                     chat_messages=msg.chat_messages,
+                    document_datas=msg.document_datas,
                 )
                 if msg.response_future and not msg.response_future.done():
                     msg.response_future.set_result(response)
@@ -268,13 +272,18 @@ class SessionMessageQueue:
             for m in batch:
                 merged_images.extend(m.image_datas)
 
+            merged_documents: list[dict] = []
+            for m in batch:
+                merged_documents.extend(m.document_datas)
+
             timezone = batch[0].timezone
 
             logger.info(
-                "🔀 合并 %d 条消息, 文本长度: %d, 图片数: %d",
+                "🔀 合并 %d 条消息, 文本长度: %d, 图片数: %d, 文档数: %d",
                 len(batch),
                 len(merged_text),
                 len(merged_images),
+                len(merged_documents),
             )
 
             last = batch[-1]
@@ -287,15 +296,16 @@ class SessionMessageQueue:
                     sink=last.token_sink,
                     is_multimodal=last.is_multimodal,
                     chat_messages=last.chat_messages,
+                    document_datas=merged_documents,
                 )
             else:
                 response, _ = await self._execute_agent(
                     text=merged_text,
                     image_datas=merged_images,
                     timezone=timezone,
-                    is_openclaw=last.is_openclaw,
                     is_multimodal=last.is_multimodal,
                     chat_messages=last.chat_messages,
+                    document_datas=merged_documents,
                 )
                 if last.response_future and not last.response_future.done():
                     last.response_future.set_result(response)
@@ -327,9 +337,9 @@ class SessionMessageQueue:
         image_datas: list[dict],
         timezone: str,
         *,
-        is_openclaw: bool = False,
         is_multimodal: bool = False,
         chat_messages: list[dict] | None = None,
+        document_datas: list[dict] | None = None,
     ) -> tuple[str, list[dict]]:
         """分配轮次号 → 处理图片 → 调用 agent → 返回 (响应, exported_files)."""
         from src.core.context import (
@@ -360,14 +370,13 @@ class SessionMessageQueue:
                 request_id=f"chat-{uuid.uuid4().hex}",
                 round_number=round_number,
                 usage_source="main_chat",
-                is_openclaw=is_openclaw,
                 timezone=timezone,
             ),
         )
 
         exported_files: list[dict] = []
         try:
-            # 3. 处理图片附件
+            # 3. 处理附件 (图片 + 纯文本文档)
             attachment_infos = await prepare_image_attachments(
                 user_id=user_id,
                 thread_id=thread_id,
@@ -375,6 +384,15 @@ class SessionMessageQueue:
                 image_datas=image_datas,
                 round_number=round_number,
             )
+            if document_datas:
+                attachment_infos.extend(
+                    await prepare_document_attachments(
+                        user_id=user_id,
+                        thread_id=thread_id,
+                        document_datas=document_datas,
+                        round_number=round_number,
+                    )
+                )
 
             # 4. 调用 agent
             response = await agent.process_message(
@@ -394,16 +412,11 @@ class SessionMessageQueue:
             if ctx_snap:
                 exported_files = list(ctx_snap.exported_files)
 
-            # 6. 拼接文件链接到响应
+            # 6. 拼接文件链接到响应 (单一 markdown 格式, 渠道网关自行解析)
             if exported_files:
-                if ctx_snap and ctx_snap.is_openclaw:
-                    media_lines = build_media_lines(exported_files)
-                    if media_lines:
-                        response = f"{response}\n{media_lines}"
-                else:
-                    file_links = build_file_links(exported_files)
-                    if file_links:
-                        response = f"{response}{file_links}"
+                file_links = build_file_links(exported_files)
+                if file_links:
+                    response = f"{response}{file_links}"
 
             return response, exported_files
         finally:
@@ -418,6 +431,7 @@ class SessionMessageQueue:
         *,
         is_multimodal: bool = False,
         chat_messages: list[dict] | None = None,
+        document_datas: list[dict] | None = None,
     ) -> None:
         """流式执行 agent, 将 token 推入 sink, 流结束后 finalize."""
         from src.core.context import (
@@ -447,7 +461,6 @@ class SessionMessageQueue:
                 request_id=f"chat-{uuid.uuid4().hex}",
                 round_number=round_number,
                 usage_source="main_chat",
-                is_openclaw=False,
                 timezone=timezone,
             ),
         )
@@ -461,6 +474,15 @@ class SessionMessageQueue:
                 image_datas=image_datas,
                 round_number=round_number,
             )
+            if document_datas:
+                attachment_infos.extend(
+                    await prepare_document_attachments(
+                        user_id=user_id,
+                        thread_id=thread_id,
+                        document_datas=document_datas,
+                        round_number=round_number,
+                    )
+                )
 
             async for item in agent.process_message_stream(
                 message=text,

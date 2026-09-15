@@ -33,7 +33,7 @@ class SearchAvailableToolsRequest(BaseModel):
 
     query: str = Field(
         default="",
-        description="搜索关键词, 描述你需要的功能",
+        description='搜索关键词, 描述你需要的功能, 如 "发送消息" / "微信 定时"',
     )
 
 
@@ -44,23 +44,17 @@ class SearchAvailableTools(BaseTool):
     当Agent需要使用某个功能但当前没有对应工具时,
     调用此工具搜索匹配的可用工具. 搜索结果返回后,
     中间件会自动将匹配的工具注入到后续的模型调用中.
-
-    使用示例:
-    - search_available_tools(query="发送消息")
-    - search_available_tools(query="微信 定时")
-    - search_available_tools(query="research")
     """
 
     name: str = "search_available_tools"
     summary: str = "搜索可用的休眠工具, 按需发现并激活"
-    description: str = """搜索可用的休眠工具. 当你需要某个功能但当前工具列表中没有时, 使用此工具搜索.
-
-搜索后匹配的工具会自动加载到你的工具列表中, 你可以直接调用它们.
-
-示例:
-- query="发送消息" - 搜索消息相关工具
-- query="微信 定时" - 搜索定时/微信相关工具
-"""
+    # 运行时 description 会被 InferenceCoordinator 覆盖为
+    # base_desc + 可发现工具清单(见 _enrich_search_tools_description),
+    # 此处仅作静态兜底, 不要在此堆示例
+    description: str = (
+        "搜索可用的休眠工具. 当你需要某个功能但当前工具列表中没有时, 使用此工具搜索.\n"
+        "搜索后匹配的工具会自动加载到你的工具列表中, 你可以直接调用它们."
+    )
     args_schema: type[SearchAvailableToolsRequest] = SearchAvailableToolsRequest
 
     def __init__(self, **kwargs: Any) -> None:
@@ -107,8 +101,19 @@ class SearchAvailableTools(BaseTool):
                 ensure_ascii=False,
             )
 
+        # 同轮重试免过滤(一次性): 中间件检测到本轮已有 search 结果时置位,
+        # 第二次搜索跳过降噪直接全量返回 (误杀的恢复路径)
+        bypass_filter = getattr(self, "_bypass_llm_filter", False)
+        if bypass_filter:
+            object.__setattr__(self, "_bypass_llm_filter", False)
+            logger.info(
+                "工具搜索(重试免降噪): query='%s', 返回全部 %d 个候选",
+                query,
+                len(results),
+            )
+
         # LLM 降噪: 当匹配 >= 2 个工具时, 调用本地小模型去除无关工具
-        if len(results) >= 2:
+        if len(results) >= 2 and not bypass_filter:
             from src.tools.internal._llm_tool_filter import filter_tools_by_llm
 
             results = await filter_tools_by_llm(query.strip(), results)
@@ -159,7 +164,12 @@ class SearchAvailableTools(BaseTool):
                 if hit_ratio < 0.2 and not has_name_hit:
                     continue
 
-            scored.append((s, tool_info))
+            # 附着过滤信号副本(不污染 catalog 原 dict):
+            # _name_hit/_filter_score 供 LLM 降噪层做高置信豁免, 组展开时丢弃
+            info = dict(tool_info)
+            info["_filter_score"] = s
+            info["_name_hit"] = has_name_hit
+            scored.append((s, info))
 
         # 降序排序
         scored.sort(key=lambda x: x[0], reverse=True)

@@ -156,9 +156,9 @@ __all__ = [
 ]
 
 # 类型别名,避免命名冲突
-AuthUser = AuthUserModel  # noqa: RUF067
-AuthContext = AuthContextModel  # noqa: RUF067
+AuthUser = AuthUserModel  # ruff: ignore[non-empty-init-module]
+AuthContext = AuthContextModel  # ruff: ignore[non-empty-init-module]
 
 # 模块初始化日志
-logger = logging.getLogger(__name__)  # noqa: RUF067
-logger.info("🔐 统一认证模块加载完成 v%s", __version__)  # noqa: RUF067
+logger = logging.getLogger(__name__)  # ruff: ignore[non-empty-init-module]
+logger.info("🔐 统一认证模块加载完成 v%s", __version__)  # ruff: ignore[non-empty-init-module]

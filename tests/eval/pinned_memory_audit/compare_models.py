@@ -15,7 +15,7 @@ from run_eval import AuditConfig, load_fixtures
 FIX_DIR = pathlib.Path(__file__).parent / "fixtures"
 
 MODELS = [
-    ("flash", "deepseek:deepseek-v4-flash"),
+    ("flash", "deepseek:deepseek-flash"),
     ("ds-pro", "deepseek:deepseek-v4-pro"),
     ("doubao", "doubao:doubao-seed-2-0-pro-260215"),
     ("gpt55", "openai:gpt-5.5"),

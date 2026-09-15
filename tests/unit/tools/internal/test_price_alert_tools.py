@@ -26,7 +26,6 @@ from src.tools.shared.tool_runtime import inject_identity
 
 DELIVERY = DeliverySpec(
     method="wechat",
-    openclaw_channel="openclaw-weixin",
     account_id="acc1",
     target="tgt1",
 )
@@ -47,7 +46,6 @@ def _rule(**overrides) -> PriceAlertRule:
         "direction": "above",
         "threshold_price": 100.0,
         "delivery_method": "wechat",
-        "openclaw_channel": "openclaw-weixin",
         "account_id": "acc1",
         "target": "tgt1",
         "user_id": "u1",
@@ -130,7 +128,6 @@ class TestCreatePriceAlert:
         # create_rule(owner, **fields): owner 位置, fields 关键字
         kwargs = mock_engine.create_rule.call_args.kwargs
         assert kwargs["market"] == 1
-        assert kwargs["openclaw_channel"] == "openclaw-weixin"
         assert kwargs["account_id"] == "acc1"
         assert kwargs["target"] == "tgt1"
 

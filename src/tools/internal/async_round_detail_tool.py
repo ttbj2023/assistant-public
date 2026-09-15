@@ -35,7 +35,7 @@ class GetRoundDetailRequest(BaseModel):
         ...,
         min_length=1,
         max_length=50,
-        description="要获取完整原文的轮次号列表, 来自索引区 fine 行或 search_memories 钩子",
+        description="要获取完整原文的轮次号列表, 来自 search_memories 返回的 [轮X] 标记",
     )
 
 
@@ -46,8 +46,8 @@ class AsyncRoundDetailTool(BaseTool):
     name: str = "get_round_detail"
     description: str = """按轮次号获取对话的完整原文(fetch 语义).
 
-索引区表格(Round 列)与 search_memories 返回的 [轮X] 钩子都含轮次号,
-用本工具按 round_number 取回完整 user_message + assistant_response.
+轮次号来自 search_memories 返回的 [轮X] 标记,
+按轮次号取回该轮用户消息与助手回复的完整原文.
 
 示例: {"round_numbers": [5, 12]}
 """

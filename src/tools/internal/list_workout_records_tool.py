@@ -33,7 +33,7 @@ class ListWorkoutRecordsRequest(BaseModel):
         default=30,
         ge=1,
         le=365,
-        description="查询天数, list 默认30, stats 默认90",
+        description="查询天数, 默认30",
     )
     workout_type: str | None = Field(
         default=None,
@@ -54,7 +54,8 @@ class ListWorkoutRecordsTool(BaseTool):
     name: str = "list_workout_records"
     description: str = (
         "查询运动记录. 参数: mode=list/stats, days, workout_type(类型筛选), limit(list 模式). "
-        "list 返回每次运动的时间/类型/时长/距离/卡路里/心率."
+        "list 返回每次运动的时间/类型/时长/距离/卡路里/心率, stats 返回次数/频率/类型分布汇总.\n"
+        '示例: {"mode": "stats", "days": 90}'
     )
     args_schema: type[ListWorkoutRecordsRequest] = ListWorkoutRecordsRequest
 
@@ -113,6 +114,8 @@ class ListWorkoutRecordsTool(BaseTool):
 
     async def _run_stats(self, request: ListWorkoutRecordsRequest) -> str:
         service = await self._get_accessor().get_service()
+        # TODO(工具重写): 设计意图为 stats 默认90天, 但 days 字段默认30
+        # 使 "or 90" 永不生效, 当前实际默认恒为30; 重写时恢复差异化默认
         days = request.days or 90
         workout_type = request.workout_type
 

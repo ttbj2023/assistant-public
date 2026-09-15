@@ -192,11 +192,13 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 
 ### 渠道接入
 
-借助 [OpenClaw](https://github.com/openclaw/openclaw) gateway 接入微信 / Telegram / WhatsApp 等广泛 IM 渠道.
+经自研 weixin-gateway (独立仓库) 接入微信渠道: assistant 保持纯 agent 后端定位, 暴露标准 OpenAI 兼容 API; gateway 承担消息协议适配 (markdown 过滤/分块/文件转换), 双方以轻量契约对接.
 
-**关键**: 本项目**完全自主编排** — 记忆 / Agent / 工具 / Skills 全部自研, **主动清理** OpenClaw gateway 注入的 system prompt / 元数据 / 心跳 / 智能上下文, **仅用其消息通道能力** (入站收消息、出站经 `/tools/invoke` 发消息). 暴露标准 OpenAI 兼容 API, 也可不经任何 gateway 直接对接.
+- **入站**: 渠道请求携带 `X-Channel` / `X-Channel-Account` / `X-Chat-Id` 请求头, assistant 侧自动发现并持久化渠道配置 (字段变化自愈更新)
+- **出站**: 定时消息 / 价格提醒 / 通知等主动推送经 `channel_push_client` 调 gateway 的 `POST /channel/send`
+- **文件**: 微信渠道支持图片与文档 (md/txt/docx/pdf/pptx, 二进制文档经 doc2md 服务解析为 markdown) 入库
 
-> 核心代码: `src/core/openclaw_filter.py` (入站过滤) + `src/core/openclaw_client.py` (出站发送)
+> 核心代码: `src/api/routes/chat.py` (渠道配置发现) + `src/core/channel_push_client.py` (出站推送)
 
 ---
 

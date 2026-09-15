@@ -62,11 +62,10 @@ def format_alert(
 def rule_to_delivery(rule: PriceAlertRule) -> DeliverySpec | None:
     """从规则构建投递描述; 投递参数缺失返回 None."""
     if rule.delivery_method == "wechat":
-        if not rule.openclaw_channel or not rule.account_id or not rule.target:
+        if not rule.account_id or not rule.target:
             return None
         return DeliverySpec(
             method="wechat",
-            openclaw_channel=rule.openclaw_channel,
             account_id=rule.account_id,
             target=rule.target,
         )
@@ -287,7 +286,12 @@ class PriceAlertEngine:
             price,
         )
         subject = f"价格告警: {rule.stock_name or rule.stock_code}"
-        return await get_notification_service().send(delivery, text, subject=subject)
+        outcome = await get_notification_service().send(delivery, text, subject=subject)
+        if not outcome.ok and outcome.error:
+            logger.error(
+                "价格告警派发失败: rule=%s, error=%s", rule.rule_id, outcome.error
+            )
+        return outcome.ok
 
     # ── CRUD (供工具调用, 按属主隔离) ─────────────────────
 

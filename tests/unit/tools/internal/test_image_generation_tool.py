@@ -75,3 +75,6 @@ async def test_arun_writes_image_and_calls_register(tool: ImageGenerationTool, t
     assert call_kwargs["output_format"] == "png"
     assert call_kwargs["user_id"] == "user1"
     assert call_kwargs["thread_id"] == "thread1"
+    # 生成参数 detail 经 source 参数落 desc (统一结构修复: 此前 detail 不落盘)
+    assert "生成提示词: 画一只猫" in call_kwargs["source"]
+    assert "图片尺寸: 2048x2048" in call_kwargs["source"]

@@ -207,8 +207,8 @@ async def _call_audit_llm(
     prompt = (
         prompt_template
         .replace("{current_date}", current_date)
-        .replace("{user_message}", user_message or "本轮无用户消息")  # noqa: RUF027
-        .replace("{data_snapshot}", data_snapshot or "暂无历史数据")  # noqa: RUF027
+        .replace("{user_message}", user_message or "本轮无用户消息")  # ruff: ignore[missing-f-string-syntax]
+        .replace("{data_snapshot}", data_snapshot or "暂无历史数据")  # ruff: ignore[missing-f-string-syntax]
     )
 
     response = await invoke_with_fallback(

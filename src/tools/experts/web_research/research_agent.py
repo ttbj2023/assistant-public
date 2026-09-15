@@ -27,6 +27,7 @@ from src.inference.llm.retry_predicates import (
     is_retryable_llm_exception,
 )
 from src.tools.experts.agent_utils import (
+    EXPERT_AGENT_RECURSION_LIMIT,
     enable_tool_error_handling,
     extract_tool_calls,
 )
@@ -212,7 +213,10 @@ class ResearchAgent:
             result = await asyncio.wait_for(
                 agent.ainvoke(
                     {"messages": messages},
-                    config=RunnableConfig(max_concurrency=1, recursion_limit=50),
+                    config=RunnableConfig(
+                        max_concurrency=1,
+                        recursion_limit=EXPERT_AGENT_RECURSION_LIMIT,
+                    ),
                 ),
                 timeout=self.timeout,
             )

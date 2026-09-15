@@ -58,13 +58,18 @@ async def create_conversation_service(
     return ConversationService(db_manager.session_factory)
 
 
-async def create_todo_service(user_id: str, thread_id: str, *, agent_id: str) -> Any:
-    """创建TODO服务实例 (底层Engine全局复用).
+async def create_todo_service(
+    user_id: str,
+    thread_id: str,  # ruff: ignore[unused-function-argument]
+    *,
+    agent_id: str,  # ruff: ignore[unused-function-argument]
+) -> Any:
+    """创建TODO服务实例 (用户级存储, thread_id 仅为行级溯源).
 
     Args:
         user_id: 用户ID
-        thread_id: 线程ID
-        agent_id: Agent ID
+        thread_id: 线程ID (行级溯源, 不参与存储路径)
+        agent_id: Agent ID (行级溯源)
 
     Returns:
         TODO服务实例
@@ -74,11 +79,7 @@ async def create_todo_service(user_id: str, thread_id: str, *, agent_id: str) ->
 
     from .todo_service import TodoService
 
-    db_manager = await create_async_todo_db_manager(
-        user_id,
-        thread_id,
-        agent_id=agent_id,
-    )
+    db_manager = await create_async_todo_db_manager(user_id)
     return TodoService(db_manager.session_factory)
 
 
@@ -264,7 +265,7 @@ async def create_usage_service(user_id: str) -> Any:
         user_id: 用户ID
 
     Returns:
-        用量统计服务实例
+        用户级用量统计服务实例
 
     """
     from src.storage.dao.async_database_manager import create_async_usage_db_manager
@@ -273,6 +274,24 @@ async def create_usage_service(user_id: str) -> Any:
 
     db_manager = await create_async_usage_db_manager(user_id)
     return UsageService(db_manager.session_factory)
+
+
+async def create_calendar_service(user_id: str) -> Any:
+    """创建用户级日历服务实例 (日程跨线程统一视图).
+
+    Args:
+        user_id: 用户ID
+
+    Returns:
+        CalendarService 实例
+
+    """
+    from src.storage.dao.async_database_manager import create_async_calendar_db_manager
+
+    from .calendar_service import CalendarService
+
+    db_manager = await create_async_calendar_db_manager(user_id)
+    return CalendarService(db_manager.session_factory, user_id=user_id)
 
 
 def clear_vector_cache() -> None:

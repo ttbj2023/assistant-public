@@ -31,7 +31,7 @@ _MAX_SUBITEM_FIELDS = 8
 _INTERNAL_KEYS = frozenset({
     "公司ID",
     "企业ID",
-    "企业ID（关联主键）",  # noqa: RUF001
+    "企业ID（关联主键）",  # ruff: ignore[ambiguous-unicode-character-string]
     "归属省份首字母小写",
     "行政区域代码",
     "行业代码",
@@ -356,7 +356,7 @@ def _format_list(key: str, lst: list) -> list[str]:
     clean_key = (
         key
         .replace("(JSON字符串)", "")
-        .replace("（关联主键）", "")  # noqa: RUF001
+        .replace("（关联主键）", "")  # ruff: ignore[ambiguous-unicode-character-string]
         .replace("(关联主键)", "")
     )
     if not lst:
@@ -422,11 +422,11 @@ def _type_distribution(items: list[dict]) -> str:
     type_key = ""
     for cand in (
         "风险类型描述",
-        "案件类型。",  # noqa: RUF001
+        "案件类型。",  # ruff: ignore[ambiguous-unicode-character-string]
         "案件类型",
         "知识产权类型(关联主键)",
         "知识产权类型",
-        "裁判文书类型。",  # noqa: RUF001
+        "裁判文书类型。",  # ruff: ignore[ambiguous-unicode-character-string]
         "公告类型大类",
     ):
         if items[0].get(cand):

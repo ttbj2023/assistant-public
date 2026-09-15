@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -48,6 +48,34 @@ class TestTodoServiceCreateTodo:
         assert result.id == 1
         assert result.title == "测试TODO"
         mock_todo_dao.create_todo.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_todo_success_notifies_graph_sync(
+        self, mock_todo_dao, mock_session_factory, test_user
+    ):
+        """创建成功后应投递 Graph 同步即时信号."""
+        mock_todo = TodoItem(
+            id=1,
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="testthread_id",
+        )
+        mock_todo_dao.create_todo = AsyncMock(return_value=mock_todo)
+        service = TodoService(mock_session_factory)
+        service.todo_dao = mock_todo_dao
+
+        with (
+            patch(
+                "src.storage.service.todo_service._notify_graph_sync",
+            ) as mock_notify,
+        ):
+            await service.create_todo(
+                title="测试TODO",
+                user_id=test_user,
+                thread_id="testthread_id",
+            )
+
+        mock_notify.assert_called_once_with(test_user)
 
     @pytest.mark.asyncio
     async def test_create_todo_with_empty_title_should_raise_value_error(
@@ -798,12 +826,19 @@ class TestTodoServiceListTodosPrioritySorting:
         # Arrange - DAO返回乱序的TODO
         todos = [
             TodoItem(
-                id=i, title=f"TODO {i}", user_id=test_user,
+                id=i,
+                title=f"TODO {i}",
+                user_id=test_user,
                 thread_id="test_thread",
                 status=TodoStatus.PENDING,
                 priority=p,
             )
-            for i, p in enumerate([TodoPriority.LOW, TodoPriority.HIGH, TodoPriority.MEDIUM, TodoPriority.URGENT])
+            for i, p in enumerate([
+                TodoPriority.LOW,
+                TodoPriority.HIGH,
+                TodoPriority.MEDIUM,
+                TodoPriority.URGENT,
+            ])
         ]
         mock_todo_dao.list_by_filters = AsyncMock(return_value=todos)
         service = TodoService(mock_session_factory)
@@ -891,9 +926,7 @@ class TestTodoServiceHealthCheckFull:
         """测试统计: 异常时应返回空统计."""
         # Arrange
         factory = MagicMock()
-        factory.return_value.__aenter__ = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        factory.return_value.__aenter__ = AsyncMock(side_effect=Exception("DB error"))
         factory.return_value.__aexit__ = AsyncMock()
 
         class AsyncSessionMock:
@@ -930,7 +963,8 @@ class TestTodoServiceListTodosPriority:
 
         # Act
         result = await service.list_todos(
-            user_id=test_user, thread_id="test_thread",
+            user_id=test_user,
+            thread_id="test_thread",
             priority=TodoPriority.HIGH,
         )
 
@@ -949,14 +983,18 @@ class TestTodoServiceCreateTodoExceptions:
     ):
         """测试创建TODO：DAO异常时应包装为RuntimeError."""
         # Arrange
-        mock_todo_dao.create_todo = AsyncMock(side_effect=Exception("DB connection lost"))
+        mock_todo_dao.create_todo = AsyncMock(
+            side_effect=Exception("DB connection lost")
+        )
         service = TodoService(mock_session_factory)
         service.todo_dao = mock_todo_dao
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="创建TODO失败"):
             await service.create_todo(
-                title="测试TODO", user_id=test_user, thread_id="test_thread",
+                title="测试TODO",
+                user_id=test_user,
+                thread_id="test_thread",
             )
 
 
@@ -972,8 +1010,12 @@ class TestTodoServiceUpdateTodoFields:
         from datetime import UTC, datetime, timedelta
 
         existing = TodoItem(
-            id=1, title="原TODO", user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.MEDIUM,
+            id=1,
+            title="原TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.MEDIUM,
         )
         due_date = datetime.now(UTC) + timedelta(days=7)
         mock_todo_dao.get_todo_by_id = AsyncMock(return_value=existing)
@@ -985,7 +1027,10 @@ class TestTodoServiceUpdateTodoFields:
         async def mock_update(todo_id, **kwargs):
             captured.update(kwargs)
             return TodoItem(
-                id=1, title="原TODO", user_id=test_user, thread_id="test_thread",
+                id=1,
+                title="原TODO",
+                user_id=test_user,
+                thread_id="test_thread",
                 description=kwargs.get("description", ""),
                 status=kwargs.get("status", TodoStatus.PENDING),
                 priority=kwargs.get("priority", TodoPriority.MEDIUM),
@@ -996,9 +1041,12 @@ class TestTodoServiceUpdateTodoFields:
 
         # Act
         result = await service.update_todo(
-            todo_id=1, user_id=test_user,
-            description="新描述", status=TodoStatus.COMPLETED,
-            priority=TodoPriority.HIGH, due_date=due_date,
+            todo_id=1,
+            user_id=test_user,
+            description="新描述",
+            status=TodoStatus.COMPLETED,
+            priority=TodoPriority.HIGH,
+            due_date=due_date,
         )
 
         # Assert
@@ -1029,12 +1077,20 @@ class TestTodoServiceUpdateTodoFields:
         """测试更新TODO：日志记录DetachedInstanceError不应影响返回结果."""
         # Arrange
         existing = TodoItem(
-            id=1, title="原TODO", user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.MEDIUM,
+            id=1,
+            title="原TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.MEDIUM,
         )
         updated = TodoItem(
-            id=1, title="新标题", user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.MEDIUM,
+            id=1,
+            title="新标题",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.MEDIUM,
         )
         mock_todo_dao.get_todo_by_id = AsyncMock(return_value=existing)
         mock_todo_dao.update_todo = AsyncMock(return_value=updated)
@@ -1064,8 +1120,12 @@ class TestTodoServiceUpdateTodoFields:
         """测试更新TODO：DAO异常时应包装为RuntimeError."""
         # Arrange
         existing = TodoItem(
-            id=1, title="原TODO", user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.MEDIUM,
+            id=1,
+            title="原TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.MEDIUM,
         )
         mock_todo_dao.get_todo_by_id = AsyncMock(return_value=existing)
         mock_todo_dao.update_todo = AsyncMock(side_effect=Exception("DB update failed"))
@@ -1087,8 +1147,12 @@ class TestTodoServiceDeleteTodoExceptions:
         """测试删除TODO：DAO异常时应包装为RuntimeError."""
         # Arrange
         existing = TodoItem(
-            id=1, title="测试TODO", user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.MEDIUM,
+            id=1,
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.MEDIUM,
         )
         mock_todo_dao.get_todo_by_id = AsyncMock(return_value=existing)
         mock_todo_dao.delete_todo = AsyncMock(side_effect=Exception("DB delete failed"))
@@ -1115,7 +1179,8 @@ class TestTodoServiceGetFormattedTodoListExceptions:
         # Act & Assert
         with pytest.raises(RuntimeError, match="获取格式化TODO列表失败"):
             await service.get_formatted_todolist(
-                user_id=test_user, thread_id="test_thread",
+                user_id=test_user,
+                thread_id="test_thread",
             )
 
     @pytest.mark.asyncio
@@ -1130,7 +1195,9 @@ class TestTodoServiceGetFormattedTodoListExceptions:
 
         # Act
         await service.get_formatted_todolist(
-            user_id=test_user, thread_id="test_thread", limit=20,
+            user_id=test_user,
+            thread_id="test_thread",
+            limit=20,
         )
 
         # Assert
@@ -1151,9 +1218,12 @@ class TestTodoServiceGetFormattedTodoListExceptions:
 
         # Act
         await service.get_formatted_todolist(
-            user_id=test_user, thread_id="test_thread",
-            status=TodoStatus.PENDING, priority=TodoPriority.HIGH,
-            include_section_title=True, format_template="html",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
+            priority=TodoPriority.HIGH,
+            include_section_title=True,
+            format_template="html",
         )
 
         # Assert - priority 传入 list_todos; include_section_title/format_template 传入 format_todos
@@ -1175,7 +1245,8 @@ class TestTodoServiceGetFormattedTodoListExceptions:
         # Act & Assert
         with pytest.raises(RuntimeError, match="获取格式化TODO列表失败"):
             await service.get_formatted_todolist(
-                user_id=test_user, thread_id="test_thread",
+                user_id=test_user,
+                thread_id="test_thread",
             )
 
 
@@ -1205,8 +1276,11 @@ class TestTodoServiceRemainingExceptions:
         """创建TODO：返回的TODO无ID应记录警告(覆盖line 211)."""
         # Arrange - DAO返回id=0(falsy)的TodoItem → 触发警告日志分支
         mock_no_id = TodoItem(
-            id=0, title="测试TODO", user_id=test_user,
-            thread_id="test_thread", status=TodoStatus.PENDING,
+            id=0,
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
             priority=TodoPriority.MEDIUM,
         )
         mock_todo_dao.create_todo = AsyncMock(return_value=mock_no_id)
@@ -1215,7 +1289,9 @@ class TestTodoServiceRemainingExceptions:
 
         # Act
         result = await service.create_todo(
-            title="测试TODO", user_id=test_user, thread_id="test_thread",
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="test_thread",
         )
 
         # Assert - 返回的id为0但业务上仍是有效TODO
@@ -1229,8 +1305,11 @@ class TestTodoServiceRemainingExceptions:
         """创建TODO：创建后日志记录异常不应影响返回结果."""
         # Arrange
         mock_todo = TodoItem(
-            id=1, title="测试TODO", user_id=test_user,
-            thread_id="test_thread", status=TodoStatus.PENDING,
+            id=1,
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="test_thread",
+            status=TodoStatus.PENDING,
             priority=TodoPriority.MEDIUM,
         )
         mock_todo_dao.create_todo = AsyncMock(return_value=mock_todo)
@@ -1248,7 +1327,9 @@ class TestTodoServiceRemainingExceptions:
 
         # Act
         result = await service.create_todo(
-            title="测试TODO", user_id=test_user, thread_id="test_thread",
+            title="测试TODO",
+            user_id=test_user,
+            thread_id="test_thread",
         )
 
         # Assert - 日志异常不影响返回结果

@@ -76,5 +76,3 @@ rm -rf .mypy_cache .ruff_cache .cache                         # 清理缓存
 python scripts/static_analysis.py analyze --no-cache          # 强制重新分析
 python scripts/static_analysis.py analyze --without-safety    # 跳过慢速工具
 ```
-
-> Codex 沙盒专用: `python scripts/static_analysis.py --codex`.

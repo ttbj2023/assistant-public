@@ -4,7 +4,7 @@
 复用 smtp_config.resolve_credentials() 读取系统级 SMTP 配置
 (config.yaml smtp 段 + .env 回退).
 
-设计原则 (对齐 openclaw_client.py):
+设计原则 (对齐 channel_push_client.py):
 - 模块级单例 + 工厂函数
 - 失败不抛异常, 返回 bool, 调用方决定降级策略
 - 结构化日志 (收件人前缀脱敏)

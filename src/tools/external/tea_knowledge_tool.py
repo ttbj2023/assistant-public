@@ -16,7 +16,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.inference_config import get_config as get_inference_config
-from src.inference.rerank.client import RerankClient
+from src.inference.rerank.client import RerankClient, resolve_rerank_base_url
 from src.knowledge_base.retriever import KnowledgeBaseRetriever
 from src.knowledge_base.store import KnowledgeBaseStore
 from src.tools.shared.semantic_cache import get_semantic_cache
@@ -83,9 +83,9 @@ class TeaKnowledgeTool(BaseTool):
         "杀青",
     ]
     description: str = (
-        "茶领域知识库查询工具, 检索本地整理的茶权威资料"
-        "(中国茶经等专业书籍/学术论文/审评报告等), 内容比互联网搜索更可靠, "
-        "回答茶领域问题时应优先使用本工具而非网络搜索.\n"
+        "茶领域知识库查询工具, 检索整理的权威茶资料"
+        "(中国茶经等专业书籍/学术论文/审评报告等), "
+        "回答茶领域问题时优先使用本工具.\n"
         "覆盖: 茶史/茶树品种/栽培与制茶工艺/茶叶品质化学/冲泡与审评/茶文化/茶经济.\n\n"
         "用法: query 用自然语言描述问题; 可选 doc_type 限定资料类型"
         "(book/paper/review/article).\n"
@@ -145,12 +145,16 @@ class TeaKnowledgeTool(BaseTool):
 
     @staticmethod
     def _build_reranker() -> tuple[RerankClient | None, str | None]:
-        """根据配置构造 RerankClient, 未启用时返回 (None, None)."""
+        """根据配置构造 RerankClient, 未启用时返回 (None, None).
+
+        base_url 经 resolve_rerank_base_url 解析, RERANKER_BASE_URL
+        环境变量优先 (容器内指向 host.docker.internal).
+        """
         cfg = get_inference_config().reranker
         if not cfg.enabled:
             return None, None
         return (
-            RerankClient(cfg.base_url, timeout=cfg.timeout),
+            RerankClient(resolve_rerank_base_url(cfg.base_url), timeout=cfg.timeout),
             cfg.instruction or None,
         )
 

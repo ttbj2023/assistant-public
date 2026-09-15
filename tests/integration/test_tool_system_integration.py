@@ -183,14 +183,15 @@ class TestInternalToolsIntegration:
         list2_result = list_tool_thread2._run()
         list2_data = json.loads(list2_result)
 
-        # Assert - 验证数据隔离
-        # 线程1应该只看到线程1的任务, 看不到线程2的任务
+        # Assert - 验证用户级统一视图语义 (todo 迁移到用户级存储后,
+        # 同用户跨线程共享视图; thread_id 仅为行级溯源字段)
+        # 线程1能看到两个线程的任务 (统一视图)
         assert any(t["title"] == "线程1任务" for t in list1_data["todos"])
-        assert not any(t["title"] == "线程2任务" for t in list1_data["todos"])
+        assert any(t["title"] == "线程2任务" for t in list1_data["todos"])
 
-        # 线程2应该只看到线程2的任务
+        # 线程2同样看到两个线程的任务
         assert any(t["title"] == "线程2任务" for t in list2_data["todos"])
-        assert not any(t["title"] == "线程1任务" for t in list2_data["todos"])
+        assert any(t["title"] == "线程1任务" for t in list2_data["todos"])
 
 
 @pytest.mark.integration
@@ -379,13 +380,16 @@ class TestToolManagerIntegration:
         user1_t2_data = json.loads(user1_t2_list_result)
         user2_t1_data = json.loads(user2_t1_list_result)
 
-        # 每个上下文应该只看到自己的任务
+        # 每个上下文的列表返回统一视图 (todo 用户级存储, 同用户跨线程共享;
+        # 不同用户相互隔离)
         assert any(t["title"] == "用户1线程1任务" for t in user1_t1_data["todos"])
-        assert not any(t["title"] == "用户1线程2任务" for t in user1_t1_data["todos"])
+        assert any(t["title"] == "用户1线程2任务" for t in user1_t1_data["todos"])
+        # 用户1看不到用户2的任务 (用户隔离保留)
         assert not any(t["title"] == "用户2线程1任务" for t in user1_t1_data["todos"])
 
         assert any(t["title"] == "用户1线程2任务" for t in user1_t2_data["todos"])
         assert any(t["title"] == "用户2线程1任务" for t in user2_t1_data["todos"])
+        assert not any(t["title"] == "用户1线程1任务" for t in user2_t1_data["todos"])
 
     @pytest.mark.asyncio
     async def test_tool_caching_mechanism_integration(

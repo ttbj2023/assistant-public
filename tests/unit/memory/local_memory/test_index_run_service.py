@@ -103,8 +103,8 @@ class TestCleanSummaryForEmbedding:
 
     def test_preserve_assistant_content(self) -> None:
         assert (
-            clean_summary_for_embedding("用户询问天气，助手告知晴天")  # noqa: RUF001
-            == "询问天气，告知晴天"  # noqa: RUF001
+            clean_summary_for_embedding("用户询问天气，助手告知晴天")  # ruff: ignore[ambiguous-unicode-character-string]
+            == "询问天气，告知晴天"  # ruff: ignore[ambiguous-unicode-character-string]
         )
 
     def test_no_role_label_unchanged(self) -> None:
@@ -118,8 +118,8 @@ class TestCleanSummaryForEmbedding:
 
     def test_preserve_assistant_with_period(self) -> None:
         assert (
-            clean_summary_for_embedding("用户记录待办，助手已完成并提供下载。")  # noqa: RUF001
-            == "记录待办，已完成并提供下载。"  # noqa: RUF001
+            clean_summary_for_embedding("用户记录待办，助手已完成并提供下载。")  # ruff: ignore[ambiguous-unicode-character-string]
+            == "记录待办，已完成并提供下载。"  # ruff: ignore[ambiguous-unicode-character-string]
         )
 
 
