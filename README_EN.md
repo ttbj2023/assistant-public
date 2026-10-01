@@ -2,7 +2,7 @@
 
 English | [中文](README.md)
 
-A production-grade, real-world personal AI assistant centered on **long-conversation memory** and **progressive tool orchestration**. Built on LangChain v1.0, v1.9.0.
+A production-grade, real-world personal AI assistant centered on **long-conversation memory** and **progressive tool orchestration**. Built on LangChain v1.0, v1.12.0.
 
 ---
 
@@ -149,7 +149,15 @@ Aligned with the [Anthropic Agent Skills](https://agentskills.io/specification) 
 
 ### Multi-Agent Physical Isolation
 
-Each agent owns independent `database/` + `vector/` directories — filesystem-level isolation. Config-driven (`agent.yaml`), zero hardcoding. Currently includes Personal / Health / Thought agents.
+Each agent owns independent `database/` + `vector/` directories — filesystem-level isolation. Config-driven (`agent.yaml`), zero hardcoding. Currently includes Personal / Health / Thought agents. Calendar and TODO live in user-level unified databases (`data/{user_id}/database/`) with thread/agent as row-level provenance fields.
+
+### Calendar/TODO and Graph Sync
+
+User-level calendar/TODO subsystem plus automatic sync with the user's own Microsoft account (MSA):
+
+- **User-level unified DBs**: `calendar.db` / `todo.db` under `data/{user_id}/database/`; ICS subscription feed for read-only phone-calendar access
+- **Graph sync engine** (`src/sync/`, resident background): TODO bidirectional + calendar bidirectional for add/edit (pulled back locally; deletes stay one-way self-healing), dedicated containers never touch the user's existing data; authorization via device code flow (`msgraph_connect` tool or REST); when both sides change, newest `lastModifiedTime` wins
+- Design doc: [docs/development/msgraph-sync-design.md](docs/development/msgraph-sync-design.md) (Chinese)
 
 ### Channel Access
 

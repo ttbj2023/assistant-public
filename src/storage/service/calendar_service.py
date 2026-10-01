@@ -56,6 +56,13 @@ class EventDeleteResult:
     cascade: ShadowCascadeReport = field(default_factory=ShadowCascadeReport)
 
 
+def _as_aware_utc(value: datetime) -> datetime:
+    """naive 视为 UTC 归一为 aware; aware 原样 (仓库时间约定)."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
 def _notify_graph_sync(user_id: str) -> None:
     """本地写后投递 Graph 同步即时信号 (惰性 import 防包初始化循环)."""
     from src.sync.graph_sync_engine import notify_local_write
@@ -190,9 +197,15 @@ class CalendarService(ServiceHealthCheckMixin):
             if existing is None or existing.user_id != self.user_id:
                 return EventUpdateResult(None)
 
-            # setattr 单字段更新不触发 before 校验器, 时间对需在服务层合并校验
-            effective_start = update_data.get("start_time", existing.start_time)
-            effective_end = update_data.get("end_time", existing.end_time)
+            # setattr 单字段更新不触发 before 校验器, 时间对需在服务层合并校验;
+            # DB 读出为 naive 而 update_data 可能为 aware (工具/pull 链路),
+            # 归一为 aware UTC 后再比较/求偏移 (naive 视为 UTC, 仓库统一约定)
+            effective_start = _as_aware_utc(
+                update_data.get("start_time", existing.start_time)
+            )
+            effective_end = _as_aware_utc(
+                update_data.get("end_time", existing.end_time)
+            )
             if effective_end < effective_start:
                 raise RuntimeError("结束时间不能早于开始时间")
 
@@ -205,9 +218,10 @@ class CalendarService(ServiceHealthCheckMixin):
                 reschedule_shadows_for_event,
             )
 
-            if effective_start != existing.start_time:
+            existing_start_aware = _as_aware_utc(existing.start_time)
+            if effective_start != existing_start_aware:
                 # 影子顺延: 保持与旧日程的相对偏移 (如"提前10分钟")
-                delta = effective_start - existing.start_time
+                delta = effective_start - existing_start_aware
                 cascade.rescheduled_message_ids = await reschedule_shadows_for_event(
                     self.user_id, event_id, delta
                 )

@@ -1,30 +1,31 @@
 # Microsoft Graph 同步子系统设计 (TODO + 日历)
 
-> 状态: 设计已定稿, 分切片实施中. 授权通道背景见 homelab 仓库
-> `docs/graph-msa.md` 与 `scripts/graph_*.py` (逻辑移植来源).
+> 状态: 已落地 (切片 1-7 全部完成). 授权通道逻辑移植自 homelab 仓库
+> `scripts/graph_*.py`; 该 CLI 通道已于 2026-09-16 整体退役
+> (退役记录见 homelab `docs/graph-msa.md`), 本子系统现为唯一通道.
 
 ## 目标与非目标
 
 把 assistant 内的用户级数据 (todo.db / calendar.db) 与用户**本人的** Microsoft
 个人账户 (MSA) 的 To Do / Outlook 日历自动同步, 让手机端原生应用可见、可改
-(TODO) 与只读镜像 (日历).
+(TODO 与日历的添加/编辑; 删除方向单向自愈, 见同步语义).
 
 非目标: 联系人同步; Teams/共享日历; 组织账户 (Azure AD) 支持.
 
 ## 授权通道 (为什么这样做)
 
-- 主通道为**自建 app registration「JFT Assistant」**(个人 Azure 目录, 与
-  homelab 通道共用注册, 见 homelab `docs/graph-msa.md`) 的 device code flow,
-  delegated `/me` 视角, 只能操作本人数据. client_id 属部署配置, 经
-  `MS_GRAPH_CLIENT_ID` (runtime_env) 注入, **不硬编码进源码** (与 homelab
-  「config 不进仓库」一致); 缺省回退微软第一方公共客户端
+- 主通道为**自建 app registration「JFT Assistant」**(个人 Azure 目录, 注册
+  最初为 homelab 通道创建, 见 homelab `docs/graph-msa.md` 退役记录) 的
+  device code flow, delegated `/me` 视角, 只能操作本人数据. client_id 属
+  部署配置, 经 `MS_GRAPH_CLIENT_ID` (runtime_env) 注入, **不硬编码进源码**
+  (沿袭 homelab 「config 不进仓库」原则); 缺省回退微软第一方公共客户端
   `Microsoft Graph Command Line Tools` (client `14d82eec-...`, 非官方通道
   理论上可能被微软收紧) 作应急 fallback. 切换 client 后所有用户必须重新授权
   (token 绑定 client, 不可迁移).
-- **与 homelab CLI 通道不共享 token**: 两条通道各自独立授权同一自建 app,
-  token 文件各自持有 (`data/{user_id}/credentials/` vs mac `~/.graph-msa/`).
-  refresh_token 每次刷新轮换, 两处共享同一 token 会互相打断 (homelab 明令
-  禁止复制 token 文件).
+- homelab CLI 通道 (mac `~/.graph-msa/` 独立 token + cron 每日刷新) 已于
+  2026-09-16 退役并清理, 本子系统现为该 client 唯一持有者. 当初两通道
+  **不共享 token** 的约束 (refresh_token 每次刷新轮换, 两处共享会互相打断)
+  是独立授权的隔离依据, 记录在案.
 - scope 首次授权即定全: `offline_access Tasks.ReadWrite Calendars.ReadWrite
   Contacts.ReadWrite` (delegated refresh **不能升级 scope**, 后加必须重走
   授权; 联系人同步仍是非目标, scope 仅授权面预留, 与 homelab 四件套对齐).
@@ -50,21 +51,19 @@
 同步范围: 本地全量 (TODO 含各状态; 日历取 active 全量, 不设时间窗) —
 个人数据量级下最简且映射稳定, 不做窗口边界 churn.
 
-### 日历: 单向 push + 镜像修复 (本地是唯一权威)
+### 日历: 双向 (添加/编辑拉回本地, 删除单向自愈)
 
-决策: Outlook 侧**不允许**编辑 agent 维护的日历 —— 远端只是镜像.
+决策演进: 初版为单向 push + 镜像修复 (远端只读), 2026-09-16 升级双向 —
+手机 Outlook 拖拽改期/改名是真实高频操作, 单向 revert 会静默吞掉用户改动.
 
 | 变更 | 行为 |
 |---|---|
 | 本地新建/更新 | POST / PATCH 远端 (按映射表) |
 | 本地软取消 (cancelled) / 删除 | 远端 DELETE |
-| 远端被编辑 (lastModifiedDateTime 晚于上次推送) | PATCH 回本地内容 (revert) |
-| 远端被删除 | 重新 POST (保持镜像) |
-| 容器内出现非映射条目 | 跳过 + 告警日志 (不动用户手建数据) |
-| 重复事件 (recurrence_rule 非空) | 暂不同步 (RRULE ↔ recurrence pattern 映射成本高, 后续单独切片) |
-
-单向带来的简化: 无冲突合并 (本地写是唯一写源), 无远端→本地字段回映,
-映射表只需 local→remote 单向 + 上次推送时间.
+| 远端被编辑 (手机拖拽改期/改名) | `pull_update` 拉回本地, 经 `CalendarService.update_event` 落库 (自动触发影子级联: 关联定时消息顺延); 双方都改 `lastModifiedTime` 新者胜, 相等本地胜 (与 TODO 同构) |
+| 手机在专用日历新建 | `pull_create` 流入本地 (溯源 `source_thread_id="graph_sync"`); 重复系列暂不流入 (RRULE 转换器缺失) |
+| 远端被删除 | 重新 POST (**删除保持单向自愈**: 双向删除纯风险无收益, 手机端基本不删; ICS 订阅天然只读不受影响) |
+| 重复事件 (recurrence_rule 非空) | 暂不同步 (RRULE ↔ recurrence pattern 映射成本高, push/pull 边界对称) |
 
 ### TODO: 双向
 
@@ -117,6 +116,7 @@ calendar_sync:            # 全局默认, per-user 可覆盖
   interval_seconds: 600
   todo_list_name: "Assistant"
   calendar_name: "Assistant"
+  timezone: "Asia/Shanghai"   # Graph 请求体时间换算默认时区 (IANA)
 ```
 
 client_id 为公共值 (非密钥), 部署配置: env `MS_GRAPH_CLIENT_ID` 为主通道
@@ -134,6 +134,7 @@ client_id 为公共值 (非密钥), 部署配置: env `MS_GRAPH_CLIENT_ID` 为�
 4. TODO 双向 diff 纯函数 (todo_sync: 换算/哈希/计划, cancelled→远端删除, 冲突以更新时间新者胜) — ✅; 引擎接线并入切片 5
 5. 日历单向 push + 镜像修复 (calendar_sync 纯函数) + 引擎接线
    (`graph_sync_engine`: 单例/周期 tick/逐用户串行/分页取数/授权暂停恢复) — ✅
+   (2026-09-16 升级双向: pull_update/pull_create 拉回本地, 见同步语义)
 6. 写后即时信号 (服务层 notify_local_write 钩子) + per-user config
    (settings REST + 容器名/时区覆盖) + `config.yaml calendar_sync` 段 — ✅
 7. internal 工具 (`msgraph_sync_group`: msgraph_connect / msgraph_sync_status) + 文档更新 — ✅

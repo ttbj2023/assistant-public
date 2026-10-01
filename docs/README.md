@@ -1,6 +1,6 @@
 # 项目文档索引
 
-**项目版本**: v1.9.0 | **文档更新**: 2026-09-04
+**项目版本**: v1.12.0 | **文档更新**: 2026-09-16
 
 ## 📚 核心文档导航
 
@@ -18,14 +18,15 @@
 
 ### 🛠️ 开发指南
 - **[测试系统](./development/testing.md)** - 三层测试架构（单元/集成/E2E）
-- **[单元测试规范](./development/unit_test_design_specification.md)** - v1.9.0测试策略 (含 Mock 体系章节)
-- **[集成测试规范](./development/integration_test_design_specification.md)** - v1.9.0协作测试
+- **[单元测试规范](./development/unit_test_design_specification.md)** - 分层测试策略 (含 Mock 体系章节)
+- **[集成测试规范](./development/integration_test_design_specification.md)** - 协作测试
 - **[双路检索架构](./development/memory-system-dual-retrieval.md)** - SQL为主向量为辅
 - **[置顶记忆设计](./development/pinned-memory-spec.md)** - 置顶记忆服务与写入策略
 - **[静态分析](./development/static-analysis.md)** - V2.0并行架构
 - **[缓存设计](./development/cache-design.md)** - 三层缓存与生命周期管理
 - **[工具系统设计规范](./development/tool-design-specification.md)** - 字段语义/筛选消费链路/写作规范
 - **[Skills 接入设计文档](./development/skills-integration.md)** - 三级渐进式披露/关联工具注入/运行时
+- **[MSA Graph 同步设计](./development/msgraph-sync-design.md)** - TODO/日历 ↔ Outlook 同步子系统 (授权/引擎/语义)
 - **[健康数据子系统](./development/health-data.md)** - 健康数据提取与审计
 
 ### 📖 源码阅读参考
@@ -58,5 +59,5 @@ Mock：development/unit_test_design_specification.md
 ---
 
 **文档维护**: 季度审查, 版本同步, 保持一致性
-**最后更新**: 2026-09-04
-**项目版本**: v1.9.0
+**最后更新**: 2026-09-16
+**项目版本**: v1.12.0

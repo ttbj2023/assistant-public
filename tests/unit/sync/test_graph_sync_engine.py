@@ -135,10 +135,12 @@ class TestDAOGetters:
         engine = GraphSyncEngine()
 
         assert isinstance(
-            await engine._get_map_dao("dao_check_user"), AsyncSyncMapDAO,
+            await engine._get_map_dao("dao_check_user"),
+            AsyncSyncMapDAO,
         )
         assert isinstance(
-            await engine._get_setting_dao("dao_check_user"), AsyncSyncSettingDAO,
+            await engine._get_setting_dao("dao_check_user"),
+            AsyncSyncSettingDAO,
         )
 
 
@@ -471,7 +473,9 @@ class TestSyncPathsRealDAO:
         return route, posts
 
     async def _engine_with(
-        self, user_id: str, route,
+        self,
+        user_id: str,
+        route,
     ) -> tuple[GraphSyncEngine, FakeClient]:
         engine = GraphSyncEngine()
         fake = FakeClient()
@@ -487,7 +491,9 @@ class TestSyncPathsRealDAO:
         engine, fake = await self._engine_with("it_push", route)
         todo_dao = await engine._get_todo_dao("it_push")
         await todo_dao.create_todo(
-            title="买猫粮", user_id="it_push", thread_id="t1",
+            title="买猫粮",
+            user_id="it_push",
+            thread_id="t1",
         )
 
         n1 = await engine._sync_todo(fake, "it_push", "lid-real")
@@ -503,15 +509,17 @@ class TestSyncPathsRealDAO:
 
         # 二轮: 远端回显同 id + lastModified 晚于映射时间 → 无新动作
         local = await todo_dao.list_by_filters(limit=100, user_id="it_push")
-        remote_view = [{
-            "id": "rid-task-1",
-            "title": "买猫粮",
-            "status": "notStarted",
-            "importance": "normal",
-            "lastModifiedDateTime": mappings[0].last_synced_at.strftime(
-                "%Y-%m-%dT%H:%M:%S.0000000Z",
-            ),
-        }]
+        remote_view = [
+            {
+                "id": "rid-task-1",
+                "title": "买猫粮",
+                "status": "notStarted",
+                "importance": "normal",
+                "lastModifiedDateTime": mappings[0].last_synced_at.strftime(
+                    "%Y-%m-%dT%H:%M:%S.0000000Z",
+                ),
+            }
+        ]
         route2, posts2 = self._router_for(remote_tasks=remote_view)
         engine2, fake2 = await self._engine_with("it_push", route2)
         n2 = await engine2._sync_todo(fake2, "it_push", "lid-real")
@@ -521,15 +529,17 @@ class TestSyncPathsRealDAO:
     @pytest.mark.asyncio
     async def test_todo拉取_字段完整落库不降级(self):
         # 远端含 dueDateTime/body/high importance/completed → 本地须原样
-        remote = [{
-            "id": "rid-r",
-            "title": "手机上建的重要事",
-            "status": "completed",
-            "importance": "high",
-            "body": {"content": "备注文字"},
-            "dueDateTime": {"dateTime": "2026-09-30T00:00:00", "timeZone": "UTC"},
-            "lastModifiedDateTime": "2026-09-15T08:00:00.0000000Z",
-        }]
+        remote = [
+            {
+                "id": "rid-r",
+                "title": "手机上建的重要事",
+                "status": "completed",
+                "importance": "high",
+                "body": {"content": "备注文字"},
+                "dueDateTime": {"dateTime": "2026-09-30T00:00:00", "timeZone": "UTC"},
+                "lastModifiedDateTime": "2026-09-15T08:00:00.0000000Z",
+            }
+        ]
         route, _ = self._router_for(remote_tasks=remote)
         engine, fake = await self._engine_with("it_pull", route)
 
@@ -581,8 +591,9 @@ class TestSyncPathsRealDAO:
         assert mappings[0].content_hash
 
     @pytest.mark.asyncio
-    async def test_日历远端被编辑_revert回推本地内容(self):
-        from datetime import UTC, datetime
+    async def test_日历远端被编辑_拉回本地(self):
+        """双向: 手机编辑 (改标题+改时间) → pull_update 走 service, 本地被更新."""
+        from datetime import UTC, datetime, timedelta
 
         from src.storage.models.calendar_event import CalendarEvent
 
@@ -598,21 +609,86 @@ class TestSyncPathsRealDAO:
         )
         await engine._sync_calendar(fake, "it_rev", "cal-real", "Asia/Shanghai")
 
-        # 第二轮: 远端 lastModified 晚于映射时间 = 被外部编辑 → revert
-        map_dao = await engine._get_map_dao("it_rev")
-        mappings = await map_dao.list_by_kind("it_rev", _sync_kind_event())
-        remote_edited = [{
-            "id": "rid-evt-1",
-            "subject": "被改过的标题",
-            "lastModifiedDateTime": "2026-09-16T08:00:00.0000000Z",
-        }]
+        # 第二轮: 远端 lastModified 晚于映射时间 = 手机编辑 → 拉回本地
+        # (映射时间=第一轮 now, 编辑时间用 now+1h 动态生成 — 硬编码时间戳
+        # 会在跑过该时刻后翻转语义, 属定时炸弹)
+        edited_at = (datetime.now(UTC) + timedelta(hours=1)).strftime(
+            "%Y-%m-%dT%H:%M:%S.0000000Z"
+        )
+        remote_edited = [
+            {
+                "id": "rid-evt-1",
+                "subject": "手机上改的标题",
+                "lastModifiedDateTime": edited_at,
+                "start": {
+                    "dateTime": "2026-09-20T15:00:00",
+                    "timeZone": "Asia/Shanghai",
+                },
+                "end": {"dateTime": "2026-09-20T16:00:00", "timeZone": "Asia/Shanghai"},
+                "isAllDay": False,
+            }
+        ]
         route2, _ = self._router_for(remote_events=remote_edited)
         engine2, fake2 = await self._engine_with("it_rev", route2)
         n2 = await engine2._sync_calendar(
-            fake2, "it_rev", "cal-real", "Asia/Shanghai",
+            fake2,
+            "it_rev",
+            "cal-real",
+            "Asia/Shanghai",
         )
 
         assert n2 == 1
+        # 不再有 PATCH (revert 已翻转为 pull)
         patch_calls = [c for c in fake2.calls if c[0] == "PATCH"]
-        assert len(patch_calls) == 1
-        assert patch_calls[0][1] == "/me/events/rid-evt-1"
+        assert patch_calls == []
+        # 本地被远端内容更新 (走 service, 标题+时间)
+        events = await cal_dao.list_active("it_rev", limit=10)
+        assert len(events) == 1
+        assert events[0].title == "手机上改的标题"
+        stored_start = events[0].start_time
+        if stored_start.tzinfo is None:  # SQLite 读出 naive, 视为 UTC
+            stored_start = stored_start.replace(tzinfo=UTC)
+        assert stored_start == datetime(2026, 9, 20, 7, 0, tzinfo=UTC)
+
+    async def test_日历手机新建_拉入本地(self):
+        """双向: 专用日历内未映射单次事件 → pull_create 流入本地并建映射."""
+        from datetime import UTC, datetime, timedelta
+
+        remote_new = [
+            {
+                "id": "rid-phone-new",
+                "subject": "手机直接新建",
+                "lastModifiedDateTime": (
+                    datetime.now(UTC) + timedelta(hours=1)
+                ).strftime("%Y-%m-%dT%H:%M:%S.0000000Z"),
+                "start": {
+                    "dateTime": "2026-09-21T10:00:00",
+                    "timeZone": "Asia/Shanghai",
+                },
+                "end": {"dateTime": "2026-09-21T11:00:00", "timeZone": "Asia/Shanghai"},
+                "isAllDay": False,
+            }
+        ]
+        route, _ = self._router_for(remote_events=remote_new)
+        engine, fake = await self._engine_with("it_pull_new", route)
+
+        n = await engine._sync_calendar(
+            fake,
+            "it_pull_new",
+            "cal-real",
+            "Asia/Shanghai",
+        )
+
+        assert n == 1
+        cal_dao = await engine._get_calendar_dao("it_pull_new")
+        events = await cal_dao.list_active("it_pull_new", limit=10)
+        assert len(events) == 1
+        assert events[0].title == "手机直接新建"
+        stored_start = events[0].start_time
+        if stored_start.tzinfo is None:  # SQLite 读出 naive, 视为 UTC
+            stored_start = stored_start.replace(tzinfo=UTC)
+        assert stored_start == datetime(2026, 9, 21, 2, 0, tzinfo=UTC)
+        map_dao = await engine._get_map_dao("it_pull_new")
+        mappings = await map_dao.list_by_kind("it_pull_new", _sync_kind_event())
+        assert len(mappings) == 1
+        assert mappings[0].remote_id == "rid-phone-new"

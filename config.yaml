@@ -25,7 +25,7 @@ inference:
   # 工具筛选: SFT-0.8B 微调模型 (plain 名称直出形态, 对齐训练分布;
   # 覆盖默认 format:json — plain 与 json mode 互斥)
   tool_filter:
-    model: local:sft08b_v4:q8_0
+    model: local:sft08b_v6b:q8_0
     response_format: plain
     model_params:
       temperature: 0.0

@@ -7,6 +7,8 @@
 ```
 data/
 ├── {user_id}/
+│   ├── database/                 # 用户级统一库 (todo.db / calendar.db / graph_sync.db)
+│   │   └── credentials/          # 用户级凭证 (Graph token 等, 0600)
 │   └── {thread_id}/
 │       ├── {agent_id}/              # Agent 物理隔离目录
 │       │   ├── database/            # SQLite 数据库
@@ -17,6 +19,8 @@ data/
 
 **规范**: 基础路径 `data/` (可经 `BASE_DATA_PATH` 自定义); 用户/线程/Agent 三级隔离; 共享资源入 `shared/`; ID 经 `IDValidator` 安全化避免特殊字符.
 
+**用户级统一库**: 日历与 TODO 为用户级库 (`data/{user_id}/database/`, 经 `get_user_database_path()`), 跨线程/Agent 统一视图; thread/agent 降级为行级溯源字段. Graph 同步映射/设置 (`graph_sync.db`) 与用户凭证 (`credentials/`) 同为用户级.
+
 ## 核心 API
 
 `UserDataPathResolver` 单例, 优先用便捷函数而非实例方法. 函数签名、参数语义与示例见 `src/core/path_resolver.py` docstring.
@@ -25,6 +29,7 @@ data/
 - `get_thread_base_path(user_id, thread_id)`
 - `get_database_path(user_id, thread_id, db_name, *, agent_id)`
 - `get_vector_path(user_id, thread_id, *, agent_id)`
+- `get_user_database_path(user_id, db_name)` — 用户级统一库 (日历/TODO/Graph 同步)
 - `get_user_path_resolver()` 获取 resolver 实例, 用于 `get_storage_path()` 等高级接口
 
 ## 安全特性

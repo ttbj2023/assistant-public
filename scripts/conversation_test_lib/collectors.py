@@ -15,6 +15,13 @@ from scripts.conversation_test_lib.config import ConversationTestConfig
 # 服务日志行首时间戳: "2026-06-23 17:32:14,192" (本地时间, 与 datetime.now() 一致)
 _LOG_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})")
 
+# kb_read_image 直注短路行 (KbImageInjectMiddleware): 图片本体直注主对话,
+# 工具不执行 → tracker 无事件, 报告工具统计需从该行补齐
+_INJECT_LINE_RE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})"
+    r".*?_image_inject.*?知识库图片直注主对话: (\S+) \((\d+) bytes\)"
+)
+
 
 def _read_sqlite(db_path: Path, query: str) -> list[dict[str, Any]]:
     """执行 SQLite 查询并返回字典列表."""
@@ -138,23 +145,31 @@ def collect_db_data(config: ConversationTestConfig) -> dict[str, Any]:
 
 
 def collect_tool_call_logs(
-    session_start: float, logs_dir: Path
+    session_start_dt: datetime,
+    session_start: float,
+    logs_dir: Path,
+    extra_log_paths: list[Path] | None = None,
 ) -> list[dict[str, Any]]:
-    """采集工具调用日志 (tool_calls_*.json)."""
-    logs: list[dict[str, Any]] = []
-    if not logs_dir.exists():
-        return logs
+    """采集工具调用事件 (tool_calls_*.json + 服务日志直注短路事件).
 
-    for f in sorted(logs_dir.glob("tool_calls_*.json")):
-        if f.stat().st_mtime < session_start:
-            continue
-        with open(f, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                with contextlib.suppress(json.JSONDecodeError):
-                    logs.append(json.loads(line))
+    直注事件来自 KbImageInjectMiddleware 短路的 kb_read_image 调用,
+    工具本体未执行 → tracker 无记录, 从服务日志直注行合成补齐.
+    """
+    logs: list[dict[str, Any]] = []
+    if logs_dir.exists():
+        for f in sorted(logs_dir.glob("tool_calls_*.json")):
+            if f.stat().st_mtime < session_start:
+                continue
+            with open(f, encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    with contextlib.suppress(json.JSONDecodeError):
+                        logs.append(json.loads(line))
+    logs.extend(
+        collect_direct_inject_events(session_start_dt, logs_dir, extra_log_paths)
+    )
     return logs
 
 
@@ -278,3 +293,79 @@ def collect_server_logs(
             seen.add(key)
             unique.append(ev)
     return unique
+
+
+def _iter_scan_files(
+    logs_dir: Path, extra_log_paths: list[Path] | None
+) -> list[tuple[Path, bool]]:
+    """汇总服务日志扫描文件: logs_dir 内 server_*.log + 显式追加路径(文件或目录)."""
+    files: list[tuple[Path, bool]] = []
+    if logs_dir.exists():
+        for f in sorted(logs_dir.glob("*.log")):
+            if _is_server_instance_log(f.name):
+                files.append((f, True))
+    for p in extra_log_paths or []:
+        if p.is_dir():
+            files.extend((f, False) for f in sorted(p.glob("*.log")))
+        elif p.exists():
+            files.append((p, False))
+    return files
+
+
+def collect_direct_inject_events(
+    session_start_dt: datetime,
+    logs_dir: Path,
+    extra_log_paths: list[Path] | None = None,
+) -> list[dict[str, Any]]:
+    """采集 kb_read_image 直注短路事件, 合成 tracker 兼容事件对.
+
+    多模态主模型下 KbImageInjectMiddleware 短路工具本体 (原图直注主对话),
+    tool_call_tracker 无 tool_start/tool_end → 报告工具统计漏计该调用;
+    从服务日志 "🖼️ 知识库图片直注主对话" 行补齐, 每行对应一次调用.
+    """
+    events: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for f, _ in _iter_scan_files(logs_dir, extra_log_paths):
+        with open(f, encoding="utf-8", errors="replace") as fh:
+            for stripped in (line.rstrip("\n") for line in fh):
+                m = _INJECT_LINE_RE.match(stripped)
+                if not m:
+                    continue
+                ts_local, image_ref, size = m.groups()
+                try:
+                    entry_dt = datetime.strptime(ts_local, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    continue
+                if entry_dt < session_start_dt:
+                    continue
+                key = (ts_local, image_ref)
+                if key in seen:
+                    continue
+                seen.add(key)
+                ts_utc = datetime.fromtimestamp(
+                    entry_dt.timestamp(), tz=UTC
+                ).isoformat()
+                events.extend([
+                    {
+                        "ts": ts_utc,
+                        "type": "tool_start",
+                        "data": {
+                            "tool_name": "kb_read_image",
+                            "input_preview": f"{{'image_ref': '{image_ref}'}}",
+                        },
+                    },
+                    {
+                        "ts": ts_utc,
+                        "type": "tool_end",
+                        "data": {
+                            "tool_name": "kb_read_image",
+                            "duration_ms": 0,
+                            "success": True,
+                            "output_preview": (
+                                f"原图直注主对话 ({size} bytes, 多模态短路, 无视觉转述)"
+                            ),
+                        },
+                    },
+                ])
+    return events

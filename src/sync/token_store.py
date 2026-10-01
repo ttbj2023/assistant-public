@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -72,8 +73,13 @@ class GraphTokenStore:
             raise RuntimeError(f"Graph token 文件结构非法: {self._path}")
         return data
 
-    def save(self, tokens: dict[str, Any]) -> None:
+    async def save(self, tokens: dict[str, Any]) -> None:
         """原子写入 token 字典 (覆盖旧值).
+
+        async 形态满足 MSGraphClient.on_tokens_updated 的 Awaitable 契约
+        (refresh_tokens 内 await 调用; 同步形态曾致每轮 token 过期后
+        该轮同步失败 — "object NoneType can't be used in 'await'").
+
 
         Args:
             tokens: OAuth token 响应 (含 access_token / refresh_token)
@@ -82,6 +88,10 @@ class GraphTokenStore:
             OSError: 写入失败
 
         """
+        await asyncio.to_thread(self._write_tokens, tokens)
+
+    def _write_tokens(self, tokens: dict[str, Any]) -> None:
+        """同步原子写 (经 to_thread 在线程池执行, 不阻塞事件循环)."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         os.chmod(self._path.parent, 0o700)
         tmp_path = self._path.with_name(self._path.name + ".tmp")

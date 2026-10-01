@@ -28,13 +28,13 @@ logger = logging.getLogger("migrate_todo")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.storage.dao.async_database_manager import (  # noqa: E402
+from src.storage.dao.async_database_manager import (  # ruff: ignore[module-import-not-at-top-of-file]
     AsyncDatabaseManager,
     close_all_db_managers,
     create_async_todo_db_manager,
 )
-from src.storage.dao.database_operations import AsyncDatabaseOperations  # noqa: E402
-from src.storage.models.todo import TodoItem  # noqa: E402
+from src.storage.dao.database_operations import AsyncDatabaseOperations  # ruff: ignore[module-import-not-at-top-of-file]
+from src.storage.models.todo import TodoItem  # ruff: ignore[module-import-not-at-top-of-file]
 
 
 @dataclass
@@ -94,9 +94,29 @@ async def _read_legacy_rows(db_path: Path) -> list[TodoItem]:
         await manager.close()
 
 
-async def _write_user_level_rows(user_id: str, rows: list[TodoItem]) -> int:
-    """把行写入用户级库 (id 重新分配)."""
-    db_manager = await create_async_todo_db_manager(user_id)
+async def _write_user_level_rows(
+    user_id: str,
+    rows: list[TodoItem],
+    base_path: Path | None = None,
+) -> int:
+    """把行写入用户级库 (id 重新分配).
+
+    base_path 显式给定 (测试/审计) 时, 写入目标同样限制在
+    base_path/{user}/database/todo.db — 不得泄漏到 path_resolver
+    生产路径; 缺省走生产 resolver.
+    """
+    if base_path is None:
+        db_manager = await create_async_todo_db_manager(user_id)
+    else:
+        from src.storage.dao.async_database_manager import (
+            _get_or_create_db_manager,
+        )
+
+        target = base_path / user_id / "database" / "todo.db"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        db_manager = await _get_or_create_db_manager(
+            f"sqlite+aiosqlite:///{target}", tables=[TodoItem]
+        )
     written = 0
     async with db_manager.session_factory() as session:
         for row in rows:
@@ -149,7 +169,7 @@ async def migrate_todo_to_user_level(
             continue
         try:
             rows = await _read_legacy_rows(db_path)
-            written = await _write_user_level_rows(user_id, rows)
+            written = await _write_user_level_rows(user_id, rows, base_path)
             report.migrated_rows += written
             report.migrated_files.append(str(db_path))
             db_path.rename(db_path.with_name(db_path.name + ".migrated"))

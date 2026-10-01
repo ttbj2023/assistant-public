@@ -2,7 +2,7 @@
 
 [English](README_EN.md) | 中文
 
-一个生产级、真实运行的个人 AI 助手, 核心是**长期对话的记忆系统**与**渐进式工具编排**. 基于 LangChain v1.0 Agent 框架, v1.9.0.
+一个生产级、真实运行的个人 AI 助手, 核心是**长期对话的记忆系统**与**渐进式工具编排**. 基于 LangChain v1.0 Agent 框架, v1.12.0.
 
 ---
 
@@ -188,7 +188,15 @@ api (路由) -> session (消息队列/编排) -> agent (Agent框架)
 
 ### 多 Agent 物理隔离
 
-每个 Agent 拥有独立的 `database/` + `vector/` 目录, 文件系统级隔离. 配置驱动 (`agent.yaml`), 零硬编码. 当前含 Personal / Health / Thought 三个 Agent, 各自独立的身份、提示词、模型、工具、记忆预算.
+每个 Agent 拥有独立的 `database/` + `vector/` 目录, 文件系统级隔离. 配置驱动 (`agent.yaml`), 零硬编码. 当前含 Personal / Health / Thought 三个 Agent, 各自独立的身份、提示词、模型、工具、记忆预算. 日历与 TODO 为用户级统一库 (`data/{user_id}/database/`), 跨线程/Agent 统一视图.
+
+### 日历/TODO 与 Graph 同步
+
+用户级日历/TODO 子系统 + 与本人 Microsoft 账户 (MSA) 的自动同步:
+
+- **用户级统一库**: `calendar.db` / `todo.db` 落 `data/{user_id}/database/`, thread/agent 降级为行级溯源字段; ICS 订阅 feed 供手机日历只读拉取
+- **Graph 同步引擎** (`src/sync/`, 常驻后台): TODO 双向 + 日历双向 (添加/编辑拉回本地, 删除单向自愈), 专用容器不碰用户既有数据; 授权经 device code flow (`msgraph_connect` 工具或 REST), 双方都改以 `lastModifiedTime` 新者胜
+- 设计文档: [docs/development/msgraph-sync-design.md](docs/development/msgraph-sync-design.md)
 
 ### 渠道接入
 

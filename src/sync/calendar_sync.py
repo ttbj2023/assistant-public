@@ -1,9 +1,10 @@
-"""日历单向 push 同步纯函数 (字段换算 + diff 计划).
+"""日历同步纯函数 (字段换算 + diff 计划; 双向: 添加/编辑拉回, 删除单向自愈).
 
 无 IO: 引擎负责取数与执行, 本模块只做确定性换算与计划生成.
-语义: 本地是唯一权威, 远端为只读镜像 —— 远端被编辑时用本地内容 revert,
-远端被删除时重新 POST; 容器内非映射条目跳过不动 (用户手建数据).
-重复事件 (recurrence_rule 非空) 暂不同步 (设计既定).
+语义: 远端编辑 pull_update 拉回本地 (双方都改 lastModifiedTime 新者胜,
+相等本地胜); 远端新建 pull_create 流入本地; 远端被删除重新 POST
+(删除保持单向自愈); 重复事件 (recurrence_rule 非空) 暂不同步
+(push/pull 边界对称).
 """
 
 from __future__ import annotations
@@ -71,6 +72,50 @@ def local_event_to_graph_payload(event: CalendarEvent, *, tz: str) -> dict:
     return payload
 
 
+def graph_event_to_local_fields(event: dict[str, Any], *, tz: str) -> dict[str, Any]:
+    """Graph event -> 本地 CalendarEvent 写入字段 (pull_update/pull_create 用).
+
+    local_event_to_graph_payload 的逆换算: 定时事件挂钟串按事件时区还原为
+    aware UTC; 全天事件 Graph 的 exclusive 次日零点还原为本地 inclusive
+    结束日 (与 ics_builder 同构语义). dateTime 携带偏移时偏移优先.
+    """
+    zone_name = str((event.get("start") or {}).get("timeZone") or tz)
+
+    def _parse_wall_clock(part: Any) -> datetime | None:
+        if not isinstance(part, dict):
+            return None
+        raw = str(part.get("dateTime") or "")
+        if not raw:
+            return None
+        parsed = datetime.fromisoformat(raw)
+        if parsed.tzinfo is None:
+            zone = (
+                ZoneInfo("UTC") if zone_name.upper() == "UTC" else ZoneInfo(zone_name)
+            )
+            parsed = parsed.replace(tzinfo=zone)
+        return parsed.astimezone(UTC)
+
+    start = _parse_wall_clock(event.get("start"))
+    end = _parse_wall_clock(event.get("end"))
+    all_day = bool(event.get("isAllDay"))
+    if all_day and end is not None:
+        # Graph exclusive 次日零点 -> 本地 inclusive 结束日
+        end = end - timedelta(days=1)
+
+    body = event.get("body") or {}
+    location = event.get("location") or {}
+    description = str(body.get("content") or "")
+    location_name = str(location.get("displayName") or "")
+    return {
+        "title": str(event.get("subject") or ""),
+        "description": description or None,
+        "location": location_name or None,
+        "start_time": start,
+        "end_time": end,
+        "all_day": all_day,
+    }
+
+
 def calendar_content_hash(event: CalendarEvent) -> str:
     """业务字段摘要 (不含 id/时间戳/重复规则), 用于"本地是否已改"判定."""
     parts = "|".join([
@@ -90,12 +135,14 @@ class CalendarSyncPlan:
 
     actions: 引擎执行的动作; foreign_remote_ids: 容器内非映射远端条目
     (用户手建数据, 跳过不动, 引擎告警); recurring_skipped_local_ids:
-    变为重复事件的已映射本地条目 (暂不同步, 引擎告警).
+    变为重复事件的已映射本地条目 (暂不同步, 引擎告警);
+    recurring_skipped_remote_ids: 手机新建的重复系列 (暂不流入, 引擎告警).
     """
 
     actions: list[SyncAction] = field(default_factory=list)
     foreign_remote_ids: list[str] = field(default_factory=list)
     recurring_skipped_local_ids: list[int] = field(default_factory=list)
+    recurring_skipped_remote_ids: list[str] = field(default_factory=list)
 
 
 def compute_calendar_sync_plan(
@@ -105,7 +152,7 @@ def compute_calendar_sync_plan(
     *,
     tz: str,
 ) -> CalendarSyncPlan:
-    """计算一轮单向 push 同步计划.
+    """计算一轮日历同步计划.
 
     Args:
         local_events: 本地全部事件 (含各状态)
@@ -114,7 +161,7 @@ def compute_calendar_sync_plan(
         tz: 用户时区 (IANA, 请求体换算用)
 
     Returns:
-        动作集合; 空动作 = 镜像一致
+        动作集合; 空动作 = 双侧一致
 
     """
     local_by_id = {e.id: e for e in local_events if e.id is not None}
@@ -177,8 +224,45 @@ def compute_calendar_sync_plan(
             and remote_modified > last_synced
         )
 
-        if local_changed or remote_edited:
-            # 本地是唯一权威: 本地已改或远端被外部编辑, 均以本地内容覆盖 (revert)
+        if local_changed and remote_edited:
+            # 双方都改: lastModifiedTime 新者胜, 相等本地胜 (与 TODO 同构)
+            local_updated = local.updated_at
+            if local_updated is not None and local_updated.tzinfo is None:
+                local_updated = local_updated.replace(tzinfo=UTC)
+            local_newer = (
+                local_updated is not None
+                and remote_modified is not None
+                and local_updated >= remote_modified
+            )
+            if local_newer:
+                actions.append(
+                    SyncAction(
+                        kind="push_update",
+                        local_id=mapping.local_id,
+                        remote_id=str(mapping.remote_id),
+                        payload=local_event_to_graph_payload(local, tz=tz),
+                    ),
+                )
+            else:
+                actions.append(
+                    SyncAction(
+                        kind="pull_update",
+                        local_id=mapping.local_id,
+                        remote_id=str(mapping.remote_id),
+                        fields=graph_event_to_local_fields(remote, tz=tz),
+                    ),
+                )
+        elif remote_edited:
+            # 远端编辑且本地未改: 拉回本地 (双向; 原 revert 语义已翻转)
+            actions.append(
+                SyncAction(
+                    kind="pull_update",
+                    local_id=mapping.local_id,
+                    remote_id=str(mapping.remote_id),
+                    fields=graph_event_to_local_fields(remote, tz=tz),
+                ),
+            )
+        elif local_changed:
             actions.append(
                 SyncAction(
                     kind="push_update",
@@ -205,12 +289,28 @@ def compute_calendar_sync_plan(
             ),
         )
 
-    foreign = [rid for rid in remote_by_id if rid not in mapped_remote_ids]
+    # 未映射远端事件 (手机在专用日历直接新建) → 拉入本地;
+    # 重复系列暂不流入 (RRULE 转换器缺失, 与 push 侧边界对称)
+    recurring_remote: list[str] = []
+    for rid, event in remote_by_id.items():
+        if rid in mapped_remote_ids:
+            continue
+        if event.get("recurrence") or event.get("seriesMasterId"):
+            recurring_remote.append(rid)
+            continue
+        actions.append(
+            SyncAction(
+                kind="pull_create",
+                remote_id=rid,
+                fields=graph_event_to_local_fields(event, tz=tz),
+            ),
+        )
 
     return CalendarSyncPlan(
         actions=actions,
-        foreign_remote_ids=foreign,
+        foreign_remote_ids=[],
         recurring_skipped_local_ids=recurring,
+        recurring_skipped_remote_ids=recurring_remote,
     )
 
 

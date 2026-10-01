@@ -1,6 +1,6 @@
 # config.yaml 参考
 
-**版本**: v2 | **更新**: 2026-08-12
+**版本**: v2 | **更新**: 2026-09-16
 
 `config.yaml` 只保存非敏感应用配置。未知字段会被 `config_doctor --strict` 拒绝。密钥不要写入本文件。
 
@@ -268,7 +268,8 @@ smtp:
 
 ## calendar_sync
 
-Graph 同步引擎全局默认配置 (MSA 个人账户: TODO 双向 + 日历单向 push):
+Graph 同步引擎全局默认配置 (MSA 个人账户: TODO 双向 + 日历双向添加/编辑,
+删除单向自愈, 设计见 `docs/development/msgraph-sync-design.md`):
 ```yaml
 calendar_sync:
   enabled: true            # false 时引擎不启动

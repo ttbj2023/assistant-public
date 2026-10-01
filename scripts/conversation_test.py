@@ -64,7 +64,9 @@ def main() -> None:
     print(f"  - 向量: {vec.get('chroma_size_human', '未找到')}")
 
     print(f"\n{_cyan('[采集]')} 正在解析工具调用日志...")
-    tool_logs = collect_tool_call_logs(session_start, config.logs_dir)
+    tool_logs = collect_tool_call_logs(
+        session_start_dt, session_start, config.logs_dir, args.server_log
+    )
     tool_names = set()
     for ev in tool_logs:
         if ev.get("type") in ("tool_start", "tool_end", "tool_error"):

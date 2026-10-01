@@ -1,16 +1,16 @@
 # 测试体系
 
-Personal Agent Assistant v1.9.0 三层测试体系. 设计规范总览见 [docs/development/testing.md](../docs/development/testing.md).
+Personal Agent Assistant v1.12.0 三层测试体系. 设计规范总览见 [docs/development/testing.md](../docs/development/testing.md).
 
-## 当前状态 (2026-09-04)
+## 当前状态 (2026-09-16)
 
 | 类型 | 测试数 | 文件数 | 通过率 | 性质 |
 |------|--------|--------|--------|------|
-| 单元 | 3134 | 211 | 100% | 白盒, Mock 外部依赖 |
-| 集成 | 106 | 27 | 100% | 灰盒, 真实组件协作 |
-| E2E | 18 | 7 | 100% | 灰盒, ASGI TestClient 进程内 |
+| 单元 | 3480 | 241 | 100% | 白盒, Mock 外部依赖 |
+| 集成 | 133 | 30 | 100% | 灰盒, 真实组件协作 |
+| E2E | 19 | 7 | 100% | 灰盒, ASGI TestClient 进程内 |
 
-综合行覆盖率(unit+integration) 85.15%, CI 门禁 80%总/75%分支/85%行 (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
+综合行覆盖率(unit+integration) 85.7%, CI 门禁 80%总/75%分支/85%行 (pyproject.toml fail_under). 静态分析双模式: 核心模式=CI门禁(阻断), 完整模式=探索工具(改进信号, 非阻断). Mock 工厂统一可用.
 
 ## 目录结构
 
@@ -31,8 +31,8 @@ tests/
 > 完整命令与受限沙盒注意事项见 [AGENTS.md](../AGENTS.md) "开发命令速查".
 
 ```bash
-python scripts/run_test_suite.py --quick     # 快速验证 (~14秒)
-python scripts/run_test_suite.py             # 完整验证 (~16秒)
+python scripts/run_test_suite.py --quick     # 快速验证 (~12秒)
+python scripts/run_test_suite.py             # 完整验证 (~30秒)
 pytest tests/unit/                           # 直接 pytest
 pytest -n 6 tests/unit/                      # 并发单元 (~9秒)
 pytest tests/integration/                    # 集成 (100% 标记覆盖)
@@ -56,7 +56,7 @@ pytest tests/e2e/                            # E2E (进程内, 无需启动服�
 -m "unit or (not integration and not e2e)"
 ```
 
-效果: 优先跑带 `unit` 标记的，兜底跑所有非集成/非 E2E 测试; 集成/E2E 不跑 (实际 48 有标记 + 3086 无标记 = 3134 全覆盖)。集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，可直接 `pytest -m integration` 全量收集；E2E 目录要求 100% 显式标记覆盖，可直接 `pytest -m e2e`。
+效果: 优先跑带 `unit` 标记的，兜底跑所有非集成/非 E2E 测试; 集成/E2E 不跑 (实际 48 有标记 + 3432 无标记 = 3480 全覆盖)。集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，可直接 `pytest -m integration` 全量收集；E2E 目录要求 100% 显式标记覆盖，可直接 `pytest tests/e2e/ -m e2e`。
 
 ```python
 # 类级别标记 (推荐, 减少重复)

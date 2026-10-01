@@ -88,7 +88,7 @@ pytest tests/e2e/ -n 0                       # E2E 串行
 -m "unit or (not integration and not e2e)"
 ```
 
-集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，因此可直接通过 `-m integration` 全量收集；E2E 测试直接通过 `-m e2e` 精确筛选. 标记注册细节见 `pyproject.toml`.
+集成测试由 `tests/integration/conftest.py` 自动补标 `integration`，因此可直接通过 `-m integration` 全量收集；E2E 目录被根配置 `--ignore=tests/e2e` 默认排除 (独立 pytest.ini 串行)，需显式 `pytest tests/e2e/` 运行. 标记注册细节见 `pyproject.toml`.
 
 ## 参考资源
 

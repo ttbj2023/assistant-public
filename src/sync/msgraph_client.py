@@ -3,9 +3,9 @@
 授权通道移植自 homelab scripts/graph_*.py: 主通道为自建 app registration
 「JFT Assistant」的 device code flow (client_id 经 MS_GRAPH_CLIENT_ID 注入),
 拿 delegated token, 只能操作本人数据 (/me 视角); 自建 app 不可用时回退
-第一方公共客户端 (见 DEFAULT_PUBLIC_CLIENT_ID). 本通道与 homelab CLI 通道
-各自独立授权同一 client, 不共享 token 文件 (refresh token 每次刷新轮换,
-两处共享同一文件会互相打断).
+第一方公共客户端 (见 DEFAULT_PUBLIC_CLIENT_ID). homelab CLI 通道已于
+2026-09-16 退役 (脚本与 token 已清理), 本通道现为该 client 唯一持有者;
+token 文件不与任何外部方共享 (refresh token 每次刷新轮换, 共享会互相打断).
 
 生命周期约定: http 客户端由调用方注入并持有 (引擎共享连接池), 本类不负责
 关闭; tokens 为用户级状态, 每用户一个实例, 轮换经 on_tokens_updated 回调落盘.

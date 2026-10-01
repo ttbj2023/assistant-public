@@ -1,6 +1,43 @@
 # 项目变更日志
 
-**版本**: v1.11.0 | **更新**: 2026-09-16
+**版本**: v1.12.0 | **更新**: 2026-09-16
+
+## 0.8B 降噪模型切换 v4 -> v6b (2026-09-16)
+
+- `inference.tool_filter.model`: `local:sft08b_v4:q8_0` -> `local:sft08b_v6b:q8_0`
+- v6b = P4 豁免对齐训练集 + 所有权标签修复 + 目录同步 (闭环见 finetune 仓库
+  docs/benchmarks.md): AR 生产门禁 100%/噪音 1.6 (v4 100%/2.1); NL 回归四轮
+  对照统计等价 (v4 自身重跑 94.1->91.2); 修好 v4 稳定失败的双意图提醒类
+- 旧 SFT 版本 (v3/v4/v5/v6/slim_e8/sft2b) 从 ollama 移除; v4 回滚产物
+  保留于 finetune runs/sft_v4_relaxed/gguf_q8/
+
+## agent_retrieval 基准补 P4 豁免模拟 (2026-09-16)
+
+- AR 建于 P4 之前, 送全量候选; 生产 filter_tools_by_llm 已把 name_hit/`_filter_score>=8.0` 候选结构性豁免出送审集. 补齐后 query 109 -> 80 (送审<2 正确跳过), 豁免金标计结构性保持
+- model_registry 注册 sft08b_v6/v6b (finetune 仓库 P4 对齐 + 所有权标签修复版本, 闭环结论见 finetune docs/benchmarks.md)
+
+## tool_filter 基准口径修正: 定位为自然语言回归集 (2026-09-16)
+
+- **角色澄清**: 生产链路喂给降噪模型的是 agent 写的**关键词 query**, 其评测与门禁在 agent_retrieval 基准 (all-runs 严格口径); tool_filter 的 query 是用户**自然语言**, 定位为回归集 (能力上限/防灾难遗忘). 此前 `--prod*` 命名把"任务形态复刻"误读成"生产分布评测"
+- **改名** (无逻辑变更): `--prod` / `--prod-names` / `--prod-plain` → `--form*`; `prod_mode.py` → `task_form.py`; 报告 mode 值与结果文件前缀 `tool_filter_prod*` → `tool_filter_form*`; "生产模式"文案 → "任务形态模式", 并在 CLI/模块/用例文档写明两基准分工
+
+## 日历同步升级为双向 (添加/编辑双向, 删除留在 agent 侧) (2026-09-16)
+
+- **语义翻转**: 手机 Outlook 编辑专用 "Assistant" 日历 (拖拽改期/改名) →
+  `pull_update` 拉回本地 (原 revert 覆盖语义废弃); 双方都改 lastModifiedTime
+  新者胜 (与 TODO 同构); 手机直接新建 → `pull_create` 流入本地
+  (溯源 `source_thread_id="graph_sync"`); **删除保持单向自愈** (远端被删 →
+  重新 POST, 手机端基本不删, 该分支纯风险无收益; ICS 订阅天然只读不受影响)
+- **级联协同**: pull_update 必须走 `CalendarService.update_event` —— 手机
+  拖拽改期自动触发影子级联 (关联定时消息顺延), "影子跟随本体"延伸到手机侧
+- **修复 (P3 遗留真 bug)**: `update_event` 级联 delta 混用 aware 输入与
+  DB naive 读出会抛 TypeError — 时间归一 `_as_aware_utc` 后再校验/求偏移
+  (真实工具/pull 链路必炸, 单测 aware mock 未暴露)
+- 远端拉取 `$select` 扩全字段 (start/end/isAllDay/body/location/recurrence);
+  手机新建的重复系列暂不流入 (RRULE 转换器缺失, 与 push 侧边界对称)
+- **修复**: `GraphTokenStore.save` 违反 Awaitable 契约 — token 过期轮同步
+  必失败 (await 同步回调抛 NoneType, 10 分钟后自愈); save 改 async
+  (原子写经 to_thread), 生产每 token 周期丢一轮的窗口消除
 
 ## 日程-提醒所有权设计 + 领域工具全折叠 + 0.8B 过滤层加固 (2026-09-16)
 

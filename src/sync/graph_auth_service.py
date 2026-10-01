@@ -232,7 +232,7 @@ class GraphAuthService:
         except asyncio.CancelledError:
             raise
 
-        self._token_store(user_id).save(tokens)
+        await self._token_store(user_id).save(tokens)
         flow = self._pending.pop(user_id, None)
         logger.info("MSA 授权完成: user=%s", user_id)
 

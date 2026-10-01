@@ -1,4 +1,4 @@
-"""Graph 同步引擎 (TODO 双向 + 日历单向 push).
+"""Graph 同步引擎 (TODO 双向 + 日历双向, 删除单向自愈).
 
 PriceAlertEngine 同款骨架: 全局单例, FastAPI lifespan 启停, 周期 tick +
 per-user 写后即时信号 (wake). 每 tick 逐用户串行同步 (Graph 限流友好);
@@ -220,7 +220,7 @@ class GraphSyncEngine:
                 )
 
     async def sync_user(self, user_id: str) -> UserSyncOutcome:
-        """同步单个用户 (TODO 双向 + 日历单向 push)."""
+        """同步单个用户 (TODO 双向 + 日历双向, 删除单向自愈)."""
         store = GraphTokenStore(user_id, base_path=self._base_path)
         tokens = store.load()
         if tokens is None:
@@ -417,7 +417,7 @@ class GraphSyncEngine:
             await todo_dao.delete_todo(action.local_id)
             await map_dao.delete_by_local(user_id, _todo_kind(), action.local_id)
 
-    # ── 日历单向 push ─────────────────────────────────────
+    # ── 日历同步 (双向: 添加/编辑拉回, 删除单向自愈) ──────
 
     async def _sync_calendar(
         self,
@@ -431,7 +431,8 @@ class GraphSyncEngine:
         remote = await self._fetch_paged(
             client,
             f"/me/calendars/{cal_id}/events"
-            f"?$top=100&$select=id,subject,lastModifiedDateTime",
+            f"?$top=100&$select=id,subject,start,end,isAllDay,body,"
+            f"lastModifiedDateTime,location,recurrence,seriesMasterId",
         )
         map_dao = await self._get_map_dao(user_id)
         mappings = await map_dao.list_by_kind(user_id, _event_kind())
@@ -446,6 +447,11 @@ class GraphSyncEngine:
             logger.warning(
                 "已映射事件变为重复规则, 暂不同步保留远端现状: %s",
                 plan.recurring_skipped_local_ids[:5],
+            )
+        if plan.recurring_skipped_remote_ids:
+            logger.warning(
+                "手机新建的重复系列暂不流入本地 (RRULE 转换未支持): %s",
+                plan.recurring_skipped_remote_ids[:5],
             )
         local_by_id = {e.id: e for e in local if e.id is not None}
         for action in plan.actions:
@@ -546,6 +552,78 @@ class GraphSyncEngine:
                     "日历 push_delete 失败 HTTP %s: remote=%s",
                     status,
                     action.remote_id,
+                )
+        elif kind == "pull_create":
+            # 手机在专用日历直接新建 → 流入本地; 走 CalendarService 保持
+            # 与工具/REST 同一入口 (溯源 thread_id="graph_sync")
+            fields = dict(action.fields or {})
+            start_time = fields.get("start_time")
+            if start_time is None:
+                logger.warning(
+                    "日历 pull_create 缺 start_time, 跳过: remote=%s",
+                    action.remote_id,
+                )
+                return
+            from src.storage.service.service_factory import create_calendar_service
+
+            cal_service = await create_calendar_service(user_id)
+            created = await cal_service.create_event(
+                title=str(fields.get("title") or "未命名事件"),
+                start_time=start_time,
+                end_time=fields.get("end_time") or start_time,
+                description=fields.get("description"),
+                location=fields.get("location"),
+                all_day=bool(fields.get("all_day")),
+                source_thread_id="graph_sync",
+            )
+            if created.id is not None:
+                await map_dao.upsert(
+                    user_id=user_id,
+                    kind=_event_kind(),
+                    local_id=created.id,
+                    remote_id=str(action.remote_id),
+                    content_hash=calendar_content_hash(created),
+                    last_synced_at=now_utc(),
+                )
+        elif kind == "pull_update":
+            # 手机编辑 (拖拽改期等) → 拉回本地; 必须走 CalendarService:
+            # update_event 内含影子级联 (关联定时消息自动顺延), 直捣
+            # DAO 会绕过级联
+            from src.storage.service.service_factory import create_calendar_service
+
+            cal_service = await create_calendar_service(user_id)
+            fields = dict(action.fields or {})
+            update_data = {
+                k: v
+                for k, v in fields.items()
+                if v is not None or k in ("description", "location")
+            }
+            if "start_time" not in update_data:
+                logger.warning(
+                    "日历 pull_update 缺 start_time, 跳过: local=%s",
+                    action.local_id,
+                )
+                return
+            result = await cal_service.update_event(int(action.local_id), update_data)
+            if result.event is not None:
+                if result.cascade.rescheduled_message_ids:
+                    logger.info(
+                        "手机改期级联顺延影子: local=%s -> %s",
+                        action.local_id,
+                        result.cascade.rescheduled_message_ids,
+                    )
+                await map_dao.upsert(
+                    user_id=user_id,
+                    kind=_event_kind(),
+                    local_id=action.local_id,
+                    remote_id=str(action.remote_id),
+                    content_hash=calendar_content_hash(result.event),
+                    last_synced_at=now_utc(),
+                )
+            else:
+                logger.warning(
+                    "日历 pull_update 本地条目不存在: local=%s",
+                    action.local_id,
                 )
 
     # ── 远端取数 (分页) ───────────────────────────────────

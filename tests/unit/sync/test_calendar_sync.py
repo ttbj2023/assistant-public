@@ -16,6 +16,7 @@ from src.storage.models.sync_map import SyncItemKind, SyncMap
 from src.sync.calendar_sync import (
     calendar_content_hash,
     compute_calendar_sync_plan,
+    graph_event_to_local_fields,
     local_event_to_graph_payload,
 )
 
@@ -53,12 +54,31 @@ def _remote(
     rid: str = "rid-1",
     subject: str = "牙医",
     last_modified: str = "2026-09-15T08:00:00.0000000Z",
+    start: str = "2026-09-20T10:00:00",
+    end: str = "2026-09-20T11:00:00",
+    all_day: bool = False,
+    body: str | None = None,
+    location: str | None = None,
+    recurrence: dict | None = None,
+    series_master: str | None = None,
 ) -> dict:
-    return {
+    remote: dict = {
         "id": rid,
         "subject": subject,
         "lastModifiedDateTime": last_modified,
+        "start": {"dateTime": start, "timeZone": TZ},
+        "end": {"dateTime": end, "timeZone": TZ},
+        "isAllDay": all_day,
     }
+    if body is not None:
+        remote["body"] = {"contentType": "text", "content": body}
+    if location is not None:
+        remote["location"] = {"displayName": location}
+    if recurrence is not None:
+        remote["recurrence"] = recurrence
+    if series_master is not None:
+        remote["seriesMasterId"] = series_master
+    return remote
 
 
 def _mapping(
@@ -147,6 +167,81 @@ class TestLocalToGraphPayload:
         assert "location" not in payload
 
 
+class TestGraphToLocalFields:
+    """Graph event -> 本地字段逆换算 (pull_update/pull_create 用)."""
+
+    def test_定时事件_挂钟串按事件时区还原为UTC(self):
+        remote = {
+            "subject": "评审会",
+            "start": {"dateTime": "2026-09-20T10:00:00", "timeZone": "Asia/Shanghai"},
+            "end": {"dateTime": "2026-09-20T11:00:00", "timeZone": "Asia/Shanghai"},
+            "isAllDay": False,
+            "body": {"contentType": "text", "content": "带材料"},
+            "location": {"displayName": "会议室A"},
+        }
+
+        fields = graph_event_to_local_fields(remote, tz=TZ)
+
+        assert fields["title"] == "评审会"
+        assert fields["description"] == "带材料"
+        assert fields["location"] == "会议室A"
+        assert fields["all_day"] is False
+        assert fields["start_time"] == datetime(2026, 9, 20, 2, 0, tzinfo=UTC)
+        assert fields["end_time"] == datetime(2026, 9, 20, 3, 0, tzinfo=UTC)
+
+    def test_全天事件_exclusive次日零点还原inclusive结束日(self):
+        remote = {
+            "subject": "出游",
+            "start": {"dateTime": "2026-10-01T00:00:00", "timeZone": "Asia/Shanghai"},
+            "end": {"dateTime": "2026-10-03T00:00:00", "timeZone": "Asia/Shanghai"},
+            "isAllDay": True,
+        }
+
+        fields = graph_event_to_local_fields(remote, tz=TZ)
+
+        assert fields["all_day"] is True
+        assert fields["start_time"] == datetime(2026, 9, 30, 16, 0, tzinfo=UTC)
+        assert fields["end_time"] == datetime(2026, 10, 1, 16, 0, tzinfo=UTC)
+
+    def test_空body与location降级为None(self):
+        remote = {
+            "subject": "只有标题",
+            "start": {"dateTime": "2026-09-20T10:00:00", "timeZone": "Asia/Shanghai"},
+            "end": {"dateTime": "2026-09-20T11:00:00", "timeZone": "Asia/Shanghai"},
+            "isAllDay": False,
+        }
+
+        fields = graph_event_to_local_fields(remote, tz=TZ)
+
+        assert fields["description"] is None
+        assert fields["location"] is None
+
+    def test_与正向payload往返一致(self):
+        """本地 → Graph → 本地 应还原同一业务字段 (双向一致性的基石)."""
+        from zoneinfo import ZoneInfo
+
+        local_start = datetime(2026, 10, 1, 0, 0, tzinfo=ZoneInfo(TZ))
+        local_end = datetime(2026, 10, 2, 0, 0, tzinfo=ZoneInfo(TZ))  # inclusive 结束日
+        event = _event(
+            title="往返",
+            start=local_start,
+            end=local_end,
+            all_day=True,
+            description="备注",
+            location="地点",
+        )
+
+        payload = local_event_to_graph_payload(event, tz=TZ)
+        fields = graph_event_to_local_fields(payload, tz=TZ)
+
+        assert fields["title"] == "往返"
+        assert fields["description"] == "备注"
+        assert fields["location"] == "地点"
+        assert fields["all_day"] is True
+        assert fields["start_time"] == local_start.astimezone(UTC)
+        assert fields["end_time"] == local_end.astimezone(UTC)
+
+
 class TestContentHash:
     """内容摘要测试 (本地是否已改判定)."""
 
@@ -210,16 +305,70 @@ class TestComputePlan:
         assert [a.kind for a in plan.actions] == ["push_update"]
         assert plan.actions[0].payload["subject"] == "复诊"
 
-    def test_远端被外部编辑_用本地内容revert(self):
+    def test_远端被外部编辑_拉回本地(self):
+        """双向: 远端编辑且本地未改 → pull_update (原 revert 语义已翻转)."""
         event = _event()
         mapping = _mapping(content_hash=calendar_content_hash(event))
-        # 远端 lastModified 晚于上次同步 = 外部编辑
+        remote = _remote(
+            last_modified="2026-09-16T08:00:00.0000000Z",
+            subject="手机上改名",
+            start="2026-09-20T15:00:00",
+        )
+
+        plan = compute_calendar_sync_plan([event], [remote], [mapping], tz=TZ)
+
+        assert [a.kind for a in plan.actions] == ["pull_update"]
+        action = plan.actions[0]
+        assert action.local_id == 1
+        assert action.remote_id == "rid-1"
+        assert action.fields["title"] == "手机上改名"
+        assert action.fields["start_time"] == datetime(2026, 9, 20, 7, 0, tzinfo=UTC)
+
+    def test_双方都改_远端新者胜(self):
+        event = _event()  # updated_at 缺省为 None
+        event.updated_at = datetime(2026, 9, 15, 10, 0, tzinfo=UTC)
+        mapping = _mapping(content_hash="stale-hash")
+        remote = _remote(last_modified="2026-09-16T08:00:00.0000000Z")
+
+        plan = compute_calendar_sync_plan([event], [remote], [mapping], tz=TZ)
+
+        assert [a.kind for a in plan.actions] == ["pull_update"]
+
+    def test_双方都改_本地新者胜(self):
+        event = _event()
+        event.updated_at = datetime(2026, 9, 17, 0, 0, tzinfo=UTC)
+        mapping = _mapping(content_hash="stale-hash")
         remote = _remote(last_modified="2026-09-16T08:00:00.0000000Z")
 
         plan = compute_calendar_sync_plan([event], [remote], [mapping], tz=TZ)
 
         assert [a.kind for a in plan.actions] == ["push_update"]
-        assert plan.actions[0].payload["subject"] == "牙医"
+
+    def test_未映射远端事件_拉入本地(self):
+        """手机在专用日历新建 (单次事件) → pull_create 流入本地."""
+        remote = _remote(
+            rid="rid-new",
+            subject="手机新建",
+            last_modified="2026-09-16T08:00:00.0000000Z",
+        )
+
+        plan = compute_calendar_sync_plan([], [remote], [], tz=TZ)
+
+        assert [a.kind for a in plan.actions] == ["pull_create"]
+        assert plan.actions[0].remote_id == "rid-new"
+        assert plan.actions[0].fields["title"] == "手机新建"
+
+    def test_未映射远端重复系列_跳过并告警(self):
+        """手机新建的重复系列 (recurrence/seriesMasterId) 暂不流入."""
+        remote = _remote(
+            rid="rid-series",
+            recurrence={"pattern": {"type": "daily"}},
+        )
+
+        plan = compute_calendar_sync_plan([], [remote], [], tz=TZ)
+
+        assert plan.actions == []
+        assert plan.recurring_skipped_remote_ids == ["rid-series"]
 
     def test_远端被删除_重新POST保持镜像(self):
         event = _event()
@@ -229,16 +378,6 @@ class TestComputePlan:
 
         assert [a.kind for a in plan.actions] == ["push_create"]
         assert plan.actions[0].local_id == 1
-
-    def test_双方都变_本地权威推送本地内容(self):
-        event = _event(title="本地改的")
-        mapping = _mapping(content_hash=calendar_content_hash(_event()))
-        remote = _remote(last_modified="2026-09-16T08:00:00.0000000Z")
-
-        plan = compute_calendar_sync_plan([event], [remote], [mapping], tz=TZ)
-
-        assert [a.kind for a in plan.actions] == ["push_update"]
-        assert plan.actions[0].payload["subject"] == "本地改的"
 
     def test_未映射active事件_推送创建(self):
         event = _event(id=7)
@@ -270,18 +409,3 @@ class TestComputePlan:
 
         assert plan.actions == []
         assert plan.recurring_skipped_local_ids == [1]
-
-    def test_容器内非映射远端条目_跳过并记录(self):
-        # 用户在 Outlook 手建的事件, 映射表不认识 → 不动, 记 foreign
-        event = _event()
-        mapping = _mapping(content_hash=calendar_content_hash(event))
-
-        plan = compute_calendar_sync_plan(
-            [event],
-            [_remote(), _remote(rid="rid-foreign", subject="手建")],
-            [mapping],
-            tz=TZ,
-        )
-
-        assert plan.actions == []
-        assert plan.foreign_remote_ids == ["rid-foreign"]

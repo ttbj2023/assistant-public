@@ -1,6 +1,6 @@
-"""prod 模式解析器单元测试: JSON 宽容解析与 plain 自由文本解析."""
+"""任务形态模式解析器单元测试: JSON 宽容解析与 plain 自由文本解析."""
 
-from scripts.benchmarks.tool_filter.prod_mode import (
+from scripts.benchmarks.tool_filter.task_form import (
     _parse_plain_names,
     _parse_relevant_indices,
     _parse_relevant_names,

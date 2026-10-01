@@ -134,9 +134,7 @@ class TestUpdateEvent:
         mock_update.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_update_time_change_reschedules_shadows(
-        self, service, sample_event
-    ):
+    async def test_update_time_change_reschedules_shadows(self, service, sample_event):
         """改时间应按偏移顺延影子消息并写入级联报告."""
         new_start = sample_event.start_time + timedelta(hours=2)
         updated = MagicMock()
@@ -159,9 +157,39 @@ class TestUpdateEvent:
         assert delta == timedelta(hours=2)
 
     @pytest.mark.asyncio
-    async def test_update_title_only_reports_linked_count(
-        self, service, sample_event
-    ):
+    async def test_update_mixed_tz_awareness_computes_cascade(self, service):
+        """DB 读出 naive + update_data aware (工具/pull 链路) 混形态不得炸.
+
+        回归: 级联 delta 曾用 existing.start_time (naive) 直接减 aware
+        输入抛 TypeError — pull_update 真实链路 (SQLite 读出) 触发.
+        """
+        existing = MagicMock()
+        existing.user_id = "user1"
+        existing.start_time = datetime(2026, 9, 20, 2, 0)  # naive UTC (DB 形态)
+        updated = MagicMock()
+        updated.start_time = datetime(2026, 9, 20, 6, 0, tzinfo=UTC)  # aware
+        service.dao.get_event_by_id = AsyncMock(return_value=existing)
+        service.dao.update_event = AsyncMock(return_value=updated)
+
+        with patch(
+            "src.storage.service.scheduled_message_cascade."
+            "reschedule_shadows_for_event",
+            new=AsyncMock(return_value=["msg-1"]),
+        ) as mock_resched:
+            result = await service.update_event(
+                1,
+                {
+                    "start_time": datetime(2026, 9, 20, 6, 0, tzinfo=UTC),
+                    "end_time": datetime(2026, 9, 20, 7, 0, tzinfo=UTC),
+                },
+            )
+
+        delta = mock_resched.call_args.args[2]
+        assert delta == timedelta(hours=4)
+        assert result.cascade.rescheduled_message_ids == ["msg-1"]
+
+    @pytest.mark.asyncio
+    async def test_update_title_only_reports_linked_count(self, service, sample_event):
         """仅改非时间字段不级联, 报告关联影子数量."""
         service.dao.get_event_by_id = AsyncMock(return_value=sample_event)
         service.dao.update_event = AsyncMock(return_value=sample_event)
@@ -173,8 +201,7 @@ class TestUpdateEvent:
                 new=AsyncMock(return_value=[]),
             ) as mock_resched,
             patch(
-                "src.storage.service.scheduled_message_cascade."
-                "count_pending_shadows",
+                "src.storage.service.scheduled_message_cascade.count_pending_shadows",
                 new=AsyncMock(return_value=2),
             ),
         ):
@@ -213,8 +240,7 @@ class TestDeleteAndCancelEvent:
         service.dao.delete_event = AsyncMock(return_value=True)
 
         with patch(
-            "src.storage.service.scheduled_message_cascade."
-            "cancel_shadows_for_event",
+            "src.storage.service.scheduled_message_cascade.cancel_shadows_for_event",
             new=AsyncMock(return_value=["msg-1", "msg-2"]),
         ) as mock_cancel:
             result = await service.delete_event(1)

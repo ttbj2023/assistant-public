@@ -42,12 +42,17 @@ def _legacy_row(title: str, user_id: str, thread_id: str) -> dict:
     }
 
 
-async def _read_user_level_count(user_id: str) -> int:
-    from src.storage.service import create_todo_service
+def _read_user_level_count(base_path: Path, user_id: str) -> int:
+    """从 base_path 下的用户级库直读行数 (隔离完整性: 写入必须在此路径)."""
+    import sqlite3
 
-    service = await create_todo_service(user_id, "any_thread", agent_id="any_agent")
-    todos = await service.list_todos(user_id, limit=1000)
-    return len(todos)
+    db = base_path / user_id / "database" / "todo.db"
+    if not db.exists():
+        return 0
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    n = conn.execute("SELECT count(*) FROM todo_items").fetchone()[0]
+    conn.close()
+    return n
 
 
 @pytest.fixture(autouse=True)
@@ -102,7 +107,7 @@ class TestMigrateTodoToUserLevel:
         assert not db1.exists()
         assert db1.with_name("todo.db.migrated").exists()
         # 用户级库包含全部 3 条 (跨线程统一)
-        assert await _read_user_level_count("m_user1") == 3
+        assert _read_user_level_count(tmp_path, "m_user1") == 3
 
     async def test_idempotent_on_rerun(self, tmp_path: Path) -> None:
         db = tmp_path / "m_user2" / "t" / "a" / "database" / "todo.db"
@@ -114,7 +119,7 @@ class TestMigrateTodoToUserLevel:
         second = await migrate_todo_to_user_level(tmp_path)
         assert second.migrated_rows == 0
         assert second.migrated_files == []
-        assert await _read_user_level_count("m_user2") == 1
+        assert _read_user_level_count(tmp_path, "m_user2") == 1
 
     async def test_dry_run_does_not_migrate(self, tmp_path: Path) -> None:
         db = tmp_path / "m_user3" / "t" / "a" / "database" / "todo.db"
@@ -126,9 +131,7 @@ class TestMigrateTodoToUserLevel:
         assert db.exists()  # 未改名
         assert len(report.skipped_files) == 1
 
-    async def test_empty_shell_db_migrates_as_zero_rows(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_empty_shell_db_migrates_as_zero_rows(self, tmp_path: Path) -> None:
         """空壳旧库 (建过连接但从未建表) 按 0 行迁移并改名, 不报错.
 
         生产实例: data/jxt/main/personal-assistant/database/todo.db

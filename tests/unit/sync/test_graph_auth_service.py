@@ -113,7 +113,7 @@ class TestStartAuthorization:
         await service.shutdown()
 
     async def test_start_authorization_已授权用户_拒绝重复发起(self, tmp_path):
-        GraphTokenStore("test_user", base_path=tmp_path).save(
+        await GraphTokenStore("test_user", base_path=tmp_path).save(
             {"access_token": "at", "refresh_token": "rt"},
         )
         service, _ = _service(tmp_path)
@@ -138,7 +138,7 @@ class TestStatusAndRevoke:
 
     async def test_revoke_已授权用户_删除token返回True(self, tmp_path):
         store = GraphTokenStore("test_user", base_path=tmp_path)
-        store.save({"access_token": "at", "refresh_token": "rt"})
+        await store.save({"access_token": "at", "refresh_token": "rt"})
         service, _ = _service(tmp_path)
 
         assert service.revoke("test_user") is True
@@ -176,7 +176,9 @@ class TestAuthCompletionCallback:
             "src.sync.graph_auth_service.notify_local_write",
         ) as mock_wake:
             await service.start_authorization(
-                "test_user", thread_id="t1", agent_id="a1",
+                "test_user",
+                thread_id="t1",
+                agent_id="a1",
             )
             await service._tasks["test_user"]
 
@@ -212,7 +214,9 @@ class TestAuthCompletionCallback:
             ),
         ):
             await service.start_authorization(
-                "test_user", thread_id="t1", agent_id="personal-assistant",
+                "test_user",
+                thread_id="t1",
+                agent_id="personal-assistant",
             )
             await service._tasks["test_user"]
 
@@ -246,7 +250,9 @@ class TestAuthCompletionCallback:
             ) as mock_get_ns,
         ):
             await service.start_authorization(
-                "test_user", thread_id="t1", agent_id="a1",
+                "test_user",
+                thread_id="t1",
+                agent_id="a1",
             )
             await service._tasks["test_user"]
 
@@ -282,7 +288,9 @@ class TestAuthCompletionCallback:
             ),
         ):
             await service.start_authorization(
-                "test_user", thread_id="t1", agent_id="a1",
+                "test_user",
+                thread_id="t1",
+                agent_id="a1",
             )
             await service._tasks["test_user"]
 

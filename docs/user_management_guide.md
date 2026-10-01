@@ -77,7 +77,7 @@ if user:
 
 ## 数据隔离
 
-每个用户-线程组合拥有独立数据存储 (`./data/{user_id}/{thread_id}/`), 文件系统级隔离, 详见 [路径管理系统](./path-management.md).
+每个用户-线程组合拥有独立数据存储 (`./data/{user_id}/{thread_id}/`), 按 Agent 再细分 `database/` + `vector/`; 日历与 TODO 为用户级统一库 (`./data/{user_id}/database/`), 文件系统级隔离, 详见 [路径管理系统](./path-management.md).
 
 ## 故障排除
 
